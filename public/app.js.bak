@@ -254,7 +254,7 @@ function VideoDetail({ daren, platform, user, onBack }) {
                 beforeUpload={file => { api.upload('/api/upload/'+record.work_id+'/'+f.key, file).then(r => r.ok ? (message.success('已上传'), fetchData()) : message.error(r.error)); return false; }}
                 showUploadList={false}
               >
-                <div style={{width:60, height:60, border:'1px dashed var(--border-em)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:11, color:'var(--ink-muted)', borderRadius:4}}>
+                <div style={{width:60, height:60, border:'1px dashed rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:11, color:'#8b949e', borderRadius:4}}>
                   {f.label}
                 </div>
               </Upload>
@@ -277,7 +277,7 @@ function VideoDetail({ daren, platform, user, onBack }) {
     { title: '视频标题', dataIndex: 'title', width: 220, ellipsis: true, editable: true },
     { title: '作品标签', dataIndex: 'tags', width: 140, ellipsis: true, editable: true },
     { title: '内容链接', dataIndex: 'content_url', width: 80,
-      render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" style={{color:'#5a6e8a'}}>查看</a> : '-' },
+      render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" style={{color:'#58a6ff'}}>查看</a> : '-' },
     { title: '发布时间', dataIndex: 'publish_time', width: 110, editable: true },
     { title: 'DA播放', dataIndex: 'da_plays', width: 90,
       render: v => (v||0).toLocaleString(), editable: true },
@@ -486,12 +486,12 @@ function App() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh', background: 'var(--paper)' }}>
+    <Layout style={{ minHeight: '100vh', background: '#0a0e14' }}>
       <div className="app-header">
         <h2>达人数据管理</h2>
         <div className="user-info">
           <span>{user.display_name}（{roleMap[user.role] || user.role}）</span>
-          <Button type="text" size="small" onClick={handleLogout} style={{ color: 'var(--ink-secondary)' }}>退出</Button>
+          <Button type="text" size="small" onClick={handleLogout} style={{ color: '#8b949e' }}>退出</Button>
         </div>
       </div>
       <div className="app-content">

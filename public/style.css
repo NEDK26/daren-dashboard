@@ -1,78 +1,123 @@
+/* ═══════════════════════════════════════════
+   纸墨工作台 — Ink & Paper Dashboard
+   宣纸米白 · 松烟墨字 · 线条分层 · 零阴影
+   ═══════════════════════════════════════════ */
+
+:root {
+  --paper:        #faf7f2;
+  --page:         #f5f1ea;
+  --card:         #faf7f2;
+  --hover:        #f0ebe0;
+  --active:       #ede7dd;
+  --ink:          #2c2416;
+  --ink-secondary:#6b6356;
+  --ink-muted:    #a09888;
+  --border:       #e6dfd3;
+  --border-em:    #d4cbb8;
+  --accent:       #8b5e3c;
+  --accent-hover: #6f4227;
+  --danger:       #c2543d;
+  --danger-bg:    #fdf2ef;
+  --success:      #5a8a6a;
+  --success-bg:   #f1f7f2;
+  --warning:      #c47a23;
+  --douyin:       #ff2e63;
+  --kuaishou:     #ff6b00;
+  --bilibili:     #00aeec;
+  --radius-sm:    4px;
+  --radius-md:    6px;
+  --radius-lg:    10px;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #0a0e14;
-  color: #e6edf3;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', 'PingFang SC', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Layout ── */
+/* ══ Layout ══ */
 
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 24px;
-  height: 48px;
-  background: #111720;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 0 28px;
+  height: 52px;
+  background: var(--ink);
+  color: var(--paper);
+  flex-shrink: 0;
 }
 
 .app-header h2 {
-  color: #e6edf3;
   font-size: 15px;
   font-weight: 600;
-  margin: 0;
+  letter-spacing: 0.3px;
+  color: var(--paper);
 }
 
 .app-header .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   font-size: 13px;
-  color: #8b949e;
+  color: rgba(250,247,242,0.65);
+}
+
+.app-header .user-info button {
+  color: rgba(250,247,242,0.65) !important;
+  font-size: 13px;
 }
 
 .app-content {
-  padding: 20px 24px;
-  max-width: 1500px;
+  padding: 24px 28px;
+  max-width: 1520px;
   margin: 0 auto;
+  min-height: calc(100vh - 52px);
 }
 
-/* ── Toolbar ── */
+/* ══ Toolbar ══ */
 
 .toolbar {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 16px;
-  padding: 12px 16px;
-  background: #111720;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .toolbar .spacer { flex: 1; }
 
+/* ══ Platform pills ══ */
+
 .platform-btns {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
 .platform-btns button {
-  min-width: 56px;
+  min-width: 52px;
   font-size: 12px;
+  font-weight: 500;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
 }
 
-/* Platform button accent colors */
-.btn-douyin    { border-color: #ff2e63; color: #ff2e63; }
-.btn-kuaishou  { border-color: #ff6b00; color: #ff6b00; }
-.btn-bilibili  { border-color: #00aeec; color: #00aeec; }
+.btn-douyin    { border-color: var(--douyin);    color: var(--douyin); }
+.btn-kuaishou  { border-color: var(--kuaishou);  color: var(--kuaishou); }
+.btn-bilibili  { border-color: var(--bilibili);  color: var(--bilibili); }
 
-/* ── Screenshot cells ── */
+/* ══ Screenshots ══ */
 
 .screenshot-cell {
   display: flex;
@@ -81,114 +126,280 @@ body {
 }
 
 .screenshot-cell img {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
 }
 
-/* ── Video detail header ── */
+/* ══ Video detail ══ */
 
 .video-detail-header {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 16px;
-  padding: 12px 0;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 .video-detail-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+  color: var(--ink);
 }
 
-/* ── Ant Design overrides ── */
-
-.ant-table {
-  background: #111720 !important;
-  color: #e6edf3 !important;
-}
-
-.ant-table-thead > tr > th {
-  background: #181d28 !important;
-  color: #8b949e !important;
-  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
-  font-size: 11px !important;
-  font-weight: 500 !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.ant-table-tbody > tr > td {
-  border-bottom: 1px solid rgba(255,255,255,0.04) !important;
-  color: #e6edf3 !important;
-  font-size: 13px;
-}
-
-.ant-table-tbody > tr:hover > td {
-  background: rgba(255,255,255,0.03) !important;
-}
-
-.ant-pagination-item,
-.ant-pagination-item a {
-  color: #8b949e !important;
-  background: #111720 !important;
-  border-color: rgba(255,255,255,0.08) !important;
-}
-
-.ant-pagination-item-active {
-  background: #1a3a5c !important;
-  border-color: #00aeec !important;
-}
-
-.ant-pagination-item-active a {
-  color: #00aeec !important;
-}
-
-.ant-input,
-.ant-select-selector,
-.ant-picker {
-  background: #0d1117 !important;
-  border-color: rgba(255,255,255,0.1) !important;
-  color: #e6edf3 !important;
-}
-
-.ant-input::placeholder {
-  color: #484f58 !important;
-}
-
-.ant-btn { border-radius: 4px; }
-
-.ant-card {
-  background: #111720;
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
-.ant-card-head {
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  color: #e6edf3;
-}
-
-.ant-tag { font-size: 11px; }
-
-.ant-modal-content { background: #111720; }
-.ant-modal-header {
-  background: #111720;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-.ant-modal-title { color: #e6edf3; }
-
-/* ── Login page ── */
+/* ══ Login ══ */
 
 .login-page {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background: #0a0e14;
+  background: var(--paper);
 }
 
-.login-card { width: 380px; }
+.login-card {
+  width: 380px;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════
+   ANT DESIGN OVERRIDES
+   覆盖 Ant Design 5 默认样式到纸墨风
+   ═══════════════════════════════════════════ */
+
+/* ── Table ── */
+
+.ant-table {
+  background: var(--card) !important;
+  color: var(--ink) !important;
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.ant-table-thead > tr > th {
+  background: var(--page) !important;
+  color: var(--ink-secondary) !important;
+  border-bottom: 1.5px solid var(--border-em) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0.4px;
+  padding: 10px 14px !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--border) !important;
+  color: var(--ink) !important;
+  padding: 10px 14px !important;
+  background: transparent !important;
+}
+
+.ant-table-tbody > tr:last-child > td {
+  border-bottom: none !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: var(--hover) !important;
+}
+
+/* ── Pagination ── */
+
+.ant-pagination-item {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm);
+}
+
+.ant-pagination-item a { color: var(--ink-secondary) !important; }
+
+.ant-pagination-item-active {
+  background: var(--ink) !important;
+  border-color: var(--ink) !important;
+}
+
+.ant-pagination-item-active a { color: var(--paper) !important; }
+
+/* ── Input & Select & DatePicker ── */
+
+.ant-input,
+.ant-select-selector,
+.ant-picker {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--ink) !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+}
+
+.ant-input:hover,
+.ant-select-selector:hover,
+.ant-picker:hover {
+  border-color: var(--border-em) !important;
+}
+
+.ant-input:focus,
+.ant-select-selector:focus,
+.ant-picker-focused {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(139,94,60,0.12) !important;
+}
+
+.ant-input::placeholder { color: var(--ink-muted) !important; }
+
+/* ── Buttons ── */
+
+.ant-btn {
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: none !important;
+}
+
+.ant-btn-primary {
+  background: var(--ink) !important;
+  border-color: var(--ink) !important;
+  color: var(--paper) !important;
+}
+
+.ant-btn-primary:hover {
+  background: #4a3e2a !important;
+  border-color: #4a3e2a !important;
+}
+
+.ant-btn-default {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+.ant-btn-default:hover {
+  border-color: var(--border-em) !important;
+  color: var(--ink) !important;
+  background: var(--hover) !important;
+}
+
+.ant-btn-dangerous {
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
+}
+
+/* ── Tags ── */
+
+.ant-tag {
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  line-height: 20px;
+  border: none;
+}
+
+/* ── Card ── */
+
+.ant-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: none !important;
+}
+
+.ant-card-head {
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  background: transparent;
+}
+
+.ant-card-head-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ── Modal ── */
+
+.ant-modal-content {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--border), 0 4px 24px rgba(0,0,0,0.08);
+}
+
+.ant-modal-header {
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.ant-modal-title { color: var(--ink); font-weight: 600; }
+
+/* ── Checkbox ── */
+
+.ant-checkbox-inner {
+  border-color: var(--border-em) !important;
+  border-radius: 3px;
+}
+
+.ant-checkbox-checked .ant-checkbox-inner {
+  background: var(--ink) !important;
+  border-color: var(--ink) !important;
+}
+
+/* ── Message ── */
+
+.ant-message-notice-content {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* ── Select dropdown ── */
+
+.ant-select-dropdown {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border-radius: var(--radius-sm);
+}
+
+.ant-select-item-option-selected { background: var(--hover) !important; }
+
+/* ── Focus ring ── */
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ══ Number emphasis ══ */
+
+.metric-number {
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-secondary);
+  text-transform: none;
+  letter-spacing: 0.2px;
+}
+
+/* ══ Divider ══ */
+
+.section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 24px 0;
+}
