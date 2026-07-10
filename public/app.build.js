@@ -1,4 +1,3 @@
-import { jsxDEV as _jsxDEV, Fragment as _Fragment } from "react/jsx-dev-runtime";
 const {
   useState,
   useEffect,
@@ -72,44 +71,36 @@ function LoginPage({
       setLoading(false);
     }
   }, [onLogin]);
-  return /*#__PURE__*/_jsxDEV("div", {
-    className: "login-page",
-    children: /*#__PURE__*/_jsxDEV(Card, {
-      title: "达人数据管理平台",
-      className: "login-card",
-      children: /*#__PURE__*/_jsxDEV(Form, {
-        onFinish: handleSubmit,
-        layout: "vertical",
-        children: [/*#__PURE__*/_jsxDEV(Form.Item, {
-          name: "username",
-          rules: [{
-            required: true,
-            message: '请输入用户名'
-          }],
-          children: /*#__PURE__*/_jsxDEV(Input, {
-            placeholder: "用户名"
-          }, void 0, false)
-        }, void 0, false), /*#__PURE__*/_jsxDEV(Form.Item, {
-          name: "password",
-          rules: [{
-            required: true,
-            message: '请输入密码'
-          }],
-          children: /*#__PURE__*/_jsxDEV(Input.Password, {
-            placeholder: "密码"
-          }, void 0, false)
-        }, void 0, false), /*#__PURE__*/_jsxDEV(Form.Item, {
-          children: /*#__PURE__*/_jsxDEV(Button, {
-            type: "primary",
-            htmlType: "submit",
-            loading: loading,
-            block: true,
-            children: "登录"
-          }, void 0, false)
-        }, void 0, false)]
-      }, void 0, true)
-    }, void 0, false)
-  }, void 0, false);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "login-page"
+  }, /*#__PURE__*/React.createElement(Card, {
+    title: "达人数据管理平台",
+    className: "login-card"
+  }, /*#__PURE__*/React.createElement(Form, {
+    onFinish: handleSubmit,
+    layout: "vertical"
+  }, /*#__PURE__*/React.createElement(Form.Item, {
+    name: "username",
+    rules: [{
+      required: true,
+      message: '请输入用户名'
+    }]
+  }, /*#__PURE__*/React.createElement(Input, {
+    placeholder: "用户名"
+  })), /*#__PURE__*/React.createElement(Form.Item, {
+    name: "password",
+    rules: [{
+      required: true,
+      message: '请输入密码'
+    }]
+  }, /*#__PURE__*/React.createElement(Input.Password, {
+    placeholder: "密码"
+  })), /*#__PURE__*/React.createElement(Form.Item, null, /*#__PURE__*/React.createElement(Button, {
+    type: "primary",
+    htmlType: "submit",
+    loading: loading,
+    block: true
+  }, "登录")))));
 }
 
 // ── Placeholder pages ──
@@ -165,12 +156,11 @@ function DarenList({
     dataIndex: 'nickname',
     key: 'nickname',
     width: 140,
-    render: text => /*#__PURE__*/_jsxDEV("span", {
+    render: text => /*#__PURE__*/React.createElement("span", {
       style: {
         fontWeight: 600
-      },
-      children: text
-    }, void 0, false)
+      }
+    }, text)
   }, {
     title: '机构名称',
     dataIndex: 'organization',
@@ -191,12 +181,11 @@ function DarenList({
     dataIndex: 'total_plays',
     key: 'total_plays',
     width: 120,
-    render: v => /*#__PURE__*/_jsxDEV("span", {
+    render: v => /*#__PURE__*/React.createElement("span", {
       style: {
         fontVariantNumeric: 'tabular-nums'
-      },
-      children: (v || 0).toLocaleString()
-    }, void 0, false)
+      }
+    }, (v || 0).toLocaleString())
   }, {
     title: '平台数据',
     key: 'platforms',
@@ -217,29 +206,28 @@ function DarenList({
           color: '#00aeec'
         }
       };
-      return /*#__PURE__*/_jsxDEV("div", {
-        className: "platform-btns",
-        children: ['抖音', '快手', 'B站'].map(p => {
-          const cfg = config[p];
-          const active = platforms.includes(p);
-          return /*#__PURE__*/_jsxDEV(Button, {
-            size: "small",
-            type: active ? 'primary' : 'default',
-            ghost: active,
-            disabled: !active,
-            className: cfg.className,
-            style: active ? {
-              background: cfg.color,
-              borderColor: cfg.color
-            } : {
-              borderColor: cfg.color,
-              color: cfg.color
-            },
-            onClick: () => active && onViewVideos(record, p),
-            children: p
-          }, p, false);
-        })
-      }, void 0, false);
+      return /*#__PURE__*/React.createElement("div", {
+        className: "platform-btns"
+      }, ['抖音', '快手', 'B站'].map(p => {
+        const cfg = config[p];
+        const active = platforms.includes(p);
+        return /*#__PURE__*/React.createElement(Button, {
+          key: p,
+          size: "small",
+          type: active ? 'primary' : 'default',
+          ghost: active,
+          disabled: !active,
+          className: cfg.className,
+          style: active ? {
+            background: cfg.color,
+            borderColor: cfg.color
+          } : {
+            borderColor: cfg.color,
+            color: cfg.color
+          },
+          onClick: () => active && onViewVideos(record, p)
+        }, p);
+      }));
     }
   }];
   const categoryOptions = [{
@@ -280,73 +268,63 @@ function DarenList({
     label: '生活'
   }];
   const isAdmin = user && user.role === 'admin';
-  return /*#__PURE__*/_jsxDEV("div", {
-    children: [/*#__PURE__*/_jsxDEV("div", {
-      className: "toolbar",
-      children: [/*#__PURE__*/_jsxDEV(Input.Search, {
-        placeholder: "搜索昵称",
-        value: search,
-        onChange: e => setSearch(e.target.value),
-        onSearch: fetchData,
-        style: {
-          width: 200
-        },
-        allowClear: true
-      }, void 0, false), /*#__PURE__*/_jsxDEV(Select, {
-        placeholder: "达人分类",
-        value: category || undefined,
-        onChange: v => setCategory(v || ''),
-        style: {
-          width: 150,
-          marginLeft: 12
-        },
-        allowClear: true,
-        options: categoryOptions
-      }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
-        className: "spacer"
-      }, void 0, false), isAdmin && /*#__PURE__*/_jsxDEV(_Fragment, {
-        children: [/*#__PURE__*/_jsxDEV(Upload, {
-          beforeUpload: handleImport,
-          showUploadList: false,
-          children: /*#__PURE__*/_jsxDEV(Button, {
-            loading: importing,
-            children: "导入Excel"
-          }, void 0, false)
-        }, void 0, false), /*#__PURE__*/_jsxDEV(Button, {
-          onClick: handleExport,
-          style: {
-            marginLeft: 8
-          },
-          children: "导出"
-        }, void 0, false), /*#__PURE__*/_jsxDEV(Button, {
-          onClick: onSettings,
-          style: {
-            marginLeft: 8
-          },
-          children: "设置"
-        }, void 0, false), /*#__PURE__*/_jsxDEV(Button, {
-          onClick: onAudit,
-          style: {
-            marginLeft: 8
-          },
-          children: "审核"
-        }, void 0, false)]
-      }, void 0, true)]
-    }, void 0, true), /*#__PURE__*/_jsxDEV(Table, {
-      columns: columns,
-      dataSource: data,
-      rowKey: "id",
-      loading: loading,
-      pagination: {
-        pageSize: 20
-      },
-      bordered: true,
-      size: "middle",
-      style: {
-        marginTop: 16
-      }
-    }, void 0, false)]
-  }, void 0, true);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "toolbar"
+  }, /*#__PURE__*/React.createElement(Input.Search, {
+    placeholder: "搜索昵称",
+    value: search,
+    onChange: e => setSearch(e.target.value),
+    onSearch: fetchData,
+    style: {
+      width: 200
+    },
+    allowClear: true
+  }), /*#__PURE__*/React.createElement(Select, {
+    placeholder: "达人分类",
+    value: category || undefined,
+    onChange: v => setCategory(v || ''),
+    style: {
+      width: 150,
+      marginLeft: 12
+    },
+    allowClear: true,
+    options: categoryOptions
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "spacer"
+  }), isAdmin && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Upload, {
+    beforeUpload: handleImport,
+    showUploadList: false
+  }, /*#__PURE__*/React.createElement(Button, {
+    loading: importing
+  }, "导入Excel")), /*#__PURE__*/React.createElement(Button, {
+    onClick: handleExport,
+    style: {
+      marginLeft: 8
+    }
+  }, "导出"), /*#__PURE__*/React.createElement(Button, {
+    onClick: onSettings,
+    style: {
+      marginLeft: 8
+    }
+  }, "设置"), /*#__PURE__*/React.createElement(Button, {
+    onClick: onAudit,
+    style: {
+      marginLeft: 8
+    }
+  }, "审核"))), /*#__PURE__*/React.createElement(Table, {
+    columns: columns,
+    dataSource: data,
+    rowKey: "id",
+    loading: loading,
+    pagination: {
+      pageSize: 20
+    },
+    bordered: true,
+    size: "middle",
+    style: {
+      marginTop: 16
+    }
+  }));
 }
 function VideoDetail({
   daren,
@@ -430,41 +408,38 @@ function VideoDetail({
       key: 'screenshot_7d_likes',
       label: '7日点赞'
     }];
-    return /*#__PURE__*/_jsxDEV("div", {
-      className: "screenshot-cell",
-      children: fields.map(f => /*#__PURE__*/_jsxDEV(Tooltip, {
-        title: f.label,
-        children: record[f.key] ? /*#__PURE__*/_jsxDEV(Image, {
-          src: record[f.key],
-          width: 60,
-          height: 60,
-          style: {
-            objectFit: 'cover'
-          }
-        }, void 0, false) : /*#__PURE__*/_jsxDEV(Upload, {
-          beforeUpload: file => {
-            api.upload('/api/upload/' + record.work_id + '/' + f.key, file).then(r => r.ok ? (message.success('已上传'), fetchData()) : message.error(r.error));
-            return false;
-          },
-          showUploadList: false,
-          children: /*#__PURE__*/_jsxDEV("div", {
-            style: {
-              width: 60,
-              height: 60,
-              border: '1px dashed var(--border-em)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: 11,
-              color: 'var(--ink-muted)',
-              borderRadius: 4
-            },
-            children: f.label
-          }, void 0, false)
-        }, void 0, false)
-      }, f.key, false))
-    }, void 0, false);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "screenshot-cell"
+    }, fields.map(f => /*#__PURE__*/React.createElement(Tooltip, {
+      key: f.key,
+      title: f.label
+    }, record[f.key] ? /*#__PURE__*/React.createElement(Image, {
+      src: record[f.key],
+      width: 60,
+      height: 60,
+      style: {
+        objectFit: 'cover'
+      }
+    }) : /*#__PURE__*/React.createElement(Upload, {
+      beforeUpload: file => {
+        api.upload('/api/upload/' + record.work_id + '/' + f.key, file).then(r => r.ok ? (message.success('已上传'), fetchData()) : message.error(r.error));
+        return false;
+      },
+      showUploadList: false
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 60,
+        height: 60,
+        border: '1px dashed var(--border-em)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        fontSize: 11,
+        color: 'var(--ink-muted)',
+        borderRadius: 4
+      }
+    }, f.label)))));
   };
   const EditableCell = ({
     title,
@@ -474,26 +449,19 @@ function VideoDetail({
     record,
     ...rest
   }) => {
-    if (!editable || editingKey !== record.work_id) return /*#__PURE__*/_jsxDEV("td", {
-      ...rest,
-      children: children
-    }, void 0, false);
-    const inputNode = dataIndex === 'publish_time' ? /*#__PURE__*/_jsxDEV(Input, {
+    if (!editable || editingKey !== record.work_id) return /*#__PURE__*/React.createElement("td", rest, children);
+    const inputNode = dataIndex === 'publish_time' ? /*#__PURE__*/React.createElement(Input, {
       size: "small",
       placeholder: "YYYY-MM-DD"
-    }, void 0, false) : /*#__PURE__*/_jsxDEV(Input, {
+    }) : /*#__PURE__*/React.createElement(Input, {
       size: "small"
-    }, void 0, false);
-    return /*#__PURE__*/_jsxDEV("td", {
-      ...rest,
-      children: /*#__PURE__*/_jsxDEV(Form.Item, {
-        name: dataIndex,
-        style: {
-          margin: 0
-        },
-        children: inputNode
-      }, void 0, false)
-    }, void 0, false);
+    });
+    return /*#__PURE__*/React.createElement("td", rest, /*#__PURE__*/React.createElement(Form.Item, {
+      name: dataIndex,
+      style: {
+        margin: 0
+      }
+    }, inputNode));
   };
   const columns = [{
     title: '视频标题',
@@ -511,15 +479,14 @@ function VideoDetail({
     title: '内容链接',
     dataIndex: 'content_url',
     width: 80,
-    render: v => v ? /*#__PURE__*/_jsxDEV("a", {
+    render: v => v ? /*#__PURE__*/React.createElement("a", {
       href: v,
       target: "_blank",
       rel: "noreferrer",
       style: {
         color: '#5a6e8a'
-      },
-      children: "查看"
-    }, void 0, false) : '-'
+      }
+    }, "查看") : '-'
   }, {
     title: '发布时间',
     dataIndex: 'publish_time',
@@ -568,24 +535,20 @@ function VideoDetail({
     title: '违规',
     dataIndex: 'violation_status',
     width: 70,
-    render: v => v === '违规' ? /*#__PURE__*/_jsxDEV(Tag, {
-      color: "red",
-      children: "违规"
-    }, void 0, false) : /*#__PURE__*/_jsxDEV(Tag, {
-      color: "green",
-      children: "未违规"
-    }, void 0, false)
+    render: v => v === '违规' ? /*#__PURE__*/React.createElement(Tag, {
+      color: "red"
+    }, "违规") : /*#__PURE__*/React.createElement(Tag, {
+      color: "green"
+    }, "未违规")
   }, {
     title: '合规',
     dataIndex: 'compliance_status',
     width: 70,
-    render: v => v === '合规' ? /*#__PURE__*/_jsxDEV(Tag, {
-      color: "green",
-      children: "合规"
-    }, void 0, false) : /*#__PURE__*/_jsxDEV(Tag, {
-      color: "orange",
-      children: "不合规"
-    }, void 0, false)
+    render: v => v === '合规' ? /*#__PURE__*/React.createElement(Tag, {
+      color: "green"
+    }, "合规") : /*#__PURE__*/React.createElement(Tag, {
+      color: "orange"
+    }, "不合规")
   }, {
     title: '截图',
     key: 'screenshots',
@@ -597,28 +560,23 @@ function VideoDetail({
     width: 80,
     render: (_, record) => {
       if (editingKey === record.work_id) {
-        return /*#__PURE__*/_jsxDEV(Space, {
-          children: [/*#__PURE__*/_jsxDEV(Button, {
-            size: "small",
-            type: "primary",
-            onClick: () => save(record.work_id),
-            children: "保存"
-          }, void 0, false), /*#__PURE__*/_jsxDEV(Button, {
-            size: "small",
-            onClick: () => setEditingKey(''),
-            children: "取消"
-          }, void 0, false)]
-        }, void 0, true);
+        return /*#__PURE__*/React.createElement(Space, null, /*#__PURE__*/React.createElement(Button, {
+          size: "small",
+          type: "primary",
+          onClick: () => save(record.work_id)
+        }, "保存"), /*#__PURE__*/React.createElement(Button, {
+          size: "small",
+          onClick: () => setEditingKey('')
+        }, "取消"));
       }
       const canEdit = isAdmin || editableCols.length > 0;
-      return canEdit ? /*#__PURE__*/_jsxDEV(Button, {
+      return canEdit ? /*#__PURE__*/React.createElement(Button, {
         size: "small",
         onClick: () => {
           setEditingKey(record.work_id);
           form.setFieldsValue(record);
-        },
-        children: "编辑"
-      }, void 0, false) : null;
+        }
+      }, "编辑") : null;
     }
   }];
   const mergedColumns = columns.map(col => ({
@@ -629,82 +587,74 @@ function VideoDetail({
       editable: col.editable
     })
   }));
-  return /*#__PURE__*/_jsxDEV(_Fragment, {
-    children: [/*#__PURE__*/_jsxDEV("div", {
-      className: "video-detail-header",
-      children: [/*#__PURE__*/_jsxDEV(Button, {
-        onClick: onBack,
-        children: "← 返回"
-      }, void 0, false), /*#__PURE__*/_jsxDEV("h3", {
-        children: [daren.nickname, " — ", platform, " 视频明细"]
-      }, void 0, true)]
-    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
-      className: "toolbar",
-      children: [/*#__PURE__*/_jsxDEV(DatePicker.RangePicker, {
-        value: dateRange,
-        onChange: setDateRange,
-        placeholder: ['开始', '结束']
-      }, void 0, false), /*#__PURE__*/_jsxDEV(Select, {
-        placeholder: "违规",
-        allowClear: true,
-        style: {
-          width: 110
-        },
-        value: violation,
-        onChange: setViolation,
-        options: [{
-          label: '全部',
-          value: 'all'
-        }, {
-          label: '违规',
-          value: '违规'
-        }, {
-          label: '未违规',
-          value: '未违规'
-        }]
-      }, void 0, false), /*#__PURE__*/_jsxDEV(Select, {
-        placeholder: "合规",
-        allowClear: true,
-        style: {
-          width: 110
-        },
-        value: compliance,
-        onChange: setCompliance,
-        options: [{
-          label: '全部',
-          value: 'all'
-        }, {
-          label: '合规',
-          value: '合规'
-        }, {
-          label: '不合规',
-          value: '不合规'
-        }]
-      }, void 0, false)]
-    }, void 0, true), /*#__PURE__*/_jsxDEV(Form, {
-      form: form,
-      component: false,
-      children: /*#__PURE__*/_jsxDEV(Table, {
-        columns: mergedColumns,
-        dataSource: data,
-        rowKey: "work_id",
-        loading: loading,
-        scroll: {
-          x: 1900
-        },
-        pagination: {
-          pageSize: 20
-        },
-        bordered: true,
-        size: "small",
-        components: {
-          body: {
-            cell: EditableCell
-          }
-        }
-      }, void 0, false)
-    }, void 0, false)]
-  }, void 0, true);
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "video-detail-header"
+  }, /*#__PURE__*/React.createElement(Button, {
+    onClick: onBack
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, daren.nickname, " — ", platform, " 视频明细")), /*#__PURE__*/React.createElement("div", {
+    className: "toolbar"
+  }, /*#__PURE__*/React.createElement(DatePicker.RangePicker, {
+    value: dateRange,
+    onChange: setDateRange,
+    placeholder: ['开始', '结束']
+  }), /*#__PURE__*/React.createElement(Select, {
+    placeholder: "违规",
+    allowClear: true,
+    style: {
+      width: 110
+    },
+    value: violation,
+    onChange: setViolation,
+    options: [{
+      label: '全部',
+      value: 'all'
+    }, {
+      label: '违规',
+      value: '违规'
+    }, {
+      label: '未违规',
+      value: '未违规'
+    }]
+  }), /*#__PURE__*/React.createElement(Select, {
+    placeholder: "合规",
+    allowClear: true,
+    style: {
+      width: 110
+    },
+    value: compliance,
+    onChange: setCompliance,
+    options: [{
+      label: '全部',
+      value: 'all'
+    }, {
+      label: '合规',
+      value: '合规'
+    }, {
+      label: '不合规',
+      value: '不合规'
+    }]
+  })), /*#__PURE__*/React.createElement(Form, {
+    form: form,
+    component: false
+  }, /*#__PURE__*/React.createElement(Table, {
+    columns: mergedColumns,
+    dataSource: data,
+    rowKey: "work_id",
+    loading: loading,
+    scroll: {
+      x: 1900
+    },
+    pagination: {
+      pageSize: 20
+    },
+    bordered: true,
+    size: "small",
+    components: {
+      body: {
+        cell: EditableCell
+      }
+    }
+  })));
 }
 const allColumns = [{
   key: 'title',
@@ -780,43 +730,34 @@ function SettingsPage({
     setLoading(false);
     if (res.ok) message.success('权限设置已保存');
   };
-  return /*#__PURE__*/_jsxDEV(_Fragment, {
-    children: [/*#__PURE__*/_jsxDEV("div", {
-      className: "video-detail-header",
-      children: [/*#__PURE__*/_jsxDEV(Button, {
-        onClick: onBack,
-        children: "← 返回"
-      }, void 0, false), /*#__PURE__*/_jsxDEV("h3", {
-        children: "可编辑列权限设置"
-      }, void 0, false)]
-    }, void 0, true), /*#__PURE__*/_jsxDEV(Card, {
-      title: "勾选普通用户可编辑的列",
-      style: {
-        maxWidth: 500
-      },
-      children: [/*#__PURE__*/_jsxDEV(Checkbox.Group, {
-        value: checked,
-        onChange: setChecked,
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10
-        },
-        children: allColumns.map(c => /*#__PURE__*/_jsxDEV(Checkbox, {
-          value: c.key,
-          children: c.label
-        }, c.key, false))
-      }, void 0, false), /*#__PURE__*/_jsxDEV(Button, {
-        type: "primary",
-        onClick: save,
-        loading: loading,
-        style: {
-          marginTop: 16
-        },
-        children: "保存设置"
-      }, void 0, false)]
-    }, void 0, true)]
-  }, void 0, true);
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "video-detail-header"
+  }, /*#__PURE__*/React.createElement(Button, {
+    onClick: onBack
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, "可编辑列权限设置")), /*#__PURE__*/React.createElement(Card, {
+    title: "勾选普通用户可编辑的列",
+    style: {
+      maxWidth: 500
+    }
+  }, /*#__PURE__*/React.createElement(Checkbox.Group, {
+    value: checked,
+    onChange: setChecked,
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10
+    }
+  }, allColumns.map(c => /*#__PURE__*/React.createElement(Checkbox, {
+    key: c.key,
+    value: c.key
+  }, c.label))), /*#__PURE__*/React.createElement(Button, {
+    type: "primary",
+    onClick: save,
+    loading: loading,
+    style: {
+      marginTop: 16
+    }
+  }, "保存设置")));
 }
 function AuditPage({
   onBack
@@ -867,33 +808,27 @@ function AuditPage({
     dataIndex: 'changed_at',
     width: 160
   }];
-  return /*#__PURE__*/_jsxDEV(_Fragment, {
-    children: [/*#__PURE__*/_jsxDEV("div", {
-      className: "video-detail-header",
-      children: [/*#__PURE__*/_jsxDEV(Button, {
-        onClick: onBack,
-        children: "← 返回"
-      }, void 0, false), /*#__PURE__*/_jsxDEV("h3", {
-        children: "操作日志"
-      }, void 0, false)]
-    }, void 0, true), /*#__PURE__*/_jsxDEV(Table, {
-      columns: columns,
-      dataSource: logs,
-      rowKey: "id",
-      loading: loading,
-      scroll: {
-        x: 1000
-      },
-      pagination: {
-        total,
-        pageSize: 50,
-        current: page,
-        onChange: setPage
-      },
-      bordered: true,
-      size: "small"
-    }, void 0, false)]
-  }, void 0, true);
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "video-detail-header"
+  }, /*#__PURE__*/React.createElement(Button, {
+    onClick: onBack
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, "操作日志")), /*#__PURE__*/React.createElement(Table, {
+    columns: columns,
+    dataSource: logs,
+    rowKey: "id",
+    loading: loading,
+    scroll: {
+      x: 1000
+    },
+    pagination: {
+      total,
+      pageSize: 50,
+      current: page,
+      onChange: setPage
+    },
+    bordered: true,
+    size: "small"
+  }));
 }
 
 // ── App ──
@@ -924,9 +859,9 @@ function App() {
   }, []);
   if (checking) return null;
   if (!user) {
-    return /*#__PURE__*/_jsxDEV(LoginPage, {
+    return /*#__PURE__*/React.createElement(LoginPage, {
       onLogin: setUser
-    }, void 0, false);
+    });
   }
   const roleMap = {
     admin: '管理员',
@@ -936,59 +871,50 @@ function App() {
   const renderPage = () => {
     switch (page) {
       case 'videos':
-        return /*#__PURE__*/_jsxDEV(VideoDetail, {
+        return /*#__PURE__*/React.createElement(VideoDetail, {
           daren: selectedDaren,
           platform: selectedPlatform,
           user: user,
           onBack: goBack
-        }, void 0, false);
+        });
       case 'settings':
-        return /*#__PURE__*/_jsxDEV(SettingsPage, {
+        return /*#__PURE__*/React.createElement(SettingsPage, {
           onBack: goBack
-        }, void 0, false);
+        });
       case 'audit':
-        return /*#__PURE__*/_jsxDEV(AuditPage, {
+        return /*#__PURE__*/React.createElement(AuditPage, {
           onBack: goBack
-        }, void 0, false);
+        });
       default:
-        return /*#__PURE__*/_jsxDEV(DarenList, {
+        return /*#__PURE__*/React.createElement(DarenList, {
           user: user,
           onViewVideos: navigateToVideos,
           onSettings: () => setPage('settings'),
           onAudit: () => setPage('audit')
-        }, void 0, false);
+        });
     }
   };
-  return /*#__PURE__*/_jsxDEV(Layout, {
+  return /*#__PURE__*/React.createElement(Layout, {
     style: {
       minHeight: '100vh',
       background: 'var(--paper)'
-    },
-    children: [/*#__PURE__*/_jsxDEV("div", {
-      className: "app-header",
-      children: [/*#__PURE__*/_jsxDEV("h2", {
-        children: "达人数据管理"
-      }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
-        className: "user-info",
-        children: [/*#__PURE__*/_jsxDEV("span", {
-          children: [user.display_name, "（", roleMap[user.role] || user.role, "）"]
-        }, void 0, true), /*#__PURE__*/_jsxDEV(Button, {
-          type: "text",
-          size: "small",
-          onClick: handleLogout,
-          style: {
-            color: 'var(--ink-secondary)'
-          },
-          children: "退出"
-        }, void 0, false)]
-      }, void 0, true)]
-    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
-      className: "app-content",
-      children: renderPage()
-    }, void 0, false)]
-  }, void 0, true);
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "app-header"
+  }, /*#__PURE__*/React.createElement("h2", null, "达人数据管理"), /*#__PURE__*/React.createElement("div", {
+    className: "user-info"
+  }, /*#__PURE__*/React.createElement("span", null, user.display_name, "（", roleMap[user.role] || user.role, "）"), /*#__PURE__*/React.createElement(Button, {
+    type: "text",
+    size: "small",
+    onClick: handleLogout,
+    style: {
+      color: 'var(--ink-secondary)'
+    }
+  }, "退出"))), /*#__PURE__*/React.createElement("div", {
+    className: "app-content"
+  }, renderPage()));
 }
 
 // ── Render ──
 
-ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/_jsxDEV(App, {}, void 0, false));
+ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
