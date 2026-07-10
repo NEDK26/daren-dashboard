@@ -32,8 +32,8 @@ async function main() {
   app.use('/api', require('./routes/settings'));
   app.use('/api', require('./routes/audit'));
 
-  // SPA fallback — 前端未构建时暂时注释
-  // app.use((req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+  // SPA fallback
+  app.use((req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
   app.listen(PORT, () => {
     console.log('Server running on http://localhost:' + PORT);
