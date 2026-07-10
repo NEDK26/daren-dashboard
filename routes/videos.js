@@ -1,0 +1,68 @@
+const express = require('express');
+const router = express.Router();
+const { getDb, prepare, escapeColumn } = require('../db');
+const { requireLogin, auditLog } = require('../middleware');
+
+router.get('/darens/:id/videos', requireLogin, (req, res) => {
+  const { id } = req.params;
+  const { platform, start, end, violation, compliance } = req.query;
+  const isAdmin = req.session.user.role === 'admin';
+
+  if (!isAdmin) {
+    const daren = prepare('SELECT nickname FROM darens WHERE id = ?').get(id);
+    if (!daren || daren.nickname !== req.session.user.display_name) {
+      return res.status(403).json({ error: '只能查看自己的数据' });
+    }
+  }
+
+  let sql = 'SELECT * FROM videos WHERE daren_id = ?';
+  const params = [id];
+
+  if (platform) { sql += ' AND platform = ?'; params.push(platform); }
+  if (start) { sql += ' AND publish_time >= ?'; params.push(start); }
+  if (end) { sql += ' AND publish_time <= ?'; params.push(end + ' 23:59:59'); }
+  if (violation && violation !== 'all') { sql += ' AND violation_status = ?'; params.push(violation); }
+  if (compliance && compliance !== 'all') { sql += ' AND compliance_status = ?'; params.push(compliance); }
+  sql += ' ORDER BY publish_time DESC';
+
+  res.json(prepare(sql).all(...params));
+});
+
+router.put('/videos/:workId', requireLogin, (req, res) => {
+  const { workId } = req.params;
+  const isAdmin = req.session.user.role === 'admin';
+
+  const video = prepare('SELECT v.*, d.nickname FROM videos v JOIN darens d ON v.daren_id = d.id WHERE v.work_id = ?').get(workId);
+  if (!video) return res.status(404).json({ error: '视频不存在' });
+  if (!isAdmin && video.nickname !== req.session.user.display_name) {
+    return res.status(403).json({ error: '只能编辑自己的数据' });
+  }
+
+  const editableCols = getEditableColumns();
+  const allowedCols = isAdmin ? Object.keys(req.body) : Object.keys(req.body).filter(k => editableCols.includes(k));
+  if (allowedCols.length === 0) return res.status(403).json({ error: '没有可编辑的列' });
+
+  const videoCols = ['title', 'tags', 'content_url', 'duration', 'publish_time',
+    'da_plays', 'da_likes', 'da_7d_plays', 'da_7d_likes', 'comments', 'saves', 'shares',
+    'violation_status', 'violation_desc', 'compliance_status', 'compliance_desc',
+    'is_node', 'node_name', 'is_hot', 'appeal'];
+
+  const changes = {};
+  for (const col of allowedCols) {
+    if (videoCols.includes(col) && req.body[col] !== undefined) {
+      const safeCol = escapeColumn(col);
+      changes[col] = { old: String(video[col] ?? ''), new: String(req.body[col] ?? '') };
+      prepare(`UPDATE videos SET ${safeCol} = ? WHERE work_id = ?`).run(req.body[col], workId);
+    }
+  }
+
+  auditLog(req, 'videos', workId, changes);
+  res.json({ ok: true, changes: Object.keys(changes) });
+});
+
+function getEditableColumns() {
+  const row = prepare("SELECT value FROM settings WHERE key = ?").get('editable_columns');
+  return row ? JSON.parse(row.value) : [];
+}
+
+module.exports = router;
