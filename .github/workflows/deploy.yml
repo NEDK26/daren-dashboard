@@ -16,8 +16,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
-            cd /opt/daren-dashboard
+            cd /home/deploy/daren-dashboard
             git pull origin master
             npm install --production
-            pm2 restart daren-dashboard || pm2 start ecosystem.config.js
-            pm2 save
+            npx pm2 restart daren-dashboard || npx pm2 start ecosystem.config.js
+            npx pm2 save
