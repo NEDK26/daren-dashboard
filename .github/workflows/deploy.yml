@@ -18,6 +18,7 @@ jobs:
           script: |
             cd /home/deploy/daren-dashboard
             git pull origin master
-            npm install --production
+            npm install
+            npm run build
             npx pm2 restart daren-dashboard || npx pm2 start ecosystem.config.js
             npx pm2 save

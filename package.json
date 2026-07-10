@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "build": "babel public/app.js -o public/app.build.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -14,5 +15,10 @@
     "express-session": "^1.18.0",
     "multer": "^1.4.5-lts.1",
     "sql.js": "^1.11.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^8.0.4",
+    "@babel/core": "^8.0.1",
+    "@babel/preset-react": "^8.0.1"
   }
 }
