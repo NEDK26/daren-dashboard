@@ -1,0 +1,23 @@
+name: Deploy to Alibaba Cloud
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            cd /opt/daren-dashboard
+            git pull origin master
+            npm install --production
+            pm2 restart daren-dashboard || pm2 start ecosystem.config.js
+            pm2 save
