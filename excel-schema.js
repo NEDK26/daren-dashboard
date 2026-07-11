@@ -23,9 +23,9 @@ const excelFields = [
   { header: '评论量', key: 'comments' },
   { header: '收藏量', key: 'saves' },
   { header: '转发量', key: 'shares' },
-  { header: '违规状态', key: 'violation_status' },
+  { header: '违规状态', key: 'violation_status', aliases: ['违规状态(未违规/违规)'] },
   { header: '违规描述', key: 'violation_desc' },
-  { header: '合规状态', key: 'compliance_status' },
+  { header: '合规状态', key: 'compliance_status', aliases: ['合规状态(不合规/合规)'] },
   { header: '合规异常描述', key: 'compliance_desc' },
   { header: '是否是节点', key: 'is_node' },
   { header: '参与节点名称', key: 'node_name' },
@@ -39,12 +39,23 @@ const excelFields = [
 
 const exportColumns = excelFields.map(({ header, key }) => ({ header, key }));
 
+function normalizeHeader(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/[（]/g, '(')
+    .replace(/[）]/g, ')')
+    .toLowerCase();
+}
+
 function buildHeaderMap(headerRow) {
-  const byHeader = new Map(excelFields.map(field => [field.header, field]));
+  const byHeader = new Map(excelFields.flatMap(field =>
+    [field.header, ...(field.aliases || [])].map(header => [normalizeHeader(header), field])
+  ));
   const columns = {};
 
   headerRow.eachCell((cell, colNumber) => {
-    const field = byHeader.get(cell.text.trim());
+    const field = byHeader.get(normalizeHeader(cell.text));
     if (field) columns[field.key] = colNumber;
   });
 
