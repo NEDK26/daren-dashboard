@@ -120,21 +120,6 @@ body {
 
 /* ══ Screenshots ══ */
 
-.screenshot-cell {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.screenshot-cell img {
-  width: 56px;
-  height: 56px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  border: 1px solid var(--border);
-}
-
 /* ══ Video detail ══ */
 
 .video-detail-header {

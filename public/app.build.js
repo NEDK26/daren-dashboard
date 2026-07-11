@@ -454,27 +454,11 @@ function VideoDetail({
       message.error('保存失败');
     }
   };
-  const renderScreenshots = record => {
-    const fields = [{
-      key: 'screenshot_plays',
-      label: '播放'
-    }, {
-      key: 'screenshot_likes',
-      label: '点赞'
-    }, {
-      key: 'screenshot_7d_plays',
-      label: '7日播放'
-    }, {
-      key: 'screenshot_7d_likes',
-      label: '7日点赞'
-    }];
-    return /*#__PURE__*/React.createElement("div", {
-      className: "screenshot-cell"
-    }, fields.map(f => /*#__PURE__*/React.createElement(Tooltip, {
-      key: f.key,
-      title: f.label
-    }, record[f.key] ? /*#__PURE__*/React.createElement(Image, {
-      src: record[f.key],
+  const renderScreenshot = (record, key, label) => {
+    return /*#__PURE__*/React.createElement(Tooltip, {
+      title: label
+    }, record[key] ? /*#__PURE__*/React.createElement(Image, {
+      src: record[key],
       width: 60,
       height: 60,
       style: {
@@ -482,7 +466,7 @@ function VideoDetail({
       }
     }) : /*#__PURE__*/React.createElement(Upload, {
       beforeUpload: file => {
-        api.upload('/api/upload/' + record.work_id + '/' + f.key, file).then(r => r.ok ? (message.success('已上传'), fetchData()) : message.error(r.error));
+        api.upload('/api/upload/' + record.work_id + '/' + key, file).then(r => r.ok ? (message.success('已上传'), fetchData()) : message.error(r.error));
         return false;
       },
       showUploadList: false
@@ -499,7 +483,7 @@ function VideoDetail({
         color: 'var(--ink-muted)',
         borderRadius: 4
       }
-    }, f.label)))));
+    }, label)));
   };
   const EditableCell = ({
     title,
@@ -581,11 +565,21 @@ function VideoDetail({
     render: v => (v || 0).toLocaleString(),
     editable: true
   }, {
+    title: '播放截图',
+    key: 'screenshot_plays',
+    width: 80,
+    render: (_, record) => renderScreenshot(record, 'screenshot_plays', '播放')
+  }, {
     title: 'DA点赞',
     dataIndex: 'da_likes',
     width: 75,
     render: v => (v || 0).toLocaleString(),
     editable: true
+  }, {
+    title: '点赞截图',
+    key: 'screenshot_likes',
+    width: 80,
+    render: (_, record) => renderScreenshot(record, 'screenshot_likes', '点赞')
   }, {
     title: '7日播放',
     dataIndex: 'da_7d_plays',
@@ -593,11 +587,21 @@ function VideoDetail({
     render: v => (v || 0).toLocaleString(),
     editable: true
   }, {
+    title: '7日播放截图',
+    key: 'screenshot_7d_plays',
+    width: 95,
+    render: (_, record) => renderScreenshot(record, 'screenshot_7d_plays', '7日播放')
+  }, {
     title: '7日点赞',
     dataIndex: 'da_7d_likes',
     width: 75,
     render: v => (v || 0).toLocaleString(),
     editable: true
+  }, {
+    title: '7日点赞截图',
+    key: 'screenshot_7d_likes',
+    width: 95,
+    render: (_, record) => renderScreenshot(record, 'screenshot_7d_likes', '7日点赞')
   }, {
     title: '评论',
     dataIndex: 'comments',
@@ -665,11 +669,6 @@ function VideoDetail({
     width: 100,
     editable: true,
     ellipsis: true
-  }, {
-    title: '截图',
-    key: 'screenshots',
-    width: 270,
-    render: (_, record) => renderScreenshots(record)
   }, {
     title: '操作',
     key: 'actions',

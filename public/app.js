@@ -269,32 +269,22 @@ function VideoDetail({ daren, user, onBack }) {
     }
   };
 
-  const renderScreenshots = (record) => {
-    const fields = [
-      { key: 'screenshot_plays', label: '播放' },
-      { key: 'screenshot_likes', label: '点赞' },
-      { key: 'screenshot_7d_plays', label: '7日播放' },
-      { key: 'screenshot_7d_likes', label: '7日点赞' },
-    ];
+  const renderScreenshot = (record, key, label) => {
     return (
-      <div className="screenshot-cell">
-        {fields.map(f => (
-          <Tooltip key={f.key} title={f.label}>
-            {record[f.key] ? (
-              <Image src={record[f.key]} width={60} height={60} style={{objectFit:'cover'}} />
-            ) : (
-              <Upload
-                beforeUpload={file => { api.upload('/api/upload/'+record.work_id+'/'+f.key, file).then(r => r.ok ? (message.success('已上传'), fetchData()) : message.error(r.error)); return false; }}
-                showUploadList={false}
-              >
-                <div style={{width:60, height:60, border:'1px dashed var(--border-em)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:11, color:'var(--ink-muted)', borderRadius:4}}>
-                  {f.label}
-                </div>
-              </Upload>
-            )}
-          </Tooltip>
-        ))}
-      </div>
+      <Tooltip title={label}>
+        {record[key] ? (
+          <Image src={record[key]} width={60} height={60} style={{objectFit:'cover'}} />
+        ) : (
+          <Upload
+            beforeUpload={file => { api.upload('/api/upload/'+record.work_id+'/'+key, file).then(r => r.ok ? (message.success('已上传'), fetchData()) : message.error(r.error)); return false; }}
+            showUploadList={false}
+          >
+            <div style={{width:60, height:60, border:'1px dashed var(--border-em)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:11, color:'var(--ink-muted)', borderRadius:4}}>
+              {label}
+            </div>
+          </Upload>
+        )}
+      </Tooltip>
     );
   };
 
@@ -323,12 +313,20 @@ function VideoDetail({ daren, user, onBack }) {
     { title: '发布时间', dataIndex: 'publish_time', width: 105, editable: true },
     { title: 'DA播放', dataIndex: 'da_plays', width: 85,
       render: v => (v||0).toLocaleString(), editable: true },
+    { title: '播放截图', key: 'screenshot_plays', width: 80,
+      render: (_, record) => renderScreenshot(record, 'screenshot_plays', '播放') },
     { title: 'DA点赞', dataIndex: 'da_likes', width: 75,
       render: v => (v||0).toLocaleString(), editable: true },
+    { title: '点赞截图', key: 'screenshot_likes', width: 80,
+      render: (_, record) => renderScreenshot(record, 'screenshot_likes', '点赞') },
     { title: '7日播放', dataIndex: 'da_7d_plays', width: 85,
       render: v => (v||0).toLocaleString(), editable: true },
+    { title: '7日播放截图', key: 'screenshot_7d_plays', width: 95,
+      render: (_, record) => renderScreenshot(record, 'screenshot_7d_plays', '7日播放') },
     { title: '7日点赞', dataIndex: 'da_7d_likes', width: 75,
       render: v => (v||0).toLocaleString(), editable: true },
+    { title: '7日点赞截图', key: 'screenshot_7d_likes', width: 95,
+      render: (_, record) => renderScreenshot(record, 'screenshot_7d_likes', '7日点赞') },
     { title: '评论', dataIndex: 'comments', width: 65, editable: true },
     { title: '收藏', dataIndex: 'saves', width: 65, editable: true },
     { title: '转发', dataIndex: 'shares', width: 65, editable: true },
@@ -342,8 +340,6 @@ function VideoDetail({ daren, user, onBack }) {
     { title: '节点名称', dataIndex: 'node_name', width: 110, ellipsis: true, editable: true },
     { title: '爆款', dataIndex: 'is_hot', width: 60, editable: true },
     { title: '申诉', dataIndex: 'appeal', width: 100, editable: true, ellipsis: true },
-    { title: '截图', key: 'screenshots', width: 270,
-      render: (_, record) => renderScreenshots(record) },
     { title: '操作', key: 'actions', width: 80,
       render: (_, record) => {
         if (editingKey === record.work_id) {
