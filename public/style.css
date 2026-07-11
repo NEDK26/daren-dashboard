@@ -406,6 +406,6 @@ body {
 }
 
 /* ── Anomaly cells ── */
-.cell-anomaly {
+.ant-table-tbody > tr > td.cell-anomaly {
   background: #fff1f0 !important;
 }
