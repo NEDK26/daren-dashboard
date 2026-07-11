@@ -74,6 +74,7 @@ function initSchema() {
     screenshot_likes TEXT,
     screenshot_7d_plays TEXT,
     screenshot_7d_likes TEXT,
+	    anomaly_data TEXT DEFAULT '',
     FOREIGN KEY (daren_id) REFERENCES darens(id)
   )`);
 
@@ -100,6 +101,7 @@ function initSchema() {
     changed_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   )`);
 
+  try { _db.run("ALTER TABLE videos ADD COLUMN anomaly_data TEXT DEFAULT ''"); } catch {}
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_daren_id ON videos(daren_id)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_platform ON videos(platform)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_audit_table_record ON audit_logs(table_name, record_id)');

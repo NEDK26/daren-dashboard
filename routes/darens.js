@@ -26,6 +26,23 @@ router.get('/darens', requireLogin, (req, res) => {
   sql += ' GROUP BY d.id ORDER BY d.id';
 
   const rows = prepare(sql).all(...params);
+
+  // Count anomaly cells per daren (count "数据异常" occurrences in anomaly_data JSON)
+  // ponytail: string counting instead of SQLite JSON functions for simplicity
+  for (const row of rows) {
+    const anomalyRows = prepare(
+      "SELECT anomaly_data FROM videos WHERE daren_id = ? AND anomaly_data != '' AND anomaly_data != '{}'"
+    ).all(row.id);
+    let count = 0;
+    for (const a of anomalyRows) {
+      try {
+        const obj = JSON.parse(a.anomaly_data);
+        count += Object.keys(obj).length;
+      } catch {}
+    }
+    row.anomaly_count = count;
+  }
+
   res.json(rows);
 });
 

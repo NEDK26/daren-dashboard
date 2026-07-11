@@ -8,6 +8,29 @@ const { hashPassword } = require('../auth');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Excel col -> DB column name for video anomaly detection
+const anomalyColMap = {
+  22: 'title', 23: 'tags', 24: 'content_url', 26: 'duration', 27: 'publish_time',
+  28: 'da_plays', 30: 'da_likes', 32: 'da_7d_plays', 34: 'da_7d_likes',
+  36: 'comments', 37: 'saves', 38: 'shares',
+  39: 'violation_status', 40: 'violation_desc', 41: 'compliance_status', 42: 'compliance_desc',
+  43: 'is_node', 44: 'node_name', 45: 'is_hot', 46: 'appeal'
+};
+
+function isRedFill(cell) {
+  const fill = cell.fill || cell.style && cell.style.fill;
+  if (!fill || !fill.fgColor) return false;
+  const c = fill.fgColor;
+  // Check if argb exists and red channel dominates
+  if (c.argb && c.argb.length >= 8) {
+    const r = parseInt(c.argb.slice(2, 4), 16);
+    const g = parseInt(c.argb.slice(4, 6), 16);
+    const b = parseInt(c.argb.slice(6, 8), 16);
+    return r > 150 && r > g + b;
+  }
+  return false;
+}
+
 router.post('/import', requireAdmin, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: '请上传文件' });
 
@@ -68,13 +91,25 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
       return String(v).slice(0, 10);
     })();
 
-    const info = prepare('INSERT OR IGNORE INTO videos (work_id, daren_id, platform, title, tags, content_url, duration, publish_time, da_plays, da_likes, da_7d_plays, da_7d_likes, comments, saves, shares, violation_status, violation_desc, compliance_status, compliance_desc, is_node, node_name, is_hot, appeal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+    // Detect red-filled cells → anomaly_data
+    const anomalies = {};
+    for (const [colNum, colName] of Object.entries(anomalyColMap)) {
+      try {
+        const cell = row.getCell(Number(colNum));
+        if (isRedFill(cell)) {
+          anomalies[colName] = '数据异常';
+        }
+      } catch {}
+    }
+
+    const info = prepare('INSERT OR IGNORE INTO videos (work_id, daren_id, platform, title, tags, content_url, duration, publish_time, da_plays, da_likes, da_7d_plays, da_7d_likes, comments, saves, shares, violation_status, violation_desc, compliance_status, compliance_desc, is_node, node_name, is_hot, appeal, anomaly_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
       workId, darenId, platform,
       getVal(22), getVal(23), getVal(24), getNum(26), publishTime,
       getNum(28), getNum(30), getNum(32), getNum(34),
       getNum(36), getNum(37), getNum(38),
       getVal(39), getVal(40), getVal(41), getVal(42),
-      getVal(43), getVal(44), getVal(45), getVal(46)
+      getVal(43), getVal(44), getVal(45), getVal(46),
+      JSON.stringify(anomalies)
     );
     if (info.changes > 0) imported++; else skipped++;
   });

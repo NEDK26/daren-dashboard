@@ -155,14 +155,20 @@ function DarenList({
     dataIndex: 'nickname',
     key: 'nickname',
     width: 140,
-    render: (text, record) => /*#__PURE__*/React.createElement("a", {
+    render: (text, record) => /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("a", {
       style: {
         fontWeight: 600,
         cursor: 'pointer',
         color: '#8b5e3c'
       },
       onClick: () => onViewVideos(record)
-    }, text)
+    }, text), record.anomaly_count > 0 && /*#__PURE__*/React.createElement(Tag, {
+      color: "red",
+      style: {
+        marginLeft: 6,
+        fontSize: 11
+      }
+    }, record.anomaly_count))
   }, {
     title: '机构名称',
     dataIndex: 'organization',
@@ -620,12 +626,21 @@ function VideoDetail({
       }, "编辑") : null;
     }
   }];
+  const isAnomaly = (record, key) => {
+    if (!record.anomaly_data) return false;
+    try {
+      return key in JSON.parse(record.anomaly_data);
+    } catch {
+      return false;
+    }
+  };
   const mergedColumns = columns.map(col => ({
     ...col,
     onCell: record => ({
       record,
       dataIndex: col.dataIndex,
-      editable: col.editable
+      editable: col.editable,
+      className: isAnomaly(record, col.dataIndex) ? 'cell-anomaly' : undefined
     })
   }));
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {

@@ -4,10 +4,19 @@ const ExcelJS = require('exceljs');
 const { prepare } = require('../db');
 const { requireAdmin } = require('../middleware');
 
+// Map export column key -> Excel column index (1-based)
+const exportKeyCol = {
+  'title': 13, 'tags': 14, 'content_url': 15, 'duration': 16, 'publish_time': 17,
+  'da_plays': 18, 'da_likes': 19, 'da_7d_plays': 20, 'da_7d_likes': 21,
+  'comments': 22, 'saves': 23, 'shares': 24,
+  'violation_status': 25, 'violation_desc': 26, 'compliance_status': 27, 'compliance_desc': 28,
+  'is_node': 29, 'node_name': 30, 'is_hot': 31, 'appeal': 32
+};
+
 router.get('/export', requireAdmin, async (req, res) => {
   const { category, search } = req.query;
 
-  let sql = 'SELECT d.nickname, d.organization, d.content_type, d.category, d.platform, d.is_main_platform, d.platform_nickname, d.homepage_url, d.account, d.followers, v.work_id, v.platform as v_platform, v.title, v.tags, v.content_url, v.duration, v.publish_time, v.da_plays, v.da_likes, v.da_7d_plays, v.da_7d_likes, v.comments, v.saves, v.shares, v.violation_status, v.violation_desc, v.compliance_status, v.compliance_desc, v.is_node, v.node_name, v.is_hot, v.appeal, v.screenshot_plays, v.screenshot_likes, v.screenshot_7d_plays, v.screenshot_7d_likes FROM videos v JOIN darens d ON v.daren_id = d.id';
+  let sql = 'SELECT d.nickname, d.organization, d.content_type, d.category, d.platform, d.is_main_platform, d.platform_nickname, d.homepage_url, d.account, d.followers, v.work_id, v.platform as v_platform, v.title, v.tags, v.content_url, v.duration, v.publish_time, v.da_plays, v.da_likes, v.da_7d_plays, v.da_7d_likes, v.comments, v.saves, v.shares, v.violation_status, v.violation_desc, v.compliance_status, v.compliance_desc, v.is_node, v.node_name, v.is_hot, v.appeal, v.screenshot_plays, v.screenshot_likes, v.screenshot_7d_plays, v.screenshot_7d_likes, v.anomaly_data FROM videos v JOIN darens d ON v.daren_id = d.id';
   const conditions = [], params = [];
   if (category) { conditions.push('d.category = ?'); params.push(category); }
   if (search) { conditions.push('d.nickname LIKE ?'); params.push('%' + search + '%'); }
@@ -59,6 +68,22 @@ router.get('/export', requireAdmin, async (req, res) => {
   ];
 
   ws.addRows(rows);
+
+  // Apply red fill to anomaly cells
+  const redFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } };
+  for (let ri = 0; ri < rows.length; ri++) {
+    const row = rows[ri];
+    if (!row.anomaly_data || row.anomaly_data === '{}') continue;
+    let anomalies = {};
+    try { anomalies = JSON.parse(row.anomaly_data); } catch { continue; }
+    const excelRow = ws.getRow(ri + 2); // +2: header row + 0-index
+    for (const key of Object.keys(anomalies)) {
+      const col = exportKeyCol[key];
+      if (col) {
+        excelRow.getCell(col).fill = redFill;
+      }
+    }
+  }
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', 'attachment; filename=daren-data.xlsx');

@@ -404,3 +404,8 @@ body {
   background: var(--border);
   margin: 24px 0;
 }
+
+/* ── Anomaly cells ── */
+.cell-anomaly {
+  background: #fff1f0 !important;
+}

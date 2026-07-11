@@ -101,7 +101,7 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
 
   const columns = [
     { title: '全网昵称', dataIndex: 'nickname', key: 'nickname', width: 140,
-      render: (text, record) => <a style={{ fontWeight: 600, cursor: 'pointer', color: '#8b5e3c' }} onClick={() => onViewVideos(record)}>{text}</a> },
+      render: (text, record) => <span><a style={{ fontWeight: 600, cursor: 'pointer', color: '#8b5e3c' }} onClick={() => onViewVideos(record)}>{text}</a>{record.anomaly_count > 0 && <Tag color="red" style={{ marginLeft: 6, fontSize: 11 }}>{record.anomaly_count}</Tag>}</span> },
     { title: '机构名称', dataIndex: 'organization', key: 'organization', width: 120 },
     { title: '内容类型', dataIndex: 'content_type', key: 'content_type', width: 100 },
     { title: '达人分类', dataIndex: 'category', key: 'category', width: 130 },
@@ -300,9 +300,11 @@ function VideoDetail({ daren, user, onBack }) {
     },
   ];
 
+  const isAnomaly = (record, key) => { if (!record.anomaly_data) return false; try { return key in JSON.parse(record.anomaly_data); } catch { return false; } };
+
   const mergedColumns = columns.map(col => ({
     ...col,
-    onCell: record => ({ record, dataIndex: col.dataIndex, editable: col.editable })
+    onCell: record => ({ record, dataIndex: col.dataIndex, editable: col.editable, className: isAnomaly(record, col.dataIndex) ? 'cell-anomaly' : undefined })
   }));
 
   return (
