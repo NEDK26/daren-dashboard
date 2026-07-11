@@ -5,6 +5,7 @@ const path = require('path');
 const DB_PATH = path.join(__dirname, 'data.db');
 
 let _db = null;
+let transactionDepth = 0;
 
 async function initDb() {
   if (_db) return _db;
@@ -28,6 +29,32 @@ function getDb() {
 function saveDb() {
   const data = _db.export();
   fs.writeFileSync(DB_PATH, Buffer.from(data));
+}
+
+function maybeSaveDb() {
+  if (transactionDepth === 0) saveDb();
+}
+
+function withTransaction(fn, options = {}) {
+  const db = options.db || getDb();
+  const persist = options.persist || saveDb;
+  const outermost = transactionDepth === 0;
+  transactionDepth++;
+  if (outermost) db.run('BEGIN');
+  let result;
+  try {
+    result = fn();
+    if (outermost) db.run('COMMIT');
+  } catch (error) {
+    if (outermost) {
+      try { db.run('ROLLBACK'); } catch {}
+    }
+    throw error;
+  } finally {
+    transactionDepth--;
+  }
+  if (outermost) persist();
+  return result;
 }
 
 const VIDEO_COLUMNS = [
@@ -202,7 +229,7 @@ function prepare(sql) {
       stmt.free();
       // Get last insert rowid
       const lastId = prepare('SELECT last_insert_rowid() as id').get();
-      saveDb();
+      maybeSaveDb();
       return { changes, lastInsertRowid: lastId ? lastId.id : 0 };
     }
   };
@@ -214,4 +241,4 @@ function escapeColumn(col) {
   return col;
 }
 
-module.exports = { initDb, getDb, saveDb, prepare, escapeColumn, migrateVideosTable };
+module.exports = { initDb, getDb, saveDb, prepare, escapeColumn, migrateVideosTable, withTransaction };

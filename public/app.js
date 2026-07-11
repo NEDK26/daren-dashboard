@@ -68,9 +68,20 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [importing, setImporting] = useState(false);
+  const [importStage, setImportStage] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const isAdmin = user && user.role === 'admin';
+  const importStages = ['正在上传文件…', '正在解析 Excel…', '正在批量写入数据…', '正在整理导入结果…'];
+
+  useEffect(() => {
+    if (!importing) {
+      setImportStage(0);
+      return undefined;
+    }
+    const timer = setInterval(() => setImportStage(stage => (stage + 1) % importStages.length), 1800);
+    return () => clearInterval(timer);
+  }, [importing]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -92,13 +103,18 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
 
   const handleImport = async (file) => {
     setImporting(true);
-    const res = await api.upload('/api/import', file);
-    setImporting(false);
-    if (res.ok) {
-      message.success(`导入完成：新增 ${res.imported} 条，跳过 ${res.skipped} 条，新建用户 ${res.newUsers} 人`);
-      fetchData();
-    } else {
-      message.error(res.error || '导入失败');
+    try {
+      const res = await api.upload('/api/import', file);
+      if (res.ok) {
+        message.success(`导入完成：新增 ${res.imported} 条，跳过 ${res.skipped} 条，新建用户 ${res.newUsers} 人`);
+        fetchData();
+      } else {
+        message.error(res.error || '导入失败');
+      }
+    } catch (e) {
+      message.error('导入失败，请稍后重试');
+    } finally {
+      setImporting(false);
     }
     return false;
   };
@@ -198,6 +214,16 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
           </>
         )}
       </div>
+      <Modal open={importing} footer={null} closable={false} maskClosable={false} keyboard={false} centered>
+        <div className="import-progress-content">
+          <div className="import-progress-spinner" aria-hidden="true" />
+          <div className="import-progress-copy">
+            <div className="import-progress-title">正在导入 Excel</div>
+            <div className="import-progress-stage">{importStages[importStage]}</div>
+            <div className="import-progress-dots" aria-hidden="true"><span /><span /><span /></div>
+          </div>
+        </div>
+      </Modal>
       <Table
         columns={columns}
         dataSource={data}

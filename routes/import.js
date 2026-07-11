@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const ExcelJS = require('exceljs');
-const { prepare } = require('../db');
+const { prepare, withTransaction } = require('../db');
 const { requireAdmin } = require('../middleware');
 const { hashPassword } = require('../auth');
 const { buildHeaderMap } = require('../excel-schema');
@@ -61,7 +61,7 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
 
   let totalRows = 0;
 
-  ws.eachRow((row, rowNumber) => {
+  withTransaction(() => ws.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
     totalRows++;
 
@@ -127,7 +127,7 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
       JSON.stringify(anomalies)
     );
     if (info.changes > 0) imported++; else { skipped++; skippedConflict++; }
-  });
+  }));
 
   console.log('--- [DEBUG] import result ---');
   console.log('  data rows in file:', totalRows);
