@@ -43,7 +43,8 @@ function initSchema() {
     platform_nickname TEXT,
     homepage_url TEXT,
     account TEXT,
-    followers INTEGER DEFAULT 0
+    followers INTEGER DEFAULT 0,
+    confirmation_status TEXT NOT NULL DEFAULT '待确认'
   )`);
 
   _db.run(`CREATE TABLE IF NOT EXISTS videos (
@@ -102,6 +103,7 @@ function initSchema() {
   )`);
 
   try { _db.run("ALTER TABLE videos ADD COLUMN anomaly_data TEXT DEFAULT ''"); } catch {}
+  try { _db.run("ALTER TABLE darens ADD COLUMN confirmation_status TEXT NOT NULL DEFAULT '待确认'"); } catch {}
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_daren_id ON videos(daren_id)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_platform ON videos(platform)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_audit_table_record ON audit_logs(table_name, record_id)');

@@ -13,6 +13,7 @@ router.get('/darens', requireLogin, (req, res) => {
   let sql = `
     SELECT d.id, d.nickname, d.organization, d.content_type, d.category,
            d.platform_nickname, d.homepage_url, d.account, d.followers,
+           d.confirmation_status,
            COALESCE(SUM(v.da_plays), 0) as total_plays
     FROM darens d
     LEFT JOIN videos v ON v.daren_id = d.id
@@ -76,6 +77,26 @@ router.put('/darens/:id', requireLogin, (req, res) => {
 
   auditLog(req, 'darens', id, changes);
   res.json({ ok: true, changes: Object.keys(changes) });
+});
+
+router.put('/darens/:id/confirmation', requireLogin, (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (req.session.user.role === 'admin') return res.status(403).json({ error: '管理员仅可查看确认状态' });
+  const daren = prepare('SELECT * FROM darens WHERE id = ?').get(id);
+  if (!daren) return res.status(404).json({ error: '达人不存在' });
+  if (daren.nickname !== req.session.user.display_name) {
+    return res.status(403).json({ error: '只能确认自己的数据' });
+  }
+
+  const allowedStatuses = ['已确认', '已提交申诉'];
+  if (!allowedStatuses.includes(status)) return res.status(400).json({ error: '无效的确认状态' });
+
+  prepare('UPDATE darens SET confirmation_status = ? WHERE id = ?').run(status, id);
+  auditLog(req, 'darens', id, {
+    confirmation_status: { old: String(daren.confirmation_status ?? '待确认'), new: status }
+  });
+  res.json({ ok: true, status });
 });
 
 router.delete('/darens', requireAdmin, (req, res) => {
