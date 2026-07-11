@@ -499,7 +499,7 @@ function VideoDetail({
     }
   };
   const renderScreenshot = (record, key, label) => {
-    const canUpload = isAdmin || editableCols.includes(key);
+    const canUpload = isAdmin || editingKey === record.work_id && editableCols.includes(key);
     const content = record[key] ? /*#__PURE__*/React.createElement(Image, {
       src: record[key],
       width: 60,

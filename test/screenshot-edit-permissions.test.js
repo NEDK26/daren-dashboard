@@ -12,7 +12,7 @@ test('screenshot fields are configurable and checked by both client and server',
   }
   assert.match(upload, /router\.post\('\/upload\/:workId\/:field', requireLogin, authorizeScreenshotUpload, upload\.single\('file'\)/);
   assert.match(upload, /function authorizeScreenshotUpload\(req, res, next\) \{/);
-  assert.match(app, /isAdmin \|\| editableCols\.includes\(key\)/);
+  assert.match(app, /isAdmin \|\| \(editingKey === record\.work_id && editableCols\.includes\(key\)\)/);
   assert.match(upload, /!isAdmin && !editableCols\.includes\(field\)/);
   assert.match(upload, /video\.nickname !== req\.session\.user\.display_name/);
 });

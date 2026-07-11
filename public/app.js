@@ -311,7 +311,7 @@ function VideoDetail({ daren, user, onBack }) {
   };
 
   const renderScreenshot = (record, key, label) => {
-    const canUpload = isAdmin || editableCols.includes(key);
+    const canUpload = isAdmin || (editingKey === record.work_id && editableCols.includes(key));
     const content = record[key] ? (
       <Image src={record[key]} width={60} height={60} style={{objectFit:'cover'}} />
     ) : (
