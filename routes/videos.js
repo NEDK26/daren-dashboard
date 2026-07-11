@@ -7,6 +7,9 @@ const { resetDarenConfirmation } = require('../services/darenConfirmation');
 router.get('/darens/:id/videos', requireLogin, (req, res) => {
   const { id } = req.params;
   const { platform, title, violation, compliance } = req.query;
+  const paged = req.query.page !== undefined || req.query.pageSize !== undefined;
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
   const isAdmin = req.session.user.role === 'admin';
 
   if (!isAdmin) {
@@ -23,9 +26,17 @@ router.get('/darens/:id/videos', requireLogin, (req, res) => {
   if (title) { sql += ' AND title LIKE ?'; params.push('%' + title + '%'); }
   if (violation && violation !== 'all') { sql += ' AND violation_status = ?'; params.push(violation); }
   if (compliance && compliance !== 'all') { sql += ' AND compliance_status = ?'; params.push(compliance); }
+  const filterSql = sql.slice(sql.indexOf(' WHERE '));
+  const totalRow = paged ? prepare(`SELECT COUNT(*) AS total FROM videos${filterSql}`).get(...params) : null;
   sql += ' ORDER BY platform, publish_time DESC';
+  if (paged) {
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(pageSize, (page - 1) * pageSize);
+  }
 
-  res.json(prepare(sql).all(...params));
+  const rows = prepare(sql).all(...params);
+  if (paged) return res.json({ rows, total: totalRow ? totalRow.total : 0, page, pageSize });
+  res.json(rows);
 });
 
 router.put('/videos/:id', requireLogin, (req, res) => {

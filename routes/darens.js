@@ -7,6 +7,9 @@ const { deleteDarensByIds } = require('../services/deleteDarens');
 
 router.get('/darens', requireLogin, (req, res) => {
   const { search, category } = req.query;
+  const paged = req.query.page !== undefined || req.query.pageSize !== undefined;
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
   const isAdmin = req.session.user.role === 'admin';
   const nickname = req.session.user.display_name;
 
@@ -25,27 +28,33 @@ router.get('/darens', requireLogin, (req, res) => {
   if (search) { conditions.push('d.nickname LIKE ?'); params.push(`%${search}%`); }
   if (category) { conditions.push('d.category = ?'); params.push(category); }
 
-  if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
-  sql += ' GROUP BY d.id ORDER BY d.id';
+  const whereSql = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
+  if (paged) {
+    sql += whereSql + ' GROUP BY d.id ORDER BY d.id LIMIT ? OFFSET ?';
+  } else {
+    sql += whereSql + ' GROUP BY d.id ORDER BY d.id';
+  }
 
-  const rows = prepare(sql).all(...params);
+  const queryParams = paged ? [...params, pageSize, (page - 1) * pageSize] : params;
+  const rows = prepare(sql).all(...queryParams);
 
   // Count anomaly cells per daren (count "数据异常" occurrences in anomaly_data JSON)
   // ponytail: string counting instead of SQLite JSON functions for simplicity
-  for (const row of rows) {
-    const anomalyRows = prepare(
-      "SELECT anomaly_data FROM videos WHERE daren_id = ? AND anomaly_data != '' AND anomaly_data != '{}'"
-    ).all(row.id);
+  const anomalyRows = rows.length
+    ? prepare(`SELECT daren_id, anomaly_data FROM videos WHERE anomaly_data != '' AND anomaly_data != '{}' AND daren_id IN (${rows.map(() => '?').join(',')})`).all(...rows.map(row => row.id))
+    : [];
+  const anomalyCounts = new Map();
+  for (const a of anomalyRows) {
     let count = 0;
-    for (const a of anomalyRows) {
-      try {
-        const obj = JSON.parse(a.anomaly_data);
-        count += Object.keys(obj).length;
-      } catch {}
-    }
-    row.anomaly_count = count;
+    try { count = Object.keys(JSON.parse(a.anomaly_data)).length; } catch {}
+    anomalyCounts.set(a.daren_id, (anomalyCounts.get(a.daren_id) || 0) + count);
   }
+  for (const row of rows) row.anomaly_count = anomalyCounts.get(row.id) || 0;
 
+  if (paged) {
+    const totalRow = prepare(`SELECT COUNT(*) AS total FROM darens d${whereSql}`).get(...params);
+    return res.json({ rows, total: totalRow ? totalRow.total : 0, page, pageSize });
+  }
   res.json(rows);
 });
 

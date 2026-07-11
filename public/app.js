@@ -1,10 +1,10 @@
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useMemo, useRef } = React;
 const { Layout, Button, Input, Form, Card, message, Space, Tag, Table, Select, Upload, Tooltip, Image, Checkbox, Modal } = antd;
 
 // ── API helpers ──
 
 const api = {
-  get: (url) => fetch(url).then(r => r.json()),
+  get: (url, options = {}) => fetch(url, options).then(r => r.json()),
   post: (url, data) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
   put: (url, data) => fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
   delete: (url, data) => fetch(url, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
@@ -64,13 +64,17 @@ function LoginPage({ onLogin }) {
 
 function DarenList({ user, onViewVideos, onSettings, onAudit }) {
   const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [importing, setImporting] = useState(false);
   const [importStage, setImportStage] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const requestRef = useRef(null);
   const isAdmin = user && user.role === 'admin';
   const importStages = ['正在上传文件…', '正在解析 Excel…', '正在批量写入数据…', '正在整理导入结果…'];
 
@@ -83,21 +87,36 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
     return () => clearInterval(timer);
   }, [importing]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const fetchData = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('page', page);
+      params.set('pageSize', 20);
       if (search) params.set('search', search);
       if (category) params.set('category', category);
-      const res = await api.get('/api/darens?' + params.toString());
-      setData(res || []);
+      const res = await api.get('/api/darens?' + params.toString(), { signal: controller.signal });
+      const payload = Array.isArray(res) ? { rows: res, total: res.length } : res;
+      setData(payload.rows || []);
+      setTotal(payload.total || 0);
       setSelectedRowKeys([]);
     } catch (e) {
-      message.error('加载失败');
+      if (e.name !== 'AbortError') message.error('加载失败');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category]);
+  }, [search, category, page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -176,12 +195,6 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
       title: '状态', dataIndex: 'confirmation_status', key: 'confirmation_status', width: 105,
       render: confirmationStatusTag
     });
-    columns.push({
-      title: '操作',
-      key: 'actions',
-      width: 90,
-      render: (_, record) => <Button danger size="small" onClick={() => handleDelete([record])}>删除</Button>
-    });
   }
 
   const categoryOptions = [
@@ -199,8 +212,8 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
   return (
     <div>
       <div className="toolbar">
-        <Input.Search placeholder="搜索昵称" value={search} onChange={e => setSearch(e.target.value)} onSearch={fetchData} style={{ width: 200 }} allowClear />
-        <Select placeholder="达人分类" value={category || undefined} onChange={v => setCategory(v || '')} style={{ width: 150, marginLeft: 12 }} allowClear options={categoryOptions} />
+        <Input.Search placeholder="搜索昵称" value={searchInput} onChange={e => setSearchInput(e.target.value)} onSearch={() => { setPage(1); setSearch(searchInput); }} style={{ width: 200 }} allowClear />
+        <Select placeholder="达人分类" value={category || undefined} onChange={v => { setPage(1); setCategory(v || ''); }} style={{ width: 150, marginLeft: 12 }} allowClear options={categoryOptions} />
         <div className="spacer" />
         {isAdmin && (
           <>
@@ -229,7 +242,7 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
         dataSource={data}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 20 }}
+        pagination={{ total, current: page, pageSize: 20, onChange: setPage }}
         rowSelection={isAdmin ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined}
         bordered
         size="middle"
@@ -241,33 +254,52 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
 
 function VideoDetail({ daren, user, onBack }) {
   const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [platformFilter, setPlatformFilter] = useState(undefined);
   const [violation, setViolation] = useState(undefined);
   const [compliance, setCompliance] = useState(undefined);
+  const [titleInput, setTitleInput] = useState('');
   const [titleSearch, setTitleSearch] = useState('');
   const [editingKey, setEditingKey] = useState('');
   const [editableCols, setEditableCols] = useState([]);
   const [form] = Form.useForm();
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
+  const requestRef = useRef(null);
   const isAdmin = user.role === 'admin';
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setTitleSearch(titleInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [titleInput]);
+
   const fetchData = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('page', page);
+      params.set('pageSize', 20);
       if (platformFilter) params.set('platform', platformFilter);
       if (violation) params.set('violation', violation);
       if (compliance) params.set('compliance', compliance);
       if (titleSearch) params.set('title', titleSearch);
-      const res = await api.get('/api/darens/' + daren.id + '/videos?' + params.toString());
-      setData(res || []);
+      const res = await api.get('/api/darens/' + daren.id + '/videos?' + params.toString(), { signal: controller.signal });
+      const payload = Array.isArray(res) ? { rows: res, total: res.length } : res;
+      setData(payload.rows || []);
+      setTotal(payload.total || 0);
     } catch (e) {
-      message.error('加载失败');
+      if (e.name !== 'AbortError') message.error('加载失败');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [platformFilter, violation, compliance, titleSearch, daren.id]);
+  }, [platformFilter, violation, compliance, titleSearch, page, daren.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -424,7 +456,15 @@ function VideoDetail({ daren, user, onBack }) {
     },
   ];
 
-  const isAnomaly = (record, key) => { if (!record.anomaly_data) return false; try { return key in JSON.parse(record.anomaly_data); } catch { return false; } };
+  const anomalyMap = useMemo(() => {
+    const map = new Map();
+    for (const record of data) {
+      if (!record.anomaly_data) continue;
+      try { map.set(record.id, new Set(Object.keys(JSON.parse(record.anomaly_data)))); } catch {}
+    }
+    return map;
+  }, [data]);
+  const isAnomaly = (record, key) => anomalyMap.get(record.id)?.has(key) || false;
 
   const mergedColumns = columns.map(col => ({
     ...col,
@@ -439,17 +479,17 @@ function VideoDetail({ daren, user, onBack }) {
         {!isAdmin && <Space>当前状态：{confirmationStatusTag(confirmationStatus)}{confirmationStatus === '待确认' && <Button size="small" type="primary" onClick={() => submitConfirmation('已确认')}>确认数据无误</Button>}</Space>}
       </div>
       <div className="toolbar">
-        <Select placeholder="平台" allowClear style={{width:110}} value={platformFilter} onChange={setPlatformFilter}
+        <Select placeholder="平台" allowClear style={{width:110}} value={platformFilter} onChange={value => { setPage(1); setPlatformFilter(value); }}
           options={[{label:'抖音',value:'抖音'},{label:'快手',value:'快手'},{label:'B站',value:'B站'}]} />
-        <Input.Search placeholder="搜索标题" value={titleSearch} onChange={e => setTitleSearch(e.target.value)} onSearch={fetchData} style={{ width: 180 }} allowClear />
-        <Select placeholder="违规" allowClear style={{width:110}} value={violation} onChange={setViolation}
+        <Input.Search placeholder="搜索标题" value={titleInput} onChange={e => setTitleInput(e.target.value)} onSearch={() => { setPage(1); setTitleSearch(titleInput); }} style={{ width: 180 }} allowClear />
+        <Select placeholder="违规" allowClear style={{width:110}} value={violation} onChange={value => { setPage(1); setViolation(value); }}
           options={[{label:'全部',value:'all'},{label:'违规',value:'违规'},{label:'未违规',value:'未违规'}]} />
-        <Select placeholder="合规" allowClear style={{width:110}} value={compliance} onChange={setCompliance}
+        <Select placeholder="合规" allowClear style={{width:110}} value={compliance} onChange={value => { setPage(1); setCompliance(value); }}
           options={[{label:'全部',value:'all'},{label:'合规',value:'合规'},{label:'不合规',value:'不合规'}]} />
       </div>
       <Form form={form} component={false}>
         <Table columns={mergedColumns} dataSource={data} rowKey="id"
-          loading={loading} scroll={{x:2600}} pagination={{pageSize:20}}
+          loading={loading} scroll={{x:2600}} pagination={{total, current:page, pageSize:20, onChange:setPage}}
           bordered size="small" components={{body:{cell:EditableCell}}} />
       </Form>
     </>

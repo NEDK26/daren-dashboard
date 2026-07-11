@@ -1,7 +1,9 @@
 const {
   useState,
   useEffect,
-  useCallback
+  useCallback,
+  useMemo,
+  useRef
 } = React;
 const {
   Layout,
@@ -24,7 +26,7 @@ const {
 // ── API helpers ──
 
 const api = {
-  get: url => fetch(url).then(r => r.json()),
+  get: (url, options = {}) => fetch(url, options).then(r => r.json()),
   post: (url, data) => fetch(url, {
     method: 'POST',
     headers: {
@@ -126,13 +128,17 @@ function DarenList({
   onAudit
 }) {
   const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [importing, setImporting] = useState(false);
   const [importStage, setImportStage] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const requestRef = useRef(null);
   const isAdmin = user && user.role === 'admin';
   const importStages = ['正在上传文件…', '正在解析 Excel…', '正在批量写入数据…', '正在整理导入结果…'];
   useEffect(() => {
@@ -143,21 +149,40 @@ function DarenList({
     const timer = setInterval(() => setImportStage(stage => (stage + 1) % importStages.length), 1800);
     return () => clearInterval(timer);
   }, [importing]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
   const fetchData = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('page', page);
+      params.set('pageSize', 20);
       if (search) params.set('search', search);
       if (category) params.set('category', category);
-      const res = await api.get('/api/darens?' + params.toString());
-      setData(res || []);
+      const res = await api.get('/api/darens?' + params.toString(), {
+        signal: controller.signal
+      });
+      const payload = Array.isArray(res) ? {
+        rows: res,
+        total: res.length
+      } : res;
+      setData(payload.rows || []);
+      setTotal(payload.total || 0);
       setSelectedRowKeys([]);
     } catch (e) {
-      message.error('加载失败');
+      if (e.name !== 'AbortError') message.error('加载失败');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category]);
+  }, [search, category, page]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -296,16 +321,6 @@ function DarenList({
       width: 105,
       render: confirmationStatusTag
     });
-    columns.push({
-      title: '操作',
-      key: 'actions',
-      width: 90,
-      render: (_, record) => /*#__PURE__*/React.createElement(Button, {
-        danger: true,
-        size: "small",
-        onClick: () => handleDelete([record])
-      }, "删除")
-    });
   }
   const categoryOptions = [{
     value: '美食',
@@ -350,9 +365,12 @@ function DarenList({
     className: "toolbar"
   }, /*#__PURE__*/React.createElement(Input.Search, {
     placeholder: "搜索昵称",
-    value: search,
-    onChange: e => setSearch(e.target.value),
-    onSearch: fetchData,
+    value: searchInput,
+    onChange: e => setSearchInput(e.target.value),
+    onSearch: () => {
+      setPage(1);
+      setSearch(searchInput);
+    },
     style: {
       width: 200
     },
@@ -360,7 +378,10 @@ function DarenList({
   }), /*#__PURE__*/React.createElement(Select, {
     placeholder: "达人分类",
     value: category || undefined,
-    onChange: v => setCategory(v || ''),
+    onChange: v => {
+      setPage(1);
+      setCategory(v || '');
+    },
     style: {
       width: 150,
       marginLeft: 12
@@ -424,7 +445,10 @@ function DarenList({
     rowKey: "id",
     loading: loading,
     pagination: {
-      pageSize: 20
+      total,
+      current: page,
+      pageSize: 20,
+      onChange: setPage
     },
     rowSelection: isAdmin ? {
       selectedRowKeys,
@@ -443,32 +467,55 @@ function VideoDetail({
   onBack
 }) {
   const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [platformFilter, setPlatformFilter] = useState(undefined);
   const [violation, setViolation] = useState(undefined);
   const [compliance, setCompliance] = useState(undefined);
+  const [titleInput, setTitleInput] = useState('');
   const [titleSearch, setTitleSearch] = useState('');
   const [editingKey, setEditingKey] = useState('');
   const [editableCols, setEditableCols] = useState([]);
   const [form] = Form.useForm();
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
+  const requestRef = useRef(null);
   const isAdmin = user.role === 'admin';
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setTitleSearch(titleInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [titleInput]);
   const fetchData = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('page', page);
+      params.set('pageSize', 20);
       if (platformFilter) params.set('platform', platformFilter);
       if (violation) params.set('violation', violation);
       if (compliance) params.set('compliance', compliance);
       if (titleSearch) params.set('title', titleSearch);
-      const res = await api.get('/api/darens/' + daren.id + '/videos?' + params.toString());
-      setData(res || []);
+      const res = await api.get('/api/darens/' + daren.id + '/videos?' + params.toString(), {
+        signal: controller.signal
+      });
+      const payload = Array.isArray(res) ? {
+        rows: res,
+        total: res.length
+      } : res;
+      setData(payload.rows || []);
+      setTotal(payload.total || 0);
     } catch (e) {
-      message.error('加载失败');
+      if (e.name !== 'AbortError') message.error('加载失败');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [platformFilter, violation, compliance, titleSearch, daren.id]);
+  }, [platformFilter, violation, compliance, titleSearch, page, daren.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -776,14 +823,17 @@ function VideoDetail({
       }, "编辑") : null;
     }
   }];
-  const isAnomaly = (record, key) => {
-    if (!record.anomaly_data) return false;
-    try {
-      return key in JSON.parse(record.anomaly_data);
-    } catch {
-      return false;
+  const anomalyMap = useMemo(() => {
+    const map = new Map();
+    for (const record of data) {
+      if (!record.anomaly_data) continue;
+      try {
+        map.set(record.id, new Set(Object.keys(JSON.parse(record.anomaly_data))));
+      } catch {}
     }
-  };
+    return map;
+  }, [data]);
+  const isAnomaly = (record, key) => anomalyMap.get(record.id)?.has(key) || false;
   const mergedColumns = columns.map(col => ({
     ...col,
     onCell: record => ({
@@ -810,7 +860,10 @@ function VideoDetail({
       width: 110
     },
     value: platformFilter,
-    onChange: setPlatformFilter,
+    onChange: value => {
+      setPage(1);
+      setPlatformFilter(value);
+    },
     options: [{
       label: '抖音',
       value: '抖音'
@@ -823,9 +876,12 @@ function VideoDetail({
     }]
   }), /*#__PURE__*/React.createElement(Input.Search, {
     placeholder: "搜索标题",
-    value: titleSearch,
-    onChange: e => setTitleSearch(e.target.value),
-    onSearch: fetchData,
+    value: titleInput,
+    onChange: e => setTitleInput(e.target.value),
+    onSearch: () => {
+      setPage(1);
+      setTitleSearch(titleInput);
+    },
     style: {
       width: 180
     },
@@ -837,7 +893,10 @@ function VideoDetail({
       width: 110
     },
     value: violation,
-    onChange: setViolation,
+    onChange: value => {
+      setPage(1);
+      setViolation(value);
+    },
     options: [{
       label: '全部',
       value: 'all'
@@ -855,7 +914,10 @@ function VideoDetail({
       width: 110
     },
     value: compliance,
-    onChange: setCompliance,
+    onChange: value => {
+      setPage(1);
+      setCompliance(value);
+    },
     options: [{
       label: '全部',
       value: 'all'
@@ -878,7 +940,10 @@ function VideoDetail({
       x: 2600
     },
     pagination: {
-      pageSize: 20
+      total,
+      current: page,
+      pageSize: 20,
+      onChange: setPage
     },
     bordered: true,
     size: "small",
