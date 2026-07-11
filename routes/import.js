@@ -53,13 +53,29 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
   console.log('  row count:', ws.rowCount);
   console.log('  actual row count:', ws.actualRowCount);
 
-  // Debug: dump first data row to verify column mapping
-  let debugDone = false;
+  // Debug: dump first 3 data rows to verify column mapping
+  let debugCount = 0;
   let totalRows = 0;
 
   ws.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
     totalRows++;
+
+    // Debug: print all non-empty columns of first 3 rows (before any validation)
+    if (debugCount < 3) {
+      const cells = [];
+      for (let c = 1; c <= 50; c++) {
+        try {
+          const cell = row.getCell(c);
+          if (cell.value !== null && cell.value !== undefined && cell.value !== '') {
+            cells.push(`col${c}:${JSON.stringify(String(cell.value).trim().slice(0, 40))}`);
+          }
+        } catch {}
+      }
+      console.log(`--- [DEBUG] row ${rowNumber} cols with data ---`);
+      console.log(' ', cells.join(' | '));
+      debugCount++;
+    }
 
     const getVal = (col) => {
       const cell = row.getCell(col);
@@ -72,18 +88,6 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
 
     const workId = getVal(25);
     if (!workId) { skippedNoWorkId++; skipped++; return; }
-
-    if (!debugDone) {
-      console.log('--- [DEBUG] row', rowNumber, '---');
-      console.log('  nickname(col12):', JSON.stringify(getVal(12)));
-      console.log('  workId(col25):', JSON.stringify(workId));
-      console.log('  platform(col17|6):', JSON.stringify(getVal(17) || getVal(6)));
-      console.log('  title(col22):', JSON.stringify(getVal(22)));
-      console.log('  publishTime(col27):', JSON.stringify((() => { const v = row.getCell(27).value; if (!v) return ''; if (v instanceof Date) return v.toISOString().slice(0,10); return String(v).slice(0,10); })()));
-      console.log('  da_plays(col28):', getNum(28));
-      console.log('  da_likes(col30):', getNum(30));
-      debugDone = true;
-    }
 
     let darenId = darenCache.get(nickname);
     if (!darenId) {
