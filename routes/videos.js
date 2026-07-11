@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb, prepare, escapeColumn } = require('../db');
 const { requireLogin, auditLog } = require('../middleware');
+const { resetDarenConfirmation } = require('../services/darenConfirmation');
 
 router.get('/darens/:id/videos', requireLogin, (req, res) => {
   const { id } = req.params;
@@ -50,11 +51,18 @@ router.put('/videos/:workId', requireLogin, (req, res) => {
   for (const col of allowedCols) {
     if (videoCols.includes(col) && req.body[col] !== undefined) {
       const safeCol = escapeColumn(col);
-      changes[col] = { old: String(video[col] ?? ''), new: String(req.body[col] ?? '') };
-      prepare(`UPDATE videos SET ${safeCol} = ? WHERE work_id = ?`).run(req.body[col], workId);
+      const oldValue = String(video[col] ?? '');
+      const newValue = String(req.body[col] ?? '');
+      if (oldValue !== newValue) {
+        changes[col] = { old: oldValue, new: newValue };
+        prepare(`UPDATE videos SET ${safeCol} = ? WHERE work_id = ?`).run(req.body[col], workId);
+      }
     }
   }
 
+  if (Object.keys(changes).length > 0) {
+    resetDarenConfirmation({ prepare, auditLog, req, darenId: video.daren_id });
+  }
   auditLog(req, 'videos', workId, changes);
   res.json({ ok: true, changes: Object.keys(changes) });
 });

@@ -55,6 +55,13 @@ const api = {
     }).then(r => r.json());
   }
 };
+const confirmationStatusTag = status => {
+  const value = status || '待确认';
+  const color = value === '已确认' ? 'green' : value === '已提交申诉' ? 'orange' : 'default';
+  return /*#__PURE__*/React.createElement(Tag, {
+    color: color
+  }, value);
+};
 
 // ── LoginPage ──
 
@@ -268,6 +275,13 @@ function DarenList({
   }];
   if (isAdmin) {
     columns.push({
+      title: '状态',
+      dataIndex: 'confirmation_status',
+      key: 'confirmation_status',
+      width: 105,
+      render: confirmationStatusTag
+    });
+    columns.push({
       title: '操作',
       key: 'actions',
       width: 90,
@@ -401,6 +415,7 @@ function VideoDetail({
   const [editingKey, setEditingKey] = useState('');
   const [editableCols, setEditableCols] = useState([]);
   const [form] = Form.useForm();
+  const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const isAdmin = user.role === 'admin';
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -426,6 +441,36 @@ function VideoDetail({
       if (res.columns) setEditableCols(res.columns);
     }).catch(() => {});
   }, []);
+  const submitConfirmation = async status => {
+    try {
+      const res = await api.put('/api/darens/' + daren.id + '/confirmation', {
+        status
+      });
+      if (res.ok) {
+        setConfirmationStatus(res.status);
+        message.success(status === '已确认' ? '已确认数据无误' : '修改已提交');
+      } else {
+        message.error(res.error || '提交失败');
+      }
+    } catch (e) {
+      message.error('提交失败');
+    }
+  };
+  const confirmModification = () => {
+    if (isAdmin) return;
+    setConfirmationStatus('待确认');
+    Modal.confirm({
+      content: '是否确认提交修改',
+      okText: '确认提交',
+      cancelText: '暂不提交',
+      onOk: () => submitConfirmation('已提交申诉')
+    });
+  };
+  const handleUploadSuccess = async () => {
+    message.success('已上传');
+    await fetchData();
+    confirmModification();
+  };
   const save = async workId => {
     try {
       const row = await form.validateFields();
@@ -444,7 +489,8 @@ function VideoDetail({
       if (res.ok) {
         message.success('保存成功');
         setEditingKey('');
-        fetchData();
+        await fetchData();
+        if (!isAdmin && res.changes && res.changes.length > 0) confirmModification();
       } else {
         message.error(res.error || '保存失败');
       }
@@ -453,22 +499,15 @@ function VideoDetail({
     }
   };
   const renderScreenshot = (record, key, label) => {
-    return /*#__PURE__*/React.createElement(Tooltip, {
-      title: label
-    }, record[key] ? /*#__PURE__*/React.createElement(Image, {
+    const canUpload = isAdmin || editableCols.includes(key);
+    const content = record[key] ? /*#__PURE__*/React.createElement(Image, {
       src: record[key],
       width: 60,
       height: 60,
       style: {
         objectFit: 'cover'
       }
-    }) : /*#__PURE__*/React.createElement(Upload, {
-      beforeUpload: file => {
-        api.upload('/api/upload/' + record.work_id + '/' + key, file).then(r => r.ok ? (message.success('已上传'), fetchData()) : message.error(r.error));
-        return false;
-      },
-      showUploadList: false
-    }, /*#__PURE__*/React.createElement("div", {
+    }) : /*#__PURE__*/React.createElement("div", {
       style: {
         width: 60,
         height: 60,
@@ -481,7 +520,16 @@ function VideoDetail({
         color: 'var(--ink-muted)',
         borderRadius: 4
       }
-    }, label)));
+    }, label);
+    return /*#__PURE__*/React.createElement(Tooltip, {
+      title: label
+    }, canUpload ? /*#__PURE__*/React.createElement(Upload, {
+      beforeUpload: file => {
+        api.upload('/api/upload/' + record.work_id + '/' + key, file).then(r => r.ok ? handleUploadSuccess() : message.error(r.error));
+        return false;
+      },
+      showUploadList: false
+    }, content) : record[key] ? content : '-');
   };
   const EditableCell = ({
     title,
@@ -713,7 +761,11 @@ function VideoDetail({
     className: "video-detail-header"
   }, isAdmin && /*#__PURE__*/React.createElement(Button, {
     onClick: onBack
-  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, isAdmin ? `${daren.nickname} — 视频明细` : '达人数据')), /*#__PURE__*/React.createElement("div", {
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'), !isAdmin && /*#__PURE__*/React.createElement(Space, null, "当前状态：", confirmationStatusTag(confirmationStatus), confirmationStatus === '待确认' && /*#__PURE__*/React.createElement(Button, {
+    size: "small",
+    type: "primary",
+    onClick: () => submitConfirmation('已确认')
+  }, "确认数据无误"))), /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
   }, /*#__PURE__*/React.createElement(Select, {
     placeholder: "平台",
@@ -820,14 +872,26 @@ const allColumns = [{
   key: 'da_plays',
   label: 'DA播放量'
 }, {
+  key: 'screenshot_plays',
+  label: '播放量截图'
+}, {
   key: 'da_likes',
   label: 'DA点赞量'
+}, {
+  key: 'screenshot_likes',
+  label: '点赞量截图'
 }, {
   key: 'da_7d_plays',
   label: 'DA7日播放'
 }, {
+  key: 'screenshot_7d_plays',
+  label: '7日播放量截图'
+}, {
   key: 'da_7d_likes',
   label: 'DA7日点赞'
+}, {
+  key: 'screenshot_7d_likes',
+  label: '7日点赞量截图'
 }, {
   key: 'comments',
   label: '评论量'
