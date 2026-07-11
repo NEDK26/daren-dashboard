@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { prepare } = require('../db');
-const { requireAdmin } = require('../middleware');
+const { requireLogin, requireAdmin } = require('../middleware');
 
-router.get('/settings/editable-columns', requireAdmin, (req, res) => {
+router.get('/settings/editable-columns', requireLogin, (req, res) => {
   const row = prepare("SELECT value FROM settings WHERE key = ?").get('editable_columns');
   res.json({ columns: row ? JSON.parse(row.value) : [] });
 });

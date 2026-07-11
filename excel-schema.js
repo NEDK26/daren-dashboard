@@ -17,9 +17,13 @@ const excelFields = [
   { header: '时长', key: 'duration' },
   { header: '发布时间', key: 'publish_time' },
   { header: 'DA播放量', key: 'da_plays' },
+  { header: '播放量截图', key: 'screenshot_plays' },
   { header: 'DA点赞量', key: 'da_likes' },
+  { header: '点赞量截图', key: 'screenshot_likes' },
   { header: 'DA7日播放', key: 'da_7d_plays' },
+  { header: '7日播放量截图', key: 'screenshot_7d_plays' },
   { header: 'DA7日点赞', key: 'da_7d_likes' },
+  { header: '7日点赞量截图', key: 'screenshot_7d_likes' },
   { header: '评论量', key: 'comments' },
   { header: '收藏量', key: 'saves' },
   { header: '转发量', key: 'shares' },
@@ -31,10 +35,6 @@ const excelFields = [
   { header: '参与节点名称', key: 'node_name' },
   { header: '是否是爆款', key: 'is_hot' },
   { header: '申诉', key: 'appeal' },
-  { header: '播放量截图', key: 'screenshot_plays' },
-  { header: '点赞量截图', key: 'screenshot_likes' },
-  { header: '7日播放量截图', key: 'screenshot_7d_plays' },
-  { header: '7日点赞量截图', key: 'screenshot_7d_likes' },
 ];
 
 const exportColumns = excelFields.map(({ header, key }) => ({ header, key }));

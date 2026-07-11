@@ -48,6 +48,18 @@ test('export columns come from the same import schema', () => {
   }
 });
 
+test('export puts screenshot columns directly after their matching metrics', () => {
+  assert.ok(schema, 'expected a shared excel-schema module');
+
+  const headers = schema.exportColumns.map(column => column.header);
+  assert.deepEqual(headers.slice(headers.indexOf('DA播放量'), headers.indexOf('评论量')), [
+    'DA播放量', '播放量截图',
+    'DA点赞量', '点赞量截图',
+    'DA7日播放', '7日播放量截图',
+    'DA7日点赞', '7日点赞量截图'
+  ]);
+});
+
 test('legacy report headers use aliases and the rightmost duplicate fields', () => {
   assert.ok(schema, 'expected a shared excel-schema module');
 

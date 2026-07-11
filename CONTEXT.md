@@ -56,5 +56,5 @@
 
 - 登录态通过 Session（`express-session`）维护，24 小时过期
 - 普通用户的数据库访问按 `nickname = display_name` 过滤达人，按达人关联过滤视频
-- 普通用户对字段的编辑权限由 `settings` 表中的 `editable_columns` 配置控制
+- `editable_columns` 是全局的普通用户可编辑列配置；所有普通用户只能编辑自己名下视频中被配置的字段
 - 达人删除仅管理员可用

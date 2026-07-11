@@ -235,12 +235,10 @@ function VideoDetail({ daren, user, onBack }) {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
-    if (isAdmin) {
-      api.get('/api/settings/editable-columns').then(res => {
-        if (res.columns) setEditableCols(res.columns);
-      }).catch(() => {});
-    }
-  }, [isAdmin]);
+    api.get('/api/settings/editable-columns').then(res => {
+      if (res.columns) setEditableCols(res.columns);
+    }).catch(() => {});
+  }, []);
 
   const save = async (workId) => {
     try {
