@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const ExcelJS = require('exceljs');
+const path = require('path');
 const { prepare } = require('../db');
 const { requireAdmin } = require('../middleware');
 const { exportColumns } = require('../excel-schema');
+const { addScreenshotImages } = require('../services/exportImages');
 
 const exportKeyCol = Object.fromEntries(exportColumns.map(({ key }, index) => [key, index + 1]));
 
@@ -25,6 +27,16 @@ router.get('/export', requireAdmin, async (req, res) => {
   ws.columns = exportColumns;
 
   ws.addRows(rows);
+  addScreenshotImages({
+    workbook: wb,
+    sheet: ws,
+    rows,
+    uploadsDir: path.join(__dirname, '..', 'uploads'),
+    screenshotColumns: Object.fromEntries(
+      ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes']
+        .map(key => [key, exportKeyCol[key]])
+    )
+  });
 
   // Apply red fill to anomaly cells
   const redFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } };
