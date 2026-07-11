@@ -471,10 +471,10 @@ function VideoDetail({
     await fetchData();
     confirmModification();
   };
-  const save = async workId => {
+  const save = async videoId => {
     try {
       const row = await form.validateFields();
-      const original = data.find(d => d.work_id === workId);
+      const original = data.find(d => d.id === videoId);
       const changes = {};
       Object.keys(row).forEach(key => {
         if (row[key] !== undefined && row[key] !== original[key]) {
@@ -485,7 +485,7 @@ function VideoDetail({
         setEditingKey('');
         return;
       }
-      const res = await api.put('/api/videos/' + workId, changes);
+      const res = await api.put('/api/videos/' + videoId, changes);
       if (res.ok) {
         message.success('保存成功');
         setEditingKey('');
@@ -499,7 +499,7 @@ function VideoDetail({
     }
   };
   const renderScreenshot = (record, key, label) => {
-    const canUpload = isAdmin || editingKey === record.work_id && editableCols.includes(key);
+    const canUpload = isAdmin || editingKey === record.id && editableCols.includes(key);
     const content = record[key] ? /*#__PURE__*/React.createElement(Image, {
       src: record[key],
       width: 60,
@@ -525,7 +525,7 @@ function VideoDetail({
       title: label
     }, canUpload ? /*#__PURE__*/React.createElement(Upload, {
       beforeUpload: file => {
-        api.upload('/api/upload/' + record.work_id + '/' + key, file).then(r => r.ok ? handleUploadSuccess() : message.error(r.error));
+        api.upload('/api/upload/' + record.id + '/' + key, file).then(r => r.ok ? handleUploadSuccess() : message.error(r.error));
         return false;
       },
       showUploadList: false
@@ -539,7 +539,7 @@ function VideoDetail({
     record,
     ...rest
   }) => {
-    if (!editable || editingKey !== record.work_id) return /*#__PURE__*/React.createElement("td", rest, children);
+    if (!editable || editingKey !== record.id) return /*#__PURE__*/React.createElement("td", rest, children);
     const inputNode = dataIndex === 'publish_time' ? /*#__PURE__*/React.createElement(Input, {
       size: "small",
       placeholder: "YYYY-MM-DD"
@@ -720,11 +720,11 @@ function VideoDetail({
     key: 'actions',
     width: 80,
     render: (_, record) => {
-      if (editingKey === record.work_id) {
+      if (editingKey === record.id) {
         return /*#__PURE__*/React.createElement(Space, null, /*#__PURE__*/React.createElement(Button, {
           size: "small",
           type: "primary",
-          onClick: () => save(record.work_id)
+          onClick: () => save(record.id)
         }, "保存"), /*#__PURE__*/React.createElement(Button, {
           size: "small",
           onClick: () => setEditingKey('')
@@ -734,7 +734,7 @@ function VideoDetail({
       return canEdit ? /*#__PURE__*/React.createElement(Button, {
         size: "small",
         onClick: () => {
-          setEditingKey(record.work_id);
+          setEditingKey(record.id);
           form.setFieldsValue(record);
         }
       }, "编辑") : null;
@@ -836,7 +836,7 @@ function VideoDetail({
   }, /*#__PURE__*/React.createElement(Table, {
     columns: mergedColumns,
     dataSource: data,
-    rowKey: "work_id",
+    rowKey: "id",
     loading: loading,
     scroll: {
       x: 2600

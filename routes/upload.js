@@ -15,24 +15,24 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-router.post('/upload/:workId/:field', requireLogin, authorizeScreenshotUpload, upload.single('file'), (req, res) => {
-  const { workId, field } = req.params;
+router.post('/upload/:id/:field', requireLogin, authorizeScreenshotUpload, upload.single('file'), (req, res) => {
+  const { id, field } = req.params;
   if (!req.file) return res.status(400).json({ error: '未上传文件' });
 
   const video = req.screenshotVideo;
 
   const filePath = '/uploads/' + req.file.filename;
-  prepare(`UPDATE videos SET ${field} = ? WHERE work_id = ?`).run(filePath, workId);
+  prepare(`UPDATE videos SET ${field} = ? WHERE id = ?`).run(filePath, id);
   resetDarenConfirmation({ prepare, auditLog, req, darenId: video.daren_id });
   res.json({ ok: true, url: filePath });
 });
 
 function authorizeScreenshotUpload(req, res, next) {
-  const { workId, field } = req.params;
+  const { id, field } = req.params;
   const allowedFields = ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes'];
   if (!allowedFields.includes(field)) return res.status(400).json({ error: '无效的截图字段' });
 
-  const video = prepare('SELECT v.daren_id, d.nickname FROM videos v JOIN darens d ON v.daren_id = d.id WHERE v.work_id = ?').get(workId);
+  const video = prepare('SELECT v.daren_id, d.nickname FROM videos v JOIN darens d ON v.daren_id = d.id WHERE v.id = ?').get(id);
   if (!video) return res.status(404).json({ error: '视频不存在' });
   const isAdmin = req.session.user.role === 'admin';
   if (!isAdmin && video.nickname !== req.session.user.display_name) {

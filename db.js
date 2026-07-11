@@ -30,25 +30,18 @@ function saveDb() {
   fs.writeFileSync(DB_PATH, Buffer.from(data));
 }
 
-function initSchema() {
-  _db.run(`CREATE TABLE IF NOT EXISTS darens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nickname TEXT NOT NULL UNIQUE,
-    organization TEXT,
-    content_type TEXT,
-    category TEXT,
-    total_plays INTEGER DEFAULT 0,
-    platform TEXT,
-    is_main_platform TEXT,
-    platform_nickname TEXT,
-    homepage_url TEXT,
-    account TEXT,
-    followers INTEGER DEFAULT 0,
-    confirmation_status TEXT NOT NULL DEFAULT '待确认' CHECK (confirmation_status IN ('待确认', '已确认', '已提交申诉'))
-  )`);
+const VIDEO_COLUMNS = [
+  'work_id', 'daren_id', 'platform', 'title', 'tags', 'content_url', 'duration', 'publish_time',
+  'da_plays', 'da_likes', 'da_7d_plays', 'da_7d_likes', 'comments', 'saves', 'shares',
+  'violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node',
+  'node_name', 'is_hot', 'appeal', 'screenshot_plays', 'screenshot_likes',
+  'screenshot_7d_plays', 'screenshot_7d_likes', 'anomaly_data'
+];
 
-  _db.run(`CREATE TABLE IF NOT EXISTS videos (
-    work_id TEXT PRIMARY KEY,
+function createVideosTable(db, tableName = 'videos') {
+  db.run(`CREATE TABLE ${tableName} (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    work_id TEXT NOT NULL,
     daren_id INTEGER NOT NULL,
     platform TEXT NOT NULL,
     title TEXT,
@@ -75,9 +68,77 @@ function initSchema() {
     screenshot_likes TEXT,
     screenshot_7d_plays TEXT,
     screenshot_7d_likes TEXT,
-	    anomaly_data TEXT DEFAULT '',
-    FOREIGN KEY (daren_id) REFERENCES darens(id)
+    anomaly_data TEXT DEFAULT '',
+    FOREIGN KEY (daren_id) REFERENCES darens(id),
+    UNIQUE(daren_id, platform, work_id)
   )`);
+}
+
+function tableColumns(db, tableName) {
+  const stmt = db.prepare(`PRAGMA table_info(${tableName})`);
+  const columns = [];
+  while (stmt.step()) columns.push(stmt.getAsObject());
+  stmt.free();
+  return columns;
+}
+
+function tableExists(db, tableName) {
+  const stmt = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?");
+  stmt.bind([tableName]);
+  const exists = stmt.step();
+  stmt.free();
+  return exists;
+}
+
+function migrateVideosTable(db = _db) {
+  const currentColumns = tableColumns(db, 'videos');
+  if (currentColumns.length === 0 || currentColumns.some(column => column.name === 'id' && Number(column.pk) === 1)) {
+    return false;
+  }
+
+  const existingNames = new Set(currentColumns.map(column => column.name));
+  const copyColumns = VIDEO_COLUMNS.filter(column => existingNames.has(column));
+  if (!existingNames.has('work_id') || !existingNames.has('daren_id') || !existingNames.has('platform')) {
+    throw new Error('videos 表缺少迁移所需字段');
+  }
+  const quotedColumns = copyColumns.map(column => `"${column}"`).join(', ');
+
+  db.run('PRAGMA foreign_keys = OFF');
+  try {
+    db.run('BEGIN');
+    createVideosTable(db, 'videos_new');
+    db.run(`INSERT INTO videos_new (${quotedColumns}) SELECT ${quotedColumns} FROM videos`);
+    db.run('DROP TABLE videos');
+    db.run('ALTER TABLE videos_new RENAME TO videos');
+    db.run('COMMIT');
+  } catch (error) {
+    try { db.run('ROLLBACK'); } catch {}
+    throw error;
+  } finally {
+    db.run('PRAGMA foreign_keys = ON');
+  }
+  return true;
+}
+
+function initSchema() {
+  _db.run(`CREATE TABLE IF NOT EXISTS darens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nickname TEXT NOT NULL UNIQUE,
+    organization TEXT,
+    content_type TEXT,
+    category TEXT,
+    total_plays INTEGER DEFAULT 0,
+    platform TEXT,
+    is_main_platform TEXT,
+    platform_nickname TEXT,
+    homepage_url TEXT,
+    account TEXT,
+    followers INTEGER DEFAULT 0,
+    confirmation_status TEXT NOT NULL DEFAULT '待确认' CHECK (confirmation_status IN ('待确认', '已确认', '已提交申诉'))
+  )`);
+
+  if (!tableExists(_db, 'videos')) createVideosTable(_db);
+  else migrateVideosTable(_db);
 
   _db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,4 +214,4 @@ function escapeColumn(col) {
   return col;
 }
 
-module.exports = { initDb, getDb, saveDb, prepare, escapeColumn };
+module.exports = { initDb, getDb, saveDb, prepare, escapeColumn, migrateVideosTable };

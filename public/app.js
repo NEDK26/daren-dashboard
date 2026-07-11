@@ -282,10 +282,10 @@ function VideoDetail({ daren, user, onBack }) {
     confirmModification();
   };
 
-  const save = async (workId) => {
+  const save = async (videoId) => {
     try {
       const row = await form.validateFields();
-      const original = data.find(d => d.work_id === workId);
+      const original = data.find(d => d.id === videoId);
       const changes = {};
       Object.keys(row).forEach(key => {
         if (row[key] !== undefined && row[key] !== original[key]) {
@@ -296,7 +296,7 @@ function VideoDetail({ daren, user, onBack }) {
         setEditingKey('');
         return;
       }
-      const res = await api.put('/api/videos/' + workId, changes);
+      const res = await api.put('/api/videos/' + videoId, changes);
       if (res.ok) {
         message.success('保存成功');
         setEditingKey('');
@@ -311,7 +311,7 @@ function VideoDetail({ daren, user, onBack }) {
   };
 
   const renderScreenshot = (record, key, label) => {
-    const canUpload = isAdmin || (editingKey === record.work_id && editableCols.includes(key));
+    const canUpload = isAdmin || (editingKey === record.id && editableCols.includes(key));
     const content = record[key] ? (
       <Image src={record[key]} width={60} height={60} style={{objectFit:'cover'}} />
     ) : (
@@ -323,7 +323,7 @@ function VideoDetail({ daren, user, onBack }) {
       <Tooltip title={label}>
         {canUpload ? (
           <Upload
-            beforeUpload={file => { api.upload('/api/upload/'+record.work_id+'/'+key, file).then(r => r.ok ? handleUploadSuccess() : message.error(r.error)); return false; }}
+            beforeUpload={file => { api.upload('/api/upload/'+record.id+'/'+key, file).then(r => r.ok ? handleUploadSuccess() : message.error(r.error)); return false; }}
             showUploadList={false}
           >
             {content}
@@ -336,7 +336,7 @@ function VideoDetail({ daren, user, onBack }) {
   };
 
   const EditableCell = ({ title, dataIndex, children, editable, record, ...rest }) => {
-    if (!editable || editingKey !== record.work_id) return <td {...rest}>{children}</td>;
+    if (!editable || editingKey !== record.id) return <td {...rest}>{children}</td>;
     const inputNode = dataIndex === 'publish_time'
       ? <Input size="small" placeholder="YYYY-MM-DD" />
       : <Input size="small" />;
@@ -389,11 +389,11 @@ function VideoDetail({ daren, user, onBack }) {
     { title: '申诉', dataIndex: 'appeal', width: 100, editable: true, ellipsis: true },
     { title: '操作', key: 'actions', width: 80,
       render: (_, record) => {
-        if (editingKey === record.work_id) {
-          return <Space><Button size="small" type="primary" onClick={() => save(record.work_id)}>保存</Button><Button size="small" onClick={() => setEditingKey('')}>取消</Button></Space>;
+        if (editingKey === record.id) {
+          return <Space><Button size="small" type="primary" onClick={() => save(record.id)}>保存</Button><Button size="small" onClick={() => setEditingKey('')}>取消</Button></Space>;
         }
         const canEdit = isAdmin || editableCols.length > 0;
-        return canEdit ? <Button size="small" onClick={() => { setEditingKey(record.work_id); form.setFieldsValue(record); }}>编辑</Button> : null;
+        return canEdit ? <Button size="small" onClick={() => { setEditingKey(record.id); form.setFieldsValue(record); }}>编辑</Button> : null;
       }
     },
   ];
@@ -422,7 +422,7 @@ function VideoDetail({ daren, user, onBack }) {
           options={[{label:'全部',value:'all'},{label:'合规',value:'合规'},{label:'不合规',value:'不合规'}]} />
       </div>
       <Form form={form} component={false}>
-        <Table columns={mergedColumns} dataSource={data} rowKey="work_id"
+        <Table columns={mergedColumns} dataSource={data} rowKey="id"
           loading={loading} scroll={{x:2600}} pagination={{pageSize:20}}
           bordered size="small" components={{body:{cell:EditableCell}}} />
       </Form>

@@ -28,11 +28,11 @@ router.get('/darens/:id/videos', requireLogin, (req, res) => {
   res.json(prepare(sql).all(...params));
 });
 
-router.put('/videos/:workId', requireLogin, (req, res) => {
-  const { workId } = req.params;
+router.put('/videos/:id', requireLogin, (req, res) => {
+  const { id } = req.params;
   const isAdmin = req.session.user.role === 'admin';
 
-  const video = prepare('SELECT v.*, d.nickname FROM videos v JOIN darens d ON v.daren_id = d.id WHERE v.work_id = ?').get(workId);
+  const video = prepare('SELECT v.*, d.nickname FROM videos v JOIN darens d ON v.daren_id = d.id WHERE v.id = ?').get(id);
   if (!video) return res.status(404).json({ error: '视频不存在' });
   if (!isAdmin && video.nickname !== req.session.user.display_name) {
     return res.status(403).json({ error: '只能编辑自己的数据' });
@@ -55,7 +55,7 @@ router.put('/videos/:workId', requireLogin, (req, res) => {
       const newValue = String(req.body[col] ?? '');
       if (oldValue !== newValue) {
         changes[col] = { old: oldValue, new: newValue };
-        prepare(`UPDATE videos SET ${safeCol} = ? WHERE work_id = ?`).run(req.body[col], workId);
+        prepare(`UPDATE videos SET ${safeCol} = ? WHERE id = ?`).run(req.body[col], id);
       }
     }
   }
@@ -63,7 +63,7 @@ router.put('/videos/:workId', requireLogin, (req, res) => {
   if (Object.keys(changes).length > 0) {
     resetDarenConfirmation({ prepare, auditLog, req, darenId: video.daren_id });
   }
-  auditLog(req, 'videos', workId, changes);
+  auditLog(req, 'videos', id, changes);
   res.json({ ok: true, changes: Object.keys(changes) });
 });
 
