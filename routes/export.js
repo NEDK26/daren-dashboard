@@ -17,7 +17,8 @@ router.get('/export', requireAdmin, async (req, res) => {
   if (category) { conditions.push('d.category = ?'); params.push(category); }
   if (search) { conditions.push('d.nickname LIKE ?'); params.push('%' + search + '%'); }
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
-  sql += ' ORDER BY d.nickname, v.platform, v.publish_time DESC';
+  // videos.id is assigned in Excel row insertion order; keep export rows aligned with the source workbook.
+  sql += ' ORDER BY v.id';
 
   const rows = prepare(sql).all(...params);
 
