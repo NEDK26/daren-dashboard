@@ -39,7 +39,7 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
   const ws = workbook.worksheets[0];
   if (!ws) return res.status(400).json({ error: '空文件' });
 
-  let imported = 0, skipped = 0, newUsers = 0;
+  let imported = 0, skipped = 0, skippedNoName = 0, skippedNoWorkId = 0, skippedConflict = 0, newUsers = 0;
   const darenCache = new Map();
 
   for (const d of prepare('SELECT id, nickname FROM darens').all()) {
@@ -48,8 +48,18 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
 
   const defaultHash = hashPassword('123456');
 
+  console.log('--- [DEBUG] workbook loaded ---');
+  console.log('  worksheet name:', ws.name);
+  console.log('  row count:', ws.rowCount);
+  console.log('  actual row count:', ws.actualRowCount);
+
+  // Debug: dump first data row to verify column mapping
+  let debugDone = false;
+  let totalRows = 0;
+
   ws.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
+    totalRows++;
 
     const getVal = (col) => {
       const cell = row.getCell(col);
@@ -58,10 +68,22 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
     const getNum = (col) => Number(row.getCell(col).value) || 0;
 
     const nickname = getVal(12) || getVal(1);
-    if (!nickname) { skipped++; return; }
+    if (!nickname) { skippedNoName++; skipped++; return; }
 
     const workId = getVal(25);
-    if (!workId) { skipped++; return; }
+    if (!workId) { skippedNoWorkId++; skipped++; return; }
+
+    if (!debugDone) {
+      console.log('--- [DEBUG] row', rowNumber, '---');
+      console.log('  nickname(col12):', JSON.stringify(getVal(12)));
+      console.log('  workId(col25):', JSON.stringify(workId));
+      console.log('  platform(col17|6):', JSON.stringify(getVal(17) || getVal(6)));
+      console.log('  title(col22):', JSON.stringify(getVal(22)));
+      console.log('  publishTime(col27):', JSON.stringify((() => { const v = row.getCell(27).value; if (!v) return ''; if (v instanceof Date) return v.toISOString().slice(0,10); return String(v).slice(0,10); })()));
+      console.log('  da_plays(col28):', getNum(28));
+      console.log('  da_likes(col30):', getNum(30));
+      debugDone = true;
+    }
 
     let darenId = darenCache.get(nickname);
     if (!darenId) {
@@ -111,8 +133,15 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
       getVal(43), getVal(44), getVal(45), getVal(46),
       JSON.stringify(anomalies)
     );
-    if (info.changes > 0) imported++; else skipped++;
+    if (info.changes > 0) imported++; else { skipped++; skippedConflict++; }
   });
+
+  console.log('--- [DEBUG] import result ---');
+  console.log('  data rows in file:', totalRows);
+  console.log('  imported:', imported);
+  console.log('  skipped (no name):', skippedNoName);
+  console.log('  skipped (no workId):', skippedNoWorkId);
+  console.log('  skipped (conflict/duplicate):', skippedConflict);
 
   res.json({ ok: true, imported, skipped, newUsers });
 });
