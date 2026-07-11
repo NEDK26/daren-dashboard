@@ -154,6 +154,81 @@ body {
   box-shadow: none !important;
 }
 
+/* ── Workbench ── */
+
+.workbench-page { padding-top: 10px; }
+
+.workbench-heading {
+  margin-bottom: 20px;
+}
+
+.workbench-eyebrow {
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.workbench-heading h3 {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.workbench-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.workbench-card {
+  min-height: 210px;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+
+.workbench-card:hover { transform: translateY(-2px); }
+
+.workbench-card-primary { border-color: var(--accent) !important; }
+.workbench-card-disabled { color: var(--ink-muted); }
+
+.workbench-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 24px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.workbench-card-disabled .workbench-card-icon { background: var(--border-em); }
+
+.workbench-card-title {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.workbench-card-desc {
+  margin-top: 8px;
+  color: var(--ink-secondary);
+  font-size: 13px;
+}
+
+.workbench-card-action {
+  margin-top: 24px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.workbench-card-disabled .workbench-card-action { color: var(--ink-muted); }
+
 /* ═══════════════════════════════════════════
    ANT DESIGN OVERRIDES
    覆盖 Ant Design 5 默认样式到纸墨风
@@ -450,4 +525,13 @@ body {
 @keyframes import-dot {
   0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-3px); }
+}
+
+@media (max-width: 640px) {
+  .app-header { padding: 0 14px; }
+  .app-header .user-info { gap: 8px; font-size: 12px; }
+  .app-content { padding: 16px 14px; }
+  .workbench-cards { grid-template-columns: 1fr; gap: 14px; }
+  .workbench-card { min-height: 170px; }
+  .login-card { width: calc(100vw - 32px); }
 }

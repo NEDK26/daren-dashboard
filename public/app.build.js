@@ -118,6 +118,43 @@ function LoginPage({
     block: true
   }, "登录")))));
 }
+function HomePage({
+  onDataCheck
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "workbench-page"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "workbench-heading"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "workbench-eyebrow"
+  }, "本期工作台"), /*#__PURE__*/React.createElement("h3", null, "请选择要核对的内容"))), /*#__PURE__*/React.createElement("div", {
+    className: "workbench-cards"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "workbench-card workbench-card-primary",
+    hoverable: true,
+    onClick: onDataCheck
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "workbench-card-icon"
+  }, "数"), /*#__PURE__*/React.createElement("div", {
+    className: "workbench-card-title"
+  }, "本期数据核对"), /*#__PURE__*/React.createElement("div", {
+    className: "workbench-card-desc"
+  }, "查看和核对本期达人视频数据"), /*#__PURE__*/React.createElement("div", {
+    className: "workbench-card-action"
+  }, "进入核对 →")), /*#__PURE__*/React.createElement(Card, {
+    className: "workbench-card workbench-card-disabled",
+    hoverable: true,
+    onClick: () => message.info('功能正在开发中')
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "workbench-card-icon"
+  }, "费"), /*#__PURE__*/React.createElement("div", {
+    className: "workbench-card-title"
+  }, "本期费用核对"), /*#__PURE__*/React.createElement("div", {
+    className: "workbench-card-desc"
+  }, "费用数据核对功能"), /*#__PURE__*/React.createElement("div", {
+    className: "workbench-card-action"
+  }, "功能正在开发中"))));
+}
 
 // ── DarenList ──
 
@@ -125,7 +162,8 @@ function DarenList({
   user,
   onViewVideos,
   onSettings,
-  onAudit
+  onAudit,
+  onHome
 }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -363,7 +401,9 @@ function DarenList({
   const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
-  }, /*#__PURE__*/React.createElement(Input.Search, {
+  }, /*#__PURE__*/React.createElement(Button, {
+    onClick: onHome
+  }, "功能首页"), /*#__PURE__*/React.createElement(Input.Search, {
     placeholder: "搜索昵称",
     value: searchInput,
     onChange: e => setSearchInput(e.target.value),
@@ -464,7 +504,8 @@ function DarenList({
 function VideoDetail({
   daren,
   user,
-  onBack
+  onBack,
+  onHome
 }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -845,7 +886,9 @@ function VideoDetail({
   }));
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "video-detail-header"
-  }, isAdmin && /*#__PURE__*/React.createElement(Button, {
+  }, /*#__PURE__*/React.createElement(Button, {
+    onClick: onHome
+  }, "功能首页"), isAdmin && /*#__PURE__*/React.createElement(Button, {
     onClick: onBack
   }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'), !isAdmin && /*#__PURE__*/React.createElement(Space, null, "当前状态：", confirmationStatusTag(confirmationStatus), confirmationStatus === '待确认' && /*#__PURE__*/React.createElement(Button, {
     size: "small",
@@ -1148,7 +1191,7 @@ function AuditPage({
 
 function App() {
   const [user, setUser] = useState(null);
-  const [page, setPage] = useState('darens');
+  const [page, setPage] = useState('home');
   const [selectedDaren, setSelectedDaren] = useState(null);
   const [checking, setChecking] = useState(true);
   useEffect(() => {
@@ -1156,16 +1199,21 @@ function App() {
       if (res.user) setUser(res.user);
     }).catch(() => {}).finally(() => setChecking(false));
   }, []);
-  useEffect(() => {
-    if (!user || user.role === 'admin' || selectedDaren) return;
-    api.get('/api/darens').then(darens => {
+  const enterDataCheck = useCallback(async () => {
+    if (user.role === 'admin') {
+      setPage('darens');
+      return;
+    }
+    try {
+      const darens = await api.get('/api/darens');
       const daren = darens && darens[0];
-      if (daren) {
-        setSelectedDaren(daren);
-        setPage('videos');
-      }
-    }).catch(() => {});
-  }, [user, selectedDaren]);
+      if (!daren) return message.info('暂无可核对的数据');
+      setSelectedDaren(daren);
+      setPage('videos');
+    } catch (e) {
+      message.error('加载数据失败');
+    }
+  }, [user]);
   const navigateToVideos = useCallback(daren => {
     setSelectedDaren(daren);
     setPage('videos');
@@ -1173,11 +1221,15 @@ function App() {
   const goBack = useCallback(() => {
     setPage('darens');
   }, []);
+  const goHome = useCallback(() => {
+    setSelectedDaren(null);
+    setPage('home');
+  }, []);
   const handleLogout = useCallback(async () => {
     await api.post('/api/logout');
     setUser(null);
     setSelectedDaren(null);
-    setPage('darens');
+    setPage('home');
   }, []);
   if (checking) return null;
   if (!user) {
@@ -1192,11 +1244,16 @@ function App() {
   };
   const renderPage = () => {
     switch (page) {
+      case 'home':
+        return /*#__PURE__*/React.createElement(HomePage, {
+          onDataCheck: enterDataCheck
+        });
       case 'videos':
         return /*#__PURE__*/React.createElement(VideoDetail, {
           daren: selectedDaren,
           user: user,
-          onBack: goBack
+          onBack: goBack,
+          onHome: goHome
         });
       case 'settings':
         return /*#__PURE__*/React.createElement(SettingsPage, {
@@ -1211,7 +1268,8 @@ function App() {
           user: user,
           onViewVideos: navigateToVideos,
           onSettings: () => setPage('settings'),
-          onAudit: () => setPage('audit')
+          onAudit: () => setPage('audit'),
+          onHome: goHome
         });
     }
   };

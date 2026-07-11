@@ -60,9 +60,36 @@ function LoginPage({ onLogin }) {
   );
 }
 
+function HomePage({ onDataCheck }) {
+  return (
+    <div className="workbench-page">
+      <div className="workbench-heading">
+        <div>
+          <div className="workbench-eyebrow">本期工作台</div>
+          <h3>请选择要核对的内容</h3>
+        </div>
+      </div>
+      <div className="workbench-cards">
+        <Card className="workbench-card workbench-card-primary" hoverable onClick={onDataCheck}>
+          <div className="workbench-card-icon">数</div>
+          <div className="workbench-card-title">本期数据核对</div>
+          <div className="workbench-card-desc">查看和核对本期达人视频数据</div>
+          <div className="workbench-card-action">进入核对 →</div>
+        </Card>
+        <Card className="workbench-card workbench-card-disabled" hoverable onClick={() => message.info('功能正在开发中')}>
+          <div className="workbench-card-icon">费</div>
+          <div className="workbench-card-title">本期费用核对</div>
+          <div className="workbench-card-desc">费用数据核对功能</div>
+          <div className="workbench-card-action">功能正在开发中</div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // ── DarenList ──
 
-function DarenList({ user, onViewVideos, onSettings, onAudit }) {
+function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -212,6 +239,7 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
   return (
     <div>
       <div className="toolbar">
+        <Button onClick={onHome}>功能首页</Button>
         <Input.Search placeholder="搜索昵称" value={searchInput} onChange={e => setSearchInput(e.target.value)} onSearch={() => { setPage(1); setSearch(searchInput); }} style={{ width: 200 }} allowClear />
         <Select placeholder="达人分类" value={category || undefined} onChange={v => { setPage(1); setCategory(v || ''); }} style={{ width: 150, marginLeft: 12 }} allowClear options={categoryOptions} />
         <div className="spacer" />
@@ -252,7 +280,7 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
   );
 }
 
-function VideoDetail({ daren, user, onBack }) {
+function VideoDetail({ daren, user, onBack, onHome }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -474,6 +502,7 @@ function VideoDetail({ daren, user, onBack }) {
   return (
     <>
       <div className="video-detail-header">
+        <Button onClick={onHome}>功能首页</Button>
         {isAdmin && <Button onClick={onBack}>← 返回</Button>}
         <h3>{isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'}</h3>
         {!isAdmin && <Space>当前状态：{confirmationStatusTag(confirmationStatus)}{confirmationStatus === '待确认' && <Button size="small" type="primary" onClick={() => submitConfirmation('已确认')}>确认数据无误</Button>}</Space>}
@@ -603,7 +632,7 @@ function AuditPage({ onBack }) {
 
 function App() {
   const [user, setUser] = useState(null);
-  const [page, setPage] = useState('darens');
+  const [page, setPage] = useState('home');
   const [selectedDaren, setSelectedDaren] = useState(null);
   const [checking, setChecking] = useState(true);
 
@@ -614,16 +643,21 @@ function App() {
       .finally(() => setChecking(false));
   }, []);
 
-  useEffect(() => {
-    if (!user || user.role === 'admin' || selectedDaren) return;
-    api.get('/api/darens').then(darens => {
+  const enterDataCheck = useCallback(async () => {
+    if (user.role === 'admin') {
+      setPage('darens');
+      return;
+    }
+    try {
+      const darens = await api.get('/api/darens');
       const daren = darens && darens[0];
-      if (daren) {
-        setSelectedDaren(daren);
-        setPage('videos');
-      }
-    }).catch(() => {});
-  }, [user, selectedDaren]);
+      if (!daren) return message.info('暂无可核对的数据');
+      setSelectedDaren(daren);
+      setPage('videos');
+    } catch (e) {
+      message.error('加载数据失败');
+    }
+  }, [user]);
 
   const navigateToVideos = useCallback((daren) => {
     setSelectedDaren(daren);
@@ -634,11 +668,16 @@ function App() {
     setPage('darens');
   }, []);
 
+  const goHome = useCallback(() => {
+    setSelectedDaren(null);
+    setPage('home');
+  }, []);
+
   const handleLogout = useCallback(async () => {
     await api.post('/api/logout');
     setUser(null);
     setSelectedDaren(null);
-    setPage('darens');
+    setPage('home');
   }, []);
 
   if (checking) return null;
@@ -651,14 +690,16 @@ function App() {
 
   const renderPage = () => {
     switch (page) {
+      case 'home':
+        return <HomePage onDataCheck={enterDataCheck} />;
       case 'videos':
-        return <VideoDetail daren={selectedDaren} user={user} onBack={goBack} />;
+        return <VideoDetail daren={selectedDaren} user={user} onBack={goBack} onHome={goHome} />;
       case 'settings':
         return <SettingsPage onBack={goBack} />;
       case 'audit':
         return <AuditPage onBack={goBack} />;
       default:
-        return <DarenList user={user} onViewVideos={navigateToVideos} onSettings={() => setPage('settings')} onAudit={() => setPage('audit')} />;
+        return <DarenList user={user} onViewVideos={navigateToVideos} onSettings={() => setPage('settings')} onAudit={() => setPage('audit')} onHome={goHome} />;
     }
   };
 
