@@ -10,10 +10,8 @@ router.get('/darens', requireLogin, (req, res) => {
 
   let sql = `
     SELECT d.id, d.nickname, d.organization, d.content_type, d.category,
-           d.platform, d.is_main_platform, d.platform_nickname, d.homepage_url,
-           d.account, d.followers,
-           COALESCE(SUM(v.da_plays), 0) as total_plays,
-           GROUP_CONCAT(DISTINCT v.platform) as platforms
+           d.platform_nickname, d.homepage_url, d.account, d.followers,
+           COALESCE(SUM(v.da_plays), 0) as total_plays
     FROM darens d
     LEFT JOIN videos v ON v.daren_id = d.id
   `;

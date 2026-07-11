@@ -5,7 +5,7 @@ const { requireLogin, auditLog } = require('../middleware');
 
 router.get('/darens/:id/videos', requireLogin, (req, res) => {
   const { id } = req.params;
-  const { platform, start, end, violation, compliance } = req.query;
+  const { platform, title, violation, compliance } = req.query;
   const isAdmin = req.session.user.role === 'admin';
 
   if (!isAdmin) {
@@ -19,11 +19,10 @@ router.get('/darens/:id/videos', requireLogin, (req, res) => {
   const params = [id];
 
   if (platform) { sql += ' AND platform = ?'; params.push(platform); }
-  if (start) { sql += ' AND publish_time >= ?'; params.push(start); }
-  if (end) { sql += ' AND publish_time <= ?'; params.push(end + ' 23:59:59'); }
+  if (title) { sql += ' AND title LIKE ?'; params.push('%' + title + '%'); }
   if (violation && violation !== 'all') { sql += ' AND violation_status = ?'; params.push(violation); }
   if (compliance && compliance !== 'all') { sql += ' AND compliance_status = ?'; params.push(compliance); }
-  sql += ' ORDER BY publish_time DESC';
+  sql += ' ORDER BY platform, publish_time DESC';
 
   res.json(prepare(sql).all(...params));
 });

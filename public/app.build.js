@@ -16,7 +16,6 @@ const {
   Select,
   Upload,
   Tooltip,
-  DatePicker,
   Image,
   Checkbox
 } = antd;
@@ -103,7 +102,7 @@ function LoginPage({
   }, "登录")))));
 }
 
-// ── Placeholder pages ──
+// ── DarenList ──
 
 function DarenList({
   user,
@@ -156,10 +155,13 @@ function DarenList({
     dataIndex: 'nickname',
     key: 'nickname',
     width: 140,
-    render: text => /*#__PURE__*/React.createElement("span", {
+    render: (text, record) => /*#__PURE__*/React.createElement("a", {
       style: {
-        fontWeight: 600
-      }
+        fontWeight: 600,
+        cursor: 'pointer',
+        color: '#8b5e3c'
+      },
+      onClick: () => onViewVideos(record)
     }, text)
   }, {
     title: '机构名称',
@@ -177,6 +179,33 @@ function DarenList({
     key: 'category',
     width: 130
   }, {
+    title: '平台昵称',
+    dataIndex: 'platform_nickname',
+    key: 'platform_nickname',
+    width: 120
+  }, {
+    title: '主页链接',
+    dataIndex: 'homepage_url',
+    key: 'homepage_url',
+    width: 100,
+    ellipsis: true,
+    render: v => v ? /*#__PURE__*/React.createElement("a", {
+      href: v,
+      target: "_blank",
+      rel: "noreferrer"
+    }, "查看") : '-'
+  }, {
+    title: '账号',
+    dataIndex: 'account',
+    key: 'account',
+    width: 110
+  }, {
+    title: '粉丝数',
+    dataIndex: 'followers',
+    key: 'followers',
+    width: 100,
+    render: v => (v || 0).toLocaleString()
+  }, {
     title: '总播放量',
     dataIndex: 'total_plays',
     key: 'total_plays',
@@ -186,49 +215,6 @@ function DarenList({
         fontVariantNumeric: 'tabular-nums'
       }
     }, (v || 0).toLocaleString())
-  }, {
-    title: '平台数据',
-    key: 'platforms',
-    width: 210,
-    render: (_, record) => {
-      const platforms = (record.platforms || '').split(',').filter(Boolean);
-      const config = {
-        '抖音': {
-          className: 'btn-douyin',
-          color: '#ff2e63'
-        },
-        '快手': {
-          className: 'btn-kuaishou',
-          color: '#ff6b00'
-        },
-        'B站': {
-          className: 'btn-bilibili',
-          color: '#00aeec'
-        }
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        className: "platform-btns"
-      }, ['抖音', '快手', 'B站'].map(p => {
-        const cfg = config[p];
-        const active = platforms.includes(p);
-        return /*#__PURE__*/React.createElement(Button, {
-          key: p,
-          size: "small",
-          type: active ? 'primary' : 'default',
-          ghost: active,
-          disabled: !active,
-          className: cfg.className,
-          style: active ? {
-            background: cfg.color,
-            borderColor: cfg.color
-          } : {
-            borderColor: cfg.color,
-            color: cfg.color
-          },
-          onClick: () => active && onViewVideos(record, p)
-        }, p);
-      }));
-    }
   }];
   const categoryOptions = [{
     value: '美食',
@@ -328,15 +314,15 @@ function DarenList({
 }
 function VideoDetail({
   daren,
-  platform,
   user,
   onBack
 }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState(null);
+  const [platformFilter, setPlatformFilter] = useState(undefined);
   const [violation, setViolation] = useState(undefined);
   const [compliance, setCompliance] = useState(undefined);
+  const [titleSearch, setTitleSearch] = useState('');
   const [editingKey, setEditingKey] = useState('');
   const [editableCols, setEditableCols] = useState([]);
   const [form] = Form.useForm();
@@ -345,11 +331,10 @@ function VideoDetail({
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (platform) params.set('platform', platform);
-      if (dateRange && dateRange[0]) params.set('start', dateRange[0].format('YYYY-MM-DD'));
-      if (dateRange && dateRange[1]) params.set('end', dateRange[1].format('YYYY-MM-DD'));
+      if (platformFilter) params.set('platform', platformFilter);
       if (violation) params.set('violation', violation);
       if (compliance) params.set('compliance', compliance);
+      if (titleSearch) params.set('title', titleSearch);
       const res = await api.get('/api/darens/' + daren.id + '/videos?' + params.toString());
       setData(res || []);
     } catch (e) {
@@ -357,7 +342,7 @@ function VideoDetail({
     } finally {
       setLoading(false);
     }
-  }, [platform, dateRange, violation, compliance, daren.id]);
+  }, [platformFilter, violation, compliance, titleSearch, daren.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -463,22 +448,39 @@ function VideoDetail({
       }
     }, inputNode));
   };
+  const platformTag = p => {
+    if (p === '抖音') return /*#__PURE__*/React.createElement(Tag, {
+      color: "red"
+    }, "抖音");
+    if (p === '快手') return /*#__PURE__*/React.createElement(Tag, {
+      color: "orange"
+    }, "快手");
+    if (p === 'B站') return /*#__PURE__*/React.createElement(Tag, {
+      color: "blue"
+    }, "B站");
+    return p || '-';
+  };
   const columns = [{
+    title: '平台',
+    dataIndex: 'platform',
+    width: 65,
+    render: platformTag
+  }, {
     title: '视频标题',
     dataIndex: 'title',
-    width: 220,
+    width: 200,
     ellipsis: true,
     editable: true
   }, {
     title: '作品标签',
     dataIndex: 'tags',
-    width: 140,
+    width: 120,
     ellipsis: true,
     editable: true
   }, {
     title: '内容链接',
     dataIndex: 'content_url',
-    width: 80,
+    width: 70,
     render: v => v ? /*#__PURE__*/React.createElement("a", {
       href: v,
       target: "_blank",
@@ -488,67 +490,106 @@ function VideoDetail({
       }
     }, "查看") : '-'
   }, {
+    title: '时长',
+    dataIndex: 'duration',
+    width: 65,
+    editable: true
+  }, {
     title: '发布时间',
     dataIndex: 'publish_time',
-    width: 110,
+    width: 105,
     editable: true
   }, {
     title: 'DA播放',
     dataIndex: 'da_plays',
-    width: 90,
+    width: 85,
     render: v => (v || 0).toLocaleString(),
     editable: true
   }, {
     title: 'DA点赞',
     dataIndex: 'da_likes',
-    width: 80,
+    width: 75,
     render: v => (v || 0).toLocaleString(),
     editable: true
   }, {
     title: '7日播放',
     dataIndex: 'da_7d_plays',
-    width: 90,
+    width: 85,
     render: v => (v || 0).toLocaleString(),
     editable: true
   }, {
     title: '7日点赞',
     dataIndex: 'da_7d_likes',
-    width: 80,
+    width: 75,
     render: v => (v || 0).toLocaleString(),
     editable: true
   }, {
     title: '评论',
     dataIndex: 'comments',
-    width: 70,
+    width: 65,
     editable: true
   }, {
     title: '收藏',
     dataIndex: 'saves',
-    width: 70,
+    width: 65,
     editable: true
   }, {
     title: '转发',
     dataIndex: 'shares',
-    width: 70,
+    width: 65,
     editable: true
   }, {
     title: '违规',
     dataIndex: 'violation_status',
-    width: 70,
+    width: 65,
     render: v => v === '违规' ? /*#__PURE__*/React.createElement(Tag, {
       color: "red"
     }, "违规") : /*#__PURE__*/React.createElement(Tag, {
       color: "green"
     }, "未违规")
   }, {
+    title: '违规描述',
+    dataIndex: 'violation_desc',
+    width: 130,
+    ellipsis: true,
+    editable: true
+  }, {
     title: '合规',
     dataIndex: 'compliance_status',
-    width: 70,
+    width: 65,
     render: v => v === '合规' ? /*#__PURE__*/React.createElement(Tag, {
       color: "green"
     }, "合规") : /*#__PURE__*/React.createElement(Tag, {
       color: "orange"
     }, "不合规")
+  }, {
+    title: '合规描述',
+    dataIndex: 'compliance_desc',
+    width: 130,
+    ellipsis: true,
+    editable: true
+  }, {
+    title: '节点',
+    dataIndex: 'is_node',
+    width: 60,
+    editable: true
+  }, {
+    title: '节点名称',
+    dataIndex: 'node_name',
+    width: 110,
+    ellipsis: true,
+    editable: true
+  }, {
+    title: '爆款',
+    dataIndex: 'is_hot',
+    width: 60,
+    editable: true
+  }, {
+    title: '申诉',
+    dataIndex: 'appeal',
+    width: 100,
+    editable: true,
+    ellipsis: true
   }, {
     title: '截图',
     key: 'screenshots',
@@ -591,12 +632,35 @@ function VideoDetail({
     className: "video-detail-header"
   }, /*#__PURE__*/React.createElement(Button, {
     onClick: onBack
-  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, daren.nickname, " — ", platform, " 视频明细")), /*#__PURE__*/React.createElement("div", {
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, daren.nickname, " — 视频明细")), /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
-  }, /*#__PURE__*/React.createElement(DatePicker.RangePicker, {
-    value: dateRange,
-    onChange: setDateRange,
-    placeholder: ['开始', '结束']
+  }, /*#__PURE__*/React.createElement(Select, {
+    placeholder: "平台",
+    allowClear: true,
+    style: {
+      width: 110
+    },
+    value: platformFilter,
+    onChange: setPlatformFilter,
+    options: [{
+      label: '抖音',
+      value: '抖音'
+    }, {
+      label: '快手',
+      value: '快手'
+    }, {
+      label: 'B站',
+      value: 'B站'
+    }]
+  }), /*#__PURE__*/React.createElement(Input.Search, {
+    placeholder: "搜索标题",
+    value: titleSearch,
+    onChange: e => setTitleSearch(e.target.value),
+    onSearch: fetchData,
+    style: {
+      width: 180
+    },
+    allowClear: true
   }), /*#__PURE__*/React.createElement(Select, {
     placeholder: "违规",
     allowClear: true,
@@ -642,7 +706,7 @@ function VideoDetail({
     rowKey: "work_id",
     loading: loading,
     scroll: {
-      x: 1900
+      x: 2600
     },
     pagination: {
       pageSize: 20
@@ -665,6 +729,9 @@ const allColumns = [{
 }, {
   key: 'content_url',
   label: '内容链接'
+}, {
+  key: 'duration',
+  label: '时长'
 }, {
   key: 'publish_time',
   label: '发布时间'
@@ -837,16 +904,14 @@ function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('darens');
   const [selectedDaren, setSelectedDaren] = useState(null);
-  const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [checking, setChecking] = useState(true);
   useEffect(() => {
     api.get('/api/me').then(res => {
       if (res.user) setUser(res.user);
     }).catch(() => {}).finally(() => setChecking(false));
   }, []);
-  const navigateToVideos = useCallback((daren, platform) => {
+  const navigateToVideos = useCallback(daren => {
     setSelectedDaren(daren);
-    setSelectedPlatform(platform);
     setPage('videos');
   }, []);
   const goBack = useCallback(() => {
@@ -873,7 +938,6 @@ function App() {
       case 'videos':
         return /*#__PURE__*/React.createElement(VideoDetail, {
           daren: selectedDaren,
-          platform: selectedPlatform,
           user: user,
           onBack: goBack
         });

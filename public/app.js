@@ -1,5 +1,5 @@
 const { useState, useEffect, useCallback } = React;
-const { Layout, Button, Input, Form, Card, message, Space, Tag, Table, Select, Upload, Tooltip, DatePicker, Image, Checkbox } = antd;
+const { Layout, Button, Input, Form, Card, message, Space, Tag, Table, Select, Upload, Tooltip, Image, Checkbox } = antd;
 
 // ── API helpers ──
 
@@ -53,7 +53,7 @@ function LoginPage({ onLogin }) {
   );
 }
 
-// ── Placeholder pages ──
+// ── DarenList ──
 
 function DarenList({ user, onViewVideos, onSettings, onAudit }) {
   const [data, setData] = useState([]);
@@ -101,40 +101,18 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
 
   const columns = [
     { title: '全网昵称', dataIndex: 'nickname', key: 'nickname', width: 140,
-      render: (text) => <span style={{ fontWeight: 600 }}>{text}</span> },
+      render: (text, record) => <a style={{ fontWeight: 600, cursor: 'pointer', color: '#8b5e3c' }} onClick={() => onViewVideos(record)}>{text}</a> },
     { title: '机构名称', dataIndex: 'organization', key: 'organization', width: 120 },
     { title: '内容类型', dataIndex: 'content_type', key: 'content_type', width: 100 },
     { title: '达人分类', dataIndex: 'category', key: 'category', width: 130 },
+    { title: '平台昵称', dataIndex: 'platform_nickname', key: 'platform_nickname', width: 120 },
+    { title: '主页链接', dataIndex: 'homepage_url', key: 'homepage_url', width: 100, ellipsis: true,
+      render: (v) => v ? <a href={v} target="_blank" rel="noreferrer">查看</a> : '-' },
+    { title: '账号', dataIndex: 'account', key: 'account', width: 110 },
+    { title: '粉丝数', dataIndex: 'followers', key: 'followers', width: 100,
+      render: (v) => (v || 0).toLocaleString() },
     { title: '总播放量', dataIndex: 'total_plays', key: 'total_plays', width: 120,
       render: (v) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{(v || 0).toLocaleString()}</span> },
-    { title: '平台数据', key: 'platforms', width: 210,
-      render: (_, record) => {
-        const platforms = (record.platforms || '').split(',').filter(Boolean);
-        const config = {
-          '抖音': { className: 'btn-douyin', color: '#ff2e63' },
-          '快手': { className: 'btn-kuaishou', color: '#ff6b00' },
-          'B站': { className: 'btn-bilibili', color: '#00aeec' }
-        };
-        return (
-          <div className="platform-btns">
-            {['抖音', '快手', 'B站'].map(p => {
-              const cfg = config[p];
-              const active = platforms.includes(p);
-              return (
-                <Button key={p} size="small"
-                  type={active ? 'primary' : 'default'}
-                  ghost={active}
-                  disabled={!active}
-                  className={cfg.className}
-                  style={active ? { background: cfg.color, borderColor: cfg.color } : { borderColor: cfg.color, color: cfg.color }}
-                  onClick={() => active && onViewVideos(record, p)}
-                >{p}</Button>
-              );
-            })}
-          </div>
-        );
-      }
-    },
   ];
 
   const categoryOptions = [
@@ -170,12 +148,13 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
   );
 }
 
-function VideoDetail({ daren, platform, user, onBack }) {
+function VideoDetail({ daren, user, onBack }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState(null);
+  const [platformFilter, setPlatformFilter] = useState(undefined);
   const [violation, setViolation] = useState(undefined);
   const [compliance, setCompliance] = useState(undefined);
+  const [titleSearch, setTitleSearch] = useState('');
   const [editingKey, setEditingKey] = useState('');
   const [editableCols, setEditableCols] = useState([]);
   const [form] = Form.useForm();
@@ -185,11 +164,10 @@ function VideoDetail({ daren, platform, user, onBack }) {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (platform) params.set('platform', platform);
-      if (dateRange && dateRange[0]) params.set('start', dateRange[0].format('YYYY-MM-DD'));
-      if (dateRange && dateRange[1]) params.set('end', dateRange[1].format('YYYY-MM-DD'));
+      if (platformFilter) params.set('platform', platformFilter);
       if (violation) params.set('violation', violation);
       if (compliance) params.set('compliance', compliance);
+      if (titleSearch) params.set('title', titleSearch);
       const res = await api.get('/api/darens/' + daren.id + '/videos?' + params.toString());
       setData(res || []);
     } catch (e) {
@@ -197,7 +175,7 @@ function VideoDetail({ daren, platform, user, onBack }) {
     } finally {
       setLoading(false);
     }
-  }, [platform, dateRange, violation, compliance, daren.id]);
+  }, [platformFilter, violation, compliance, titleSearch, daren.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -273,27 +251,42 @@ function VideoDetail({ daren, platform, user, onBack }) {
     return <td {...rest}><Form.Item name={dataIndex} style={{margin:0}}>{inputNode}</Form.Item></td>;
   };
 
+  const platformTag = (p) => {
+    if (p === '抖音') return <Tag color="red">抖音</Tag>;
+    if (p === '快手') return <Tag color="orange">快手</Tag>;
+    if (p === 'B站') return <Tag color="blue">B站</Tag>;
+    return p || '-';
+  };
+
   const columns = [
-    { title: '视频标题', dataIndex: 'title', width: 220, ellipsis: true, editable: true },
-    { title: '作品标签', dataIndex: 'tags', width: 140, ellipsis: true, editable: true },
-    { title: '内容链接', dataIndex: 'content_url', width: 80,
+    { title: '平台', dataIndex: 'platform', width: 65, render: platformTag },
+    { title: '视频标题', dataIndex: 'title', width: 200, ellipsis: true, editable: true },
+    { title: '作品标签', dataIndex: 'tags', width: 120, ellipsis: true, editable: true },
+    { title: '内容链接', dataIndex: 'content_url', width: 70,
       render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" style={{color:'#5a6e8a'}}>查看</a> : '-' },
-    { title: '发布时间', dataIndex: 'publish_time', width: 110, editable: true },
-    { title: 'DA播放', dataIndex: 'da_plays', width: 90,
+    { title: '时长', dataIndex: 'duration', width: 65, editable: true },
+    { title: '发布时间', dataIndex: 'publish_time', width: 105, editable: true },
+    { title: 'DA播放', dataIndex: 'da_plays', width: 85,
       render: v => (v||0).toLocaleString(), editable: true },
-    { title: 'DA点赞', dataIndex: 'da_likes', width: 80,
+    { title: 'DA点赞', dataIndex: 'da_likes', width: 75,
       render: v => (v||0).toLocaleString(), editable: true },
-    { title: '7日播放', dataIndex: 'da_7d_plays', width: 90,
+    { title: '7日播放', dataIndex: 'da_7d_plays', width: 85,
       render: v => (v||0).toLocaleString(), editable: true },
-    { title: '7日点赞', dataIndex: 'da_7d_likes', width: 80,
+    { title: '7日点赞', dataIndex: 'da_7d_likes', width: 75,
       render: v => (v||0).toLocaleString(), editable: true },
-    { title: '评论', dataIndex: 'comments', width: 70, editable: true },
-    { title: '收藏', dataIndex: 'saves', width: 70, editable: true },
-    { title: '转发', dataIndex: 'shares', width: 70, editable: true },
-    { title: '违规', dataIndex: 'violation_status', width: 70,
+    { title: '评论', dataIndex: 'comments', width: 65, editable: true },
+    { title: '收藏', dataIndex: 'saves', width: 65, editable: true },
+    { title: '转发', dataIndex: 'shares', width: 65, editable: true },
+    { title: '违规', dataIndex: 'violation_status', width: 65,
       render: v => v==='违规' ? <Tag color="red">违规</Tag> : <Tag color="green">未违规</Tag> },
-    { title: '合规', dataIndex: 'compliance_status', width: 70,
+    { title: '违规描述', dataIndex: 'violation_desc', width: 130, ellipsis: true, editable: true },
+    { title: '合规', dataIndex: 'compliance_status', width: 65,
       render: v => v==='合规' ? <Tag color="green">合规</Tag> : <Tag color="orange">不合规</Tag> },
+    { title: '合规描述', dataIndex: 'compliance_desc', width: 130, ellipsis: true, editable: true },
+    { title: '节点', dataIndex: 'is_node', width: 60, editable: true },
+    { title: '节点名称', dataIndex: 'node_name', width: 110, ellipsis: true, editable: true },
+    { title: '爆款', dataIndex: 'is_hot', width: 60, editable: true },
+    { title: '申诉', dataIndex: 'appeal', width: 100, editable: true, ellipsis: true },
     { title: '截图', key: 'screenshots', width: 270,
       render: (_, record) => renderScreenshots(record) },
     { title: '操作', key: 'actions', width: 80,
@@ -316,10 +309,12 @@ function VideoDetail({ daren, platform, user, onBack }) {
     <>
       <div className="video-detail-header">
         <Button onClick={onBack}>← 返回</Button>
-        <h3>{daren.nickname} — {platform} 视频明细</h3>
+        <h3>{daren.nickname} — 视频明细</h3>
       </div>
       <div className="toolbar">
-        <DatePicker.RangePicker value={dateRange} onChange={setDateRange} placeholder={['开始','结束']} />
+        <Select placeholder="平台" allowClear style={{width:110}} value={platformFilter} onChange={setPlatformFilter}
+          options={[{label:'抖音',value:'抖音'},{label:'快手',value:'快手'},{label:'B站',value:'B站'}]} />
+        <Input.Search placeholder="搜索标题" value={titleSearch} onChange={e => setTitleSearch(e.target.value)} onSearch={fetchData} style={{ width: 180 }} allowClear />
         <Select placeholder="违规" allowClear style={{width:110}} value={violation} onChange={setViolation}
           options={[{label:'全部',value:'all'},{label:'违规',value:'违规'},{label:'未违规',value:'未违规'}]} />
         <Select placeholder="合规" allowClear style={{width:110}} value={compliance} onChange={setCompliance}
@@ -327,7 +322,7 @@ function VideoDetail({ daren, platform, user, onBack }) {
       </div>
       <Form form={form} component={false}>
         <Table columns={mergedColumns} dataSource={data} rowKey="work_id"
-          loading={loading} scroll={{x:1900}} pagination={{pageSize:20}}
+          loading={loading} scroll={{x:2600}} pagination={{pageSize:20}}
           bordered size="small" components={{body:{cell:EditableCell}}} />
       </Form>
     </>
@@ -338,6 +333,7 @@ const allColumns = [
   { key: 'title', label: '视频标题' },
   { key: 'tags', label: '作品描述标签' },
   { key: 'content_url', label: '内容链接' },
+  { key: 'duration', label: '时长' },
   { key: 'publish_time', label: '发布时间' },
   { key: 'da_plays', label: 'DA播放量' },
   { key: 'da_likes', label: 'DA点赞量' },
@@ -438,7 +434,6 @@ function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('darens');
   const [selectedDaren, setSelectedDaren] = useState(null);
-  const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -448,9 +443,8 @@ function App() {
       .finally(() => setChecking(false));
   }, []);
 
-  const navigateToVideos = useCallback((daren, platform) => {
+  const navigateToVideos = useCallback((daren) => {
     setSelectedDaren(daren);
-    setSelectedPlatform(platform);
     setPage('videos');
   }, []);
 
@@ -475,7 +469,7 @@ function App() {
   const renderPage = () => {
     switch (page) {
       case 'videos':
-        return <VideoDetail daren={selectedDaren} platform={selectedPlatform} user={user} onBack={goBack} />;
+        return <VideoDetail daren={selectedDaren} user={user} onBack={goBack} />;
       case 'settings':
         return <SettingsPage onBack={goBack} />;
       case 'audit':

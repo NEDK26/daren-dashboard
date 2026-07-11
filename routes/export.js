@@ -5,11 +5,10 @@ const { prepare } = require('../db');
 const { requireAdmin } = require('../middleware');
 
 router.get('/export', requireAdmin, async (req, res) => {
-  const { platform, category, search } = req.query;
+  const { category, search } = req.query;
 
   let sql = 'SELECT d.nickname, d.organization, d.content_type, d.category, d.platform, d.is_main_platform, d.platform_nickname, d.homepage_url, d.account, d.followers, v.work_id, v.platform as v_platform, v.title, v.tags, v.content_url, v.duration, v.publish_time, v.da_plays, v.da_likes, v.da_7d_plays, v.da_7d_likes, v.comments, v.saves, v.shares, v.violation_status, v.violation_desc, v.compliance_status, v.compliance_desc, v.is_node, v.node_name, v.is_hot, v.appeal, v.screenshot_plays, v.screenshot_likes, v.screenshot_7d_plays, v.screenshot_7d_likes FROM videos v JOIN darens d ON v.daren_id = d.id';
   const conditions = [], params = [];
-  if (platform) { conditions.push('v.platform = ?'); params.push(platform); }
   if (category) { conditions.push('d.category = ?'); params.push(category); }
   if (search) { conditions.push('d.nickname LIKE ?'); params.push('%' + search + '%'); }
   if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
