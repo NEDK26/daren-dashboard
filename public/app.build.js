@@ -705,15 +705,15 @@ function VideoDetail({
     onCell: record => ({
       record,
       dataIndex: col.dataIndex,
-      editable: col.editable,
+      editable: col.editable && (isAdmin || editableCols.includes(col.dataIndex)),
       className: isAnomaly(record, col.dataIndex) ? 'cell-anomaly' : undefined
     })
   }));
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "video-detail-header"
-  }, /*#__PURE__*/React.createElement(Button, {
+  }, isAdmin && /*#__PURE__*/React.createElement(Button, {
     onClick: onBack
-  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, daren.nickname, " — 视频明细")), /*#__PURE__*/React.createElement("div", {
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, isAdmin ? `${daren.nickname} — 视频明细` : '达人数据')), /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
   }, /*#__PURE__*/React.createElement(Select, {
     placeholder: "平台",
@@ -991,6 +991,16 @@ function App() {
       if (res.user) setUser(res.user);
     }).catch(() => {}).finally(() => setChecking(false));
   }, []);
+  useEffect(() => {
+    if (!user || user.role === 'admin' || selectedDaren) return;
+    api.get('/api/darens').then(darens => {
+      const daren = darens && darens[0];
+      if (daren) {
+        setSelectedDaren(daren);
+        setPage('videos');
+      }
+    }).catch(() => {});
+  }, [user, selectedDaren]);
   const navigateToVideos = useCallback(daren => {
     setSelectedDaren(daren);
     setPage('videos');
@@ -1001,6 +1011,7 @@ function App() {
   const handleLogout = useCallback(async () => {
     await api.post('/api/logout');
     setUser(null);
+    setSelectedDaren(null);
     setPage('darens');
   }, []);
   if (checking) return null;
@@ -1046,7 +1057,7 @@ function App() {
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "app-header"
-  }, /*#__PURE__*/React.createElement("h2", null, "达人数据管理"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据'), /*#__PURE__*/React.createElement("div", {
     className: "user-info"
   }, /*#__PURE__*/React.createElement("span", null, user.display_name, "（", roleMap[user.role] || user.role, "）"), /*#__PURE__*/React.createElement(Button, {
     type: "text",

@@ -10,3 +10,9 @@ test('logged-in users can read the global editable-column configuration', () => 
   assert.match(settings, /router\.get\('\/settings\/editable-columns', requireLogin,/);
   assert.match(app, /useEffect\(\(\) => \{\s*api\.get\('\/api\/settings\/editable-columns'\)/s);
 });
+
+test('the video editor enables only configured columns for regular users', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+
+  assert.match(app, /editable:\s*col\.editable\s*&&\s*\(isAdmin\s*\|\|\s*editableCols\.includes\(col\.dataIndex\)\)/);
+});

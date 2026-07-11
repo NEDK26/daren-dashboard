@@ -353,14 +353,14 @@ function VideoDetail({ daren, user, onBack }) {
 
   const mergedColumns = columns.map(col => ({
     ...col,
-    onCell: record => ({ record, dataIndex: col.dataIndex, editable: col.editable, className: isAnomaly(record, col.dataIndex) ? 'cell-anomaly' : undefined })
+    onCell: record => ({ record, dataIndex: col.dataIndex, editable: col.editable && (isAdmin || editableCols.includes(col.dataIndex)), className: isAnomaly(record, col.dataIndex) ? 'cell-anomaly' : undefined })
   }));
 
   return (
     <>
       <div className="video-detail-header">
-        <Button onClick={onBack}>← 返回</Button>
-        <h3>{daren.nickname} — 视频明细</h3>
+        {isAdmin && <Button onClick={onBack}>← 返回</Button>}
+        <h3>{isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'}</h3>
       </div>
       <div className="toolbar">
         <Select placeholder="平台" allowClear style={{width:110}} value={platformFilter} onChange={setPlatformFilter}
@@ -494,6 +494,17 @@ function App() {
       .finally(() => setChecking(false));
   }, []);
 
+  useEffect(() => {
+    if (!user || user.role === 'admin' || selectedDaren) return;
+    api.get('/api/darens').then(darens => {
+      const daren = darens && darens[0];
+      if (daren) {
+        setSelectedDaren(daren);
+        setPage('videos');
+      }
+    }).catch(() => {});
+  }, [user, selectedDaren]);
+
   const navigateToVideos = useCallback((daren) => {
     setSelectedDaren(daren);
     setPage('videos');
@@ -506,6 +517,7 @@ function App() {
   const handleLogout = useCallback(async () => {
     await api.post('/api/logout');
     setUser(null);
+    setSelectedDaren(null);
     setPage('darens');
   }, []);
 
@@ -533,7 +545,7 @@ function App() {
   return (
     <Layout style={{ minHeight: '100vh', background: 'var(--paper)' }}>
       <div className="app-header">
-        <h2>达人数据管理</h2>
+        <h2>{user.role === 'admin' ? '达人数据管理' : '达人数据'}</h2>
         <div className="user-info">
           <span>{user.display_name}（{roleMap[user.role] || user.role}）</span>
           <Button type="text" size="small" onClick={handleLogout} style={{ color: 'var(--ink-secondary)' }}>退出</Button>
