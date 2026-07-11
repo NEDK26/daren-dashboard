@@ -17,7 +17,8 @@ const {
   Upload,
   Tooltip,
   Image,
-  Checkbox
+  Checkbox,
+  Modal
 } = antd;
 
 // ── API helpers ──
@@ -33,6 +34,13 @@ const api = {
   }).then(r => r.json()),
   put: (url, data) => fetch(url, {
     method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  }).then(r => r.json()),
+  delete: (url, data) => fetch(url, {
+    method: 'DELETE',
     headers: {
       'Content-Type': 'application/json'
     },
@@ -115,6 +123,9 @@ function DarenList({
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [importing, setImporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const isAdmin = user && user.role === 'admin';
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -123,6 +134,7 @@ function DarenList({
       if (category) params.set('category', category);
       const res = await api.get('/api/darens?' + params.toString());
       setData(res || []);
+      setSelectedRowKeys([]);
     } catch (e) {
       message.error('加载失败');
     } finally {
@@ -149,6 +161,38 @@ function DarenList({
     if (search) params.set('search', search);
     if (category) params.set('category', category);
     window.open('/api/export?' + params.toString());
+  };
+  const handleDelete = records => {
+    if (!records.length) return;
+    const names = records.slice(0, 5).map(r => r.nickname).join('、');
+    const more = records.length > 5 ? ` 等 ${records.length} 个达人` : '';
+    Modal.confirm({
+      title: `确认删除 ${records.length} 个达人？`,
+      content: `将永久删除 ${names}${more}、其全部视频、同名普通用户账号和本地截图文件。`,
+      okText: '删除',
+      okButtonProps: {
+        danger: true
+      },
+      cancelText: '取消',
+      onOk: async () => {
+        setDeleting(true);
+        try {
+          const res = await api.delete('/api/darens', {
+            ids: records.map(r => r.id)
+          });
+          if (res.ok) {
+            message.success(`已删除 ${res.deletedDarens} 个达人`);
+            fetchData();
+          } else {
+            message.error(res.error || '删除失败');
+          }
+        } catch (e) {
+          message.error('删除失败');
+        } finally {
+          setDeleting(false);
+        }
+      }
+    });
   };
   const columns = [{
     title: '全网昵称',
@@ -222,6 +266,18 @@ function DarenList({
       }
     }, (v || 0).toLocaleString())
   }];
+  if (isAdmin) {
+    columns.push({
+      title: '操作',
+      key: 'actions',
+      width: 90,
+      render: (_, record) => /*#__PURE__*/React.createElement(Button, {
+        danger: true,
+        size: "small",
+        onClick: () => handleDelete([record])
+      }, "删除")
+    });
+  }
   const categoryOptions = [{
     value: '美食',
     label: '美食'
@@ -259,7 +315,8 @@ function DarenList({
     value: '生活',
     label: '生活'
   }];
-  const isAdmin = user && user.role === 'admin';
+  const selectedKeySet = new Set(selectedRowKeys.map(String));
+  const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
   }, /*#__PURE__*/React.createElement(Input.Search, {
@@ -294,6 +351,14 @@ function DarenList({
       marginLeft: 8
     }
   }, "导出"), /*#__PURE__*/React.createElement(Button, {
+    danger: true,
+    loading: deleting,
+    disabled: !selectedRowKeys.length,
+    onClick: () => handleDelete(selectedRows),
+    style: {
+      marginLeft: 8
+    }
+  }, "删除选中"), /*#__PURE__*/React.createElement(Button, {
     onClick: onSettings,
     style: {
       marginLeft: 8
@@ -311,6 +376,10 @@ function DarenList({
     pagination: {
       pageSize: 20
     },
+    rowSelection: isAdmin ? {
+      selectedRowKeys,
+      onChange: setSelectedRowKeys
+    } : undefined,
     bordered: true,
     size: "middle",
     style: {

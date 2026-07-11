@@ -1,5 +1,5 @@
 const { useState, useEffect, useCallback } = React;
-const { Layout, Button, Input, Form, Card, message, Space, Tag, Table, Select, Upload, Tooltip, Image, Checkbox } = antd;
+const { Layout, Button, Input, Form, Card, message, Space, Tag, Table, Select, Upload, Tooltip, Image, Checkbox, Modal } = antd;
 
 // ── API helpers ──
 
@@ -7,6 +7,7 @@ const api = {
   get: (url) => fetch(url).then(r => r.json()),
   post: (url, data) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
   put: (url, data) => fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+  delete: (url, data) => fetch(url, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
   upload: (url, file) => { const fd = new FormData(); fd.append('file', file); return fetch(url, { method: 'POST', body: fd }).then(r => r.json()); }
 };
 
@@ -61,6 +62,9 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [importing, setImporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const isAdmin = user && user.role === 'admin';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -70,6 +74,7 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
       if (category) params.set('category', category);
       const res = await api.get('/api/darens?' + params.toString());
       setData(res || []);
+      setSelectedRowKeys([]);
     } catch (e) {
       message.error('加载失败');
     } finally {
@@ -99,6 +104,35 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
     window.open('/api/export?' + params.toString());
   };
 
+  const handleDelete = (records) => {
+    if (!records.length) return;
+    const names = records.slice(0, 5).map(r => r.nickname).join('、');
+    const more = records.length > 5 ? ` 等 ${records.length} 个达人` : '';
+    Modal.confirm({
+      title: `确认删除 ${records.length} 个达人？`,
+      content: `将永久删除 ${names}${more}、其全部视频、同名普通用户账号和本地截图文件。`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        setDeleting(true);
+        try {
+          const res = await api.delete('/api/darens', { ids: records.map(r => r.id) });
+          if (res.ok) {
+            message.success(`已删除 ${res.deletedDarens} 个达人`);
+            fetchData();
+          } else {
+            message.error(res.error || '删除失败');
+          }
+        } catch (e) {
+          message.error('删除失败');
+        } finally {
+          setDeleting(false);
+        }
+      }
+    });
+  };
+
   const columns = [
     { title: '全网昵称', dataIndex: 'nickname', key: 'nickname', width: 140,
       render: (text, record) => <span><a style={{ fontWeight: 600, cursor: 'pointer', color: '#8b5e3c' }} onClick={() => onViewVideos(record)}>{text}</a>{record.anomaly_count > 0 && <Tag color="red" style={{ marginLeft: 6, fontSize: 11 }}>{record.anomaly_count}</Tag>}</span> },
@@ -115,6 +149,15 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
       render: (v) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{(v || 0).toLocaleString()}</span> },
   ];
 
+  if (isAdmin) {
+    columns.push({
+      title: '操作',
+      key: 'actions',
+      width: 90,
+      render: (_, record) => <Button danger size="small" onClick={() => handleDelete([record])}>删除</Button>
+    });
+  }
+
   const categoryOptions = [
     { value: '美食', label: '美食' }, { value: '美妆', label: '美妆' },
     { value: '搞笑', label: '搞笑' }, { value: '游戏', label: '游戏' },
@@ -124,7 +167,8 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
     { value: '科技', label: '科技' }, { value: '生活', label: '生活' },
   ];
 
-  const isAdmin = user && user.role === 'admin';
+  const selectedKeySet = new Set(selectedRowKeys.map(String));
+  const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
 
   return (
     <div>
@@ -138,12 +182,23 @@ function DarenList({ user, onViewVideos, onSettings, onAudit }) {
               <Button loading={importing}>导入Excel</Button>
             </Upload>
             <Button onClick={handleExport} style={{ marginLeft: 8 }}>导出</Button>
+            <Button danger loading={deleting} disabled={!selectedRowKeys.length} onClick={() => handleDelete(selectedRows)} style={{ marginLeft: 8 }}>删除选中</Button>
             <Button onClick={onSettings} style={{ marginLeft: 8 }}>设置</Button>
             <Button onClick={onAudit} style={{ marginLeft: 8 }}>审核</Button>
           </>
         )}
       </div>
-      <Table columns={columns} dataSource={data} rowKey="id" loading={loading} pagination={{ pageSize: 20 }} bordered size="middle" style={{ marginTop: 16 }} />
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="id"
+        loading={loading}
+        pagination={{ pageSize: 20 }}
+        rowSelection={isAdmin ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined}
+        bordered
+        size="middle"
+        style={{ marginTop: 16 }}
+      />
     </div>
   );
 }

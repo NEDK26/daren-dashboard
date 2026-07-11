@@ -1,7 +1,9 @@
 const express = require('express');
+const path = require('path');
 const router = express.Router();
-const { getDb, prepare, escapeColumn } = require('../db');
+const { getDb, saveDb, prepare, escapeColumn } = require('../db');
 const { requireLogin, requireAdmin, auditLog } = require('../middleware');
+const { deleteDarensByIds } = require('../services/deleteDarens');
 
 router.get('/darens', requireLogin, (req, res) => {
   const { search, category } = req.query;
@@ -74,6 +76,21 @@ router.put('/darens/:id', requireLogin, (req, res) => {
 
   auditLog(req, 'darens', id, changes);
   res.json({ ok: true, changes: Object.keys(changes) });
+});
+
+router.delete('/darens', requireAdmin, (req, res) => {
+  try {
+    const result = deleteDarensByIds({
+      db: getDb(),
+      ids: req.body.ids,
+      actor: req.session.user.display_name,
+      uploadsDir: path.join(__dirname, '..', 'uploads'),
+      saveDb
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(400).json({ error: err.message || '删除失败' });
+  }
 });
 
 function getEditableColumns() {
