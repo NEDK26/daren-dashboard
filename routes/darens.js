@@ -53,7 +53,26 @@ router.get('/darens', requireLogin, (req, res) => {
 
   if (paged) {
     const totalRow = prepare(`SELECT COUNT(*) AS total FROM darens d${whereSql}`).get(...params);
-    return res.json({ rows, total: totalRow ? totalRow.total : 0, page, pageSize });
+    const statusRow = isAdmin
+      ? prepare(`
+          SELECT
+            SUM(CASE WHEN d.confirmation_status = '待确认' THEN 1 ELSE 0 END) AS pending,
+            SUM(CASE WHEN d.confirmation_status = '已确认' THEN 1 ELSE 0 END) AS confirmed,
+            SUM(CASE WHEN d.confirmation_status = '已提交申诉' THEN 1 ELSE 0 END) AS appealed
+          FROM darens d
+        `).get()
+      : null;
+    return res.json({
+      rows,
+      total: totalRow ? totalRow.total : 0,
+      page,
+      pageSize,
+      statusCounts: {
+        pending: Number(statusRow?.pending) || 0,
+        confirmed: Number(statusRow?.confirmed) || 0,
+        appealed: Number(statusRow?.appealed) || 0
+      }
+    });
   }
   res.json(rows);
 });

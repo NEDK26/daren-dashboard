@@ -35,7 +35,16 @@ router.get('/darens/:id/videos', requireLogin, (req, res) => {
   }
 
   const rows = prepare(sql).all(...params);
-  if (paged) return res.json({ rows, total: totalRow ? totalRow.total : 0, page, pageSize });
+  const anomalySummary = getAnomalySummary(id);
+  if (paged) {
+    return res.json({
+      rows,
+      total: totalRow ? totalRow.total : 0,
+      page,
+      pageSize,
+      anomalySummary
+    });
+  }
   res.json(rows);
 });
 
@@ -81,6 +90,24 @@ router.put('/videos/:id', requireLogin, (req, res) => {
 function getEditableColumns() {
   const row = prepare("SELECT value FROM settings WHERE key = ?").get('editable_columns');
   return row ? JSON.parse(row.value) : [];
+}
+
+function getAnomalySummary(darenId) {
+  const daren = prepare('SELECT confirmation_status FROM darens WHERE id = ?').get(darenId);
+  const rows = prepare('SELECT anomaly_data, appeal FROM videos WHERE daren_id = ?').all(darenId);
+  const submittedForDaren = daren?.confirmation_status === '已提交申诉';
+  let anomalyCount = 0;
+  let submittedAnomalyCount = 0;
+
+  for (const row of rows) {
+    if (!row.anomaly_data || row.anomaly_data === '{}') continue;
+    let count = 0;
+    try { count = Object.keys(JSON.parse(row.anomaly_data)).length; } catch {}
+    anomalyCount += count;
+    if (submittedForDaren || String(row.appeal ?? '').trim()) submittedAnomalyCount += count;
+  }
+
+  return { anomalyCount, submittedAnomalyCount };
 }
 
 module.exports = router;

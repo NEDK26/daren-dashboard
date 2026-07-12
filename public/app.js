@@ -101,6 +101,7 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
   const [importStage, setImportStage] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [statusCounts, setStatusCounts] = useState({ pending: 0, confirmed: 0, appealed: 0 });
   const requestRef = useRef(null);
   const isAdmin = user && user.role === 'admin';
   const importStages = ['正在上传文件…', '正在解析 Excel…', '正在批量写入数据…', '正在整理导入结果…'];
@@ -137,6 +138,7 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
       const payload = Array.isArray(res) ? { rows: res, total: res.length } : res;
       setData(payload.rows || []);
       setTotal(payload.total || 0);
+      setStatusCounts(payload.statusCounts || { pending: 0, confirmed: 0, appealed: 0 });
       setSelectedRowKeys([]);
     } catch (e) {
       if (e.name !== 'AbortError') message.error('加载失败');
@@ -238,6 +240,22 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
 
   return (
     <div>
+      {isAdmin && (
+        <div className="confirmation-summary-card" aria-label="达人确认状态统计">
+          <div className="confirmation-summary-item pending">
+            <span>待确认</span>
+            <strong>{statusCounts.pending}</strong>
+          </div>
+          <div className="confirmation-summary-item confirmed">
+            <span>已确认</span>
+            <strong>{statusCounts.confirmed}</strong>
+          </div>
+          <div className="confirmation-summary-item appealed">
+            <span>已申诉</span>
+            <strong>{statusCounts.appealed}</strong>
+          </div>
+        </div>
+      )}
       <div className="toolbar">
         <Button onClick={onHome}>功能首页</Button>
         <Input.Search placeholder="搜索昵称" value={searchInput} onChange={e => setSearchInput(e.target.value)} onSearch={() => { setPage(1); setSearch(searchInput); }} style={{ width: 200 }} allowClear />
@@ -292,6 +310,7 @@ function VideoDetail({ daren, user, onBack, onHome }) {
   const [titleSearch, setTitleSearch] = useState('');
   const [editingKey, setEditingKey] = useState('');
   const [editableCols, setEditableCols] = useState([]);
+  const [anomalySummary, setAnomalySummary] = useState({ anomalyCount: 0, submittedAnomalyCount: 0 });
   const [form] = Form.useForm();
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const requestRef = useRef(null);
@@ -322,6 +341,7 @@ function VideoDetail({ daren, user, onBack, onHome }) {
       const payload = Array.isArray(res) ? { rows: res, total: res.length } : res;
       setData(payload.rows || []);
       setTotal(payload.total || 0);
+      setAnomalySummary(payload.anomalySummary || { anomalyCount: 0, submittedAnomalyCount: 0 });
     } catch (e) {
       if (e.name !== 'AbortError') message.error('加载失败');
     } finally {
@@ -342,6 +362,7 @@ function VideoDetail({ daren, user, onBack, onHome }) {
       const res = await api.put('/api/darens/' + daren.id + '/confirmation', { status });
       if (res.ok) {
         setConfirmationStatus(res.status);
+        await fetchData();
         message.success(status === '已确认' ? '已确认数据无误' : '修改已提交');
       } else {
         message.error(res.error || '提交失败');
@@ -506,6 +527,16 @@ function VideoDetail({ daren, user, onBack, onHome }) {
         {isAdmin && <Button onClick={onBack}>← 返回</Button>}
         <h3>{isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'}</h3>
         {!isAdmin && <Space>当前状态：{confirmationStatusTag(confirmationStatus)}{confirmationStatus === '待确认' && <Button size="small" type="primary" onClick={() => submitConfirmation('已确认')}>确认数据无误</Button>}</Space>}
+      </div>
+      <div className="anomaly-summary-card" aria-label="视频异常统计">
+        <div className="anomaly-summary-item anomaly">
+          <span>异常数量</span>
+          <strong>{anomalySummary.anomalyCount}</strong>
+        </div>
+        <div className="anomaly-summary-item submitted">
+          <span>已提交异常数量</span>
+          <strong>{anomalySummary.submittedAnomalyCount}</strong>
+        </div>
       </div>
       <div className="toolbar">
         <Select placeholder="平台" allowClear style={{width:110}} value={platformFilter} onChange={value => { setPage(1); setPlatformFilter(value); }}

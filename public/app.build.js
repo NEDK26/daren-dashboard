@@ -176,6 +176,11 @@ function DarenList({
   const [importStage, setImportStage] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [statusCounts, setStatusCounts] = useState({
+    pending: 0,
+    confirmed: 0,
+    appealed: 0
+  });
   const requestRef = useRef(null);
   const isAdmin = user && user.role === 'admin';
   const importStages = ['正在上传文件…', '正在解析 Excel…', '正在批量写入数据…', '正在整理导入结果…'];
@@ -214,6 +219,11 @@ function DarenList({
       } : res;
       setData(payload.rows || []);
       setTotal(payload.total || 0);
+      setStatusCounts(payload.statusCounts || {
+        pending: 0,
+        confirmed: 0,
+        appealed: 0
+      });
       setSelectedRowKeys([]);
     } catch (e) {
       if (e.name !== 'AbortError') message.error('加载失败');
@@ -399,7 +409,16 @@ function DarenList({
   }];
   const selectedKeySet = new Set(selectedRowKeys.map(String));
   const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
-  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  return /*#__PURE__*/React.createElement("div", null, isAdmin && /*#__PURE__*/React.createElement("div", {
+    className: "confirmation-summary-card",
+    "aria-label": "达人确认状态统计"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "confirmation-summary-item pending"
+  }, /*#__PURE__*/React.createElement("span", null, "待确认"), /*#__PURE__*/React.createElement("strong", null, statusCounts.pending)), /*#__PURE__*/React.createElement("div", {
+    className: "confirmation-summary-item confirmed"
+  }, /*#__PURE__*/React.createElement("span", null, "已确认"), /*#__PURE__*/React.createElement("strong", null, statusCounts.confirmed)), /*#__PURE__*/React.createElement("div", {
+    className: "confirmation-summary-item appealed"
+  }, /*#__PURE__*/React.createElement("span", null, "已申诉"), /*#__PURE__*/React.createElement("strong", null, statusCounts.appealed))), /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
   }, /*#__PURE__*/React.createElement(Button, {
     onClick: onHome
@@ -518,6 +537,10 @@ function VideoDetail({
   const [titleSearch, setTitleSearch] = useState('');
   const [editingKey, setEditingKey] = useState('');
   const [editableCols, setEditableCols] = useState([]);
+  const [anomalySummary, setAnomalySummary] = useState({
+    anomalyCount: 0,
+    submittedAnomalyCount: 0
+  });
   const [form] = Form.useForm();
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const requestRef = useRef(null);
@@ -551,6 +574,10 @@ function VideoDetail({
       } : res;
       setData(payload.rows || []);
       setTotal(payload.total || 0);
+      setAnomalySummary(payload.anomalySummary || {
+        anomalyCount: 0,
+        submittedAnomalyCount: 0
+      });
     } catch (e) {
       if (e.name !== 'AbortError') message.error('加载失败');
     } finally {
@@ -572,6 +599,7 @@ function VideoDetail({
       });
       if (res.ok) {
         setConfirmationStatus(res.status);
+        await fetchData();
         message.success(status === '已确认' ? '已确认数据无误' : '修改已提交');
       } else {
         message.error(res.error || '提交失败');
@@ -895,6 +923,13 @@ function VideoDetail({
     type: "primary",
     onClick: () => submitConfirmation('已确认')
   }, "确认数据无误"))), /*#__PURE__*/React.createElement("div", {
+    className: "anomaly-summary-card",
+    "aria-label": "视频异常统计"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "anomaly-summary-item anomaly"
+  }, /*#__PURE__*/React.createElement("span", null, "异常数量"), /*#__PURE__*/React.createElement("strong", null, anomalySummary.anomalyCount)), /*#__PURE__*/React.createElement("div", {
+    className: "anomaly-summary-item submitted"
+  }, /*#__PURE__*/React.createElement("span", null, "已提交异常数量"), /*#__PURE__*/React.createElement("strong", null, anomalySummary.submittedAnomalyCount))), /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
   }, /*#__PURE__*/React.createElement(Select, {
     placeholder: "平台",

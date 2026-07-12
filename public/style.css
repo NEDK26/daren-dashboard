@@ -470,6 +470,81 @@ body {
   background: #fff1f0 !important;
 }
 
+/* ── Confirmation status summary ── */
+
+.confirmation-summary-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-bottom: 20px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.confirmation-summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 92px;
+  padding: 18px 22px;
+  background: var(--card);
+}
+
+.confirmation-summary-item span {
+  color: var(--ink-secondary);
+  font-size: 13px;
+}
+
+.confirmation-summary-item strong {
+  color: var(--ink);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.confirmation-summary-item.pending strong { color: var(--warning); }
+.confirmation-summary-item.confirmed strong { color: var(--success); }
+.confirmation-summary-item.appealed strong { color: var(--danger); }
+
+.anomaly-summary-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin-bottom: 20px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.anomaly-summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 92px;
+  padding: 18px 22px;
+  background: var(--card);
+}
+
+.anomaly-summary-item span {
+  color: var(--ink-secondary);
+  font-size: 13px;
+}
+
+.anomaly-summary-item strong {
+  color: var(--ink);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.anomaly-summary-item.anomaly strong { color: var(--danger); }
+.anomaly-summary-item.submitted strong { color: var(--warning); }
+
 /* ── Import progress ── */
 
 .import-progress-content {
@@ -533,5 +608,9 @@ body {
   .app-content { padding: 16px 14px; }
   .workbench-cards { grid-template-columns: 1fr; gap: 14px; }
   .workbench-card { min-height: 170px; }
+  .confirmation-summary-item { min-height: 76px; padding: 14px; }
+  .confirmation-summary-item strong { font-size: 24px; }
+  .anomaly-summary-item { min-height: 76px; padding: 14px; }
+  .anomaly-summary-item strong { font-size: 24px; }
   .login-card { width: calc(100vw - 32px); }
 }
