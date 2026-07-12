@@ -89,6 +89,72 @@ function BatchPicker({
     onChange: id => onChange(selectable.find(batch => batch.id === id))
   });
 }
+function BatchSwitchPage({
+  batches,
+  selectedBatch,
+  onSelectBatch,
+  onBack
+}) {
+  const selectable = batches.filter(batch => batch.status !== 'draft');
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "video-detail-header"
+  }, /*#__PURE__*/React.createElement(Button, {
+    onClick: onBack
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, "切换批次")), /*#__PURE__*/React.createElement("div", {
+    className: "batch-switch-list"
+  }, selectable.map(batch => /*#__PURE__*/React.createElement(Card, {
+    key: batch.id,
+    className: 'batch-switch-card ' + (selectedBatch?.id === batch.id ? 'active' : ''),
+    hoverable: true,
+    onClick: () => onSelectBatch(batch)
+  }, /*#__PURE__*/React.createElement("strong", null, batch.name), /*#__PURE__*/React.createElement("span", null, batch.status === 'current' ? '当前批次' : '历史批次'))), !selectable.length && /*#__PURE__*/React.createElement(Card, null, "暂无可用批次")));
+}
+function AppNavigation({
+  user,
+  page,
+  onNavigate,
+  placement
+}) {
+  const isAdmin = user.role === 'admin';
+  const items = isAdmin ? [{
+    key: 'darens',
+    label: '达人页',
+    icon: '人'
+  }, {
+    key: 'batches',
+    label: '批次管理',
+    icon: '批'
+  }, {
+    key: 'settings',
+    label: '编辑设置',
+    icon: '设'
+  }, {
+    key: 'audit',
+    label: '完整审计日志',
+    icon: '审'
+  }] : [{
+    key: 'data',
+    label: '数据核对',
+    icon: '数'
+  }, {
+    key: 'audit',
+    label: '我的日志',
+    icon: '记'
+  }, {
+    key: 'batch-switch',
+    label: '切换批次',
+    icon: '批'
+  }];
+  const activeKey = isAdmin ? page === 'videos' || page === 'home' || page === 'empty' ? 'darens' : page : page === 'videos' || page === 'empty' || page === 'home' ? 'data' : page;
+  return /*#__PURE__*/React.createElement("nav", {
+    className: placement === 'desktop' ? 'desktop-nav' : 'mobile-nav'
+  }, items.map(item => /*#__PURE__*/React.createElement(Button, {
+    key: item.key,
+    type: "text",
+    className: activeKey === item.key ? 'active' : '',
+    onClick: () => onNavigate(item.key)
+  }, /*#__PURE__*/React.createElement("span", null, item.icon), item.label)));
+}
 
 // ── LoginPage ──
 
@@ -1583,6 +1649,10 @@ function App() {
     setSelectedDaren(null);
     setPage(user.role === 'admin' ? 'darens' : 'home');
   }, [user]);
+  const navigatePrimary = useCallback(key => {
+    if (key === 'data' || key === 'darens') return enterDataCheck();
+    setPage(key);
+  }, [enterDataCheck]);
   if (checking) return null;
   if (!user) {
     return /*#__PURE__*/React.createElement(LoginPage, {
@@ -1625,6 +1695,13 @@ function App() {
           onSelectBatch: chooseBatch,
           onBack: goHome
         });
+      case 'batch-switch':
+        return /*#__PURE__*/React.createElement(BatchSwitchPage, {
+          batches: batches,
+          selectedBatch: selectedBatch,
+          onSelectBatch: chooseBatch,
+          onBack: goHome
+        });
       case 'empty':
         return /*#__PURE__*/React.createElement(Card, null, "本期暂无数据");
       default:
@@ -1646,9 +1723,14 @@ function App() {
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "app-header"
-  }, /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据'), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据'), /*#__PURE__*/React.createElement(AppNavigation, {
+    user: user,
+    page: page,
+    onNavigate: navigatePrimary,
+    placement: "desktop"
+  }), /*#__PURE__*/React.createElement("div", {
     className: "user-info"
-  }, /*#__PURE__*/React.createElement(BatchPicker, {
+  }, user.role === 'admin' && /*#__PURE__*/React.createElement(BatchPicker, {
     batches: batches,
     value: selectedBatch,
     onChange: chooseBatch
@@ -1661,7 +1743,12 @@ function App() {
     }
   }, "退出"))), /*#__PURE__*/React.createElement("div", {
     className: "app-content"
-  }, renderPage()));
+  }, renderPage()), /*#__PURE__*/React.createElement(AppNavigation, {
+    user: user,
+    page: page,
+    onNavigate: navigatePrimary,
+    placement: "mobile"
+  }));
 }
 
 // ── Render ──

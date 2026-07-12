@@ -62,6 +62,27 @@ body {
   color: var(--paper);
 }
 
+.desktop-nav {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+  margin-left: 28px;
+}
+
+.desktop-nav .ant-btn {
+  height: 52px;
+  padding: 0 12px;
+  color: rgba(250,247,242,0.68) !important;
+  border-radius: 0;
+}
+
+.desktop-nav .ant-btn span:first-child { display: none; }
+.desktop-nav .ant-btn.active { color: var(--paper) !important; border-bottom: 2px solid var(--paper); }
+
+.mobile-nav { display: none; }
+
 .app-header .user-info {
   display: flex;
   align-items: center;
@@ -82,6 +103,12 @@ body {
 
 .batch-manager-card { margin-bottom: 16px; }
 .batch-manager-table { margin-top: 16px; }
+
+.batch-switch-list { display: grid; gap: 12px; max-width: 720px; }
+.batch-switch-card { cursor: pointer; }
+.batch-switch-card.active { border-color: var(--accent) !important; }
+.batch-switch-card .ant-card-body { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.batch-switch-card span { color: var(--ink-muted); font-size: 12px; }
 
 .app-content {
   padding: 24px 28px;
@@ -632,8 +659,34 @@ body {
 @media (max-width: 640px) {
   .app-header { padding: 0 14px; }
   .app-header .user-info { gap: 8px; font-size: 12px; }
-  .batch-picker { min-width: 130px; max-width: 150px; }
-  .app-content { padding: 16px 14px; }
+  .desktop-nav { display: none; }
+  .batch-picker { display: none; }
+  .app-content { padding: 16px 14px 84px; }
+  .mobile-nav {
+    position: fixed;
+    z-index: 20;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    background: var(--card);
+    border-top: 1px solid var(--border);
+  }
+  .mobile-nav .ant-btn {
+    height: 48px;
+    min-width: 62px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    color: var(--ink-muted) !important;
+    font-size: 11px;
+  }
+  .mobile-nav .ant-btn span:first-child { font-size: 16px; line-height: 1; }
+  .mobile-nav .ant-btn.active { color: var(--accent) !important; font-weight: 600; }
   .workbench-cards { grid-template-columns: 1fr; gap: 14px; }
   .workbench-card { min-height: 170px; }
   .confirmation-summary-item { min-height: 76px; padding: 14px; }

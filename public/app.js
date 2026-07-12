@@ -31,6 +31,32 @@ function BatchPicker({ batches, value, onChange }) {
   />;
 }
 
+function BatchSwitchPage({ batches, selectedBatch, onSelectBatch, onBack }) {
+  const selectable = batches.filter(batch => batch.status !== 'draft');
+  return (
+    <>
+      <div className="video-detail-header"><Button onClick={onBack}>← 返回</Button><h3>切换批次</h3></div>
+      <div className="batch-switch-list">
+        {selectable.map(batch => <Card key={batch.id} className={'batch-switch-card ' + (selectedBatch?.id === batch.id ? 'active' : '')} hoverable onClick={() => onSelectBatch(batch)}>
+          <strong>{batch.name}</strong><span>{batch.status === 'current' ? '当前批次' : '历史批次'}</span>
+        </Card>)}
+        {!selectable.length && <Card>暂无可用批次</Card>}
+      </div>
+    </>
+  );
+}
+
+function AppNavigation({ user, page, onNavigate, placement }) {
+  const isAdmin = user.role === 'admin';
+  const items = isAdmin
+    ? [{ key: 'darens', label: '达人页', icon: '人' }, { key: 'batches', label: '批次管理', icon: '批' }, { key: 'settings', label: '编辑设置', icon: '设' }, { key: 'audit', label: '完整审计日志', icon: '审' }]
+    : [{ key: 'data', label: '数据核对', icon: '数' }, { key: 'audit', label: '我的日志', icon: '记' }, { key: 'batch-switch', label: '切换批次', icon: '批' }];
+  const activeKey = isAdmin
+    ? (page === 'videos' || page === 'home' || page === 'empty' ? 'darens' : page)
+    : (page === 'videos' || page === 'empty' || page === 'home' ? 'data' : page);
+  return <nav className={placement === 'desktop' ? 'desktop-nav' : 'mobile-nav'}>{items.map(item => <Button key={item.key} type="text" className={activeKey === item.key ? 'active' : ''} onClick={() => onNavigate(item.key)}><span>{item.icon}</span>{item.label}</Button>)}</nav>;
+}
+
 // ── LoginPage ──
 
 function LoginPage({ onLogin }) {
@@ -898,6 +924,11 @@ function App() {
     setPage(user.role === 'admin' ? 'darens' : 'home');
   }, [user]);
 
+  const navigatePrimary = useCallback((key) => {
+    if (key === 'data' || key === 'darens') return enterDataCheck();
+    setPage(key);
+  }, [enterDataCheck]);
+
   if (checking) return null;
 
   if (!user) {
@@ -920,6 +951,8 @@ function App() {
         return <AuditPage onBack={goBack} />;
       case 'batches':
         return <BatchManagerPage batches={batches} onRefresh={loadBatches} onSelectBatch={chooseBatch} onBack={goHome} />;
+      case 'batch-switch':
+        return <BatchSwitchPage batches={batches} selectedBatch={selectedBatch} onSelectBatch={chooseBatch} onBack={goHome} />;
       case 'empty':
         return <Card>本期暂无数据</Card>;
       default:
@@ -931,8 +964,9 @@ function App() {
     <Layout style={{ minHeight: '100vh', background: 'var(--paper)' }}>
       <div className="app-header">
         <h2>{user.role === 'admin' ? '达人数据管理' : '达人数据'}</h2>
+        <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="desktop" />
         <div className="user-info">
-          <BatchPicker batches={batches} value={selectedBatch} onChange={chooseBatch} />
+          {user.role === 'admin' && <BatchPicker batches={batches} value={selectedBatch} onChange={chooseBatch} />}
           <span>{user.display_name}（{roleMap[user.role] || user.role}）</span>
           <Button type="text" size="small" onClick={handleLogout} style={{ color: 'var(--ink-secondary)' }}>退出</Button>
         </div>
@@ -940,6 +974,7 @@ function App() {
       <div className="app-content">
         {renderPage()}
       </div>
+      <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="mobile" />
     </Layout>
   );
 }
