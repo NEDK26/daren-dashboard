@@ -75,6 +75,14 @@ body {
   font-size: 13px;
 }
 
+.batch-picker { min-width: 190px; }
+.batch-picker .ant-select-selector { background: rgba(250,247,242,0.12) !important; border-color: rgba(250,247,242,0.28) !important; }
+.batch-picker .ant-select-selection-item, .batch-picker .ant-select-arrow { color: var(--paper) !important; }
+.batch-picker-empty { color: rgba(250,247,242,0.65); font-size: 12px; }
+
+.batch-manager-card { margin-bottom: 16px; }
+.batch-manager-table { margin-top: 16px; }
+
 .app-content {
   padding: 24px 28px;
   max-width: 1520px;
@@ -605,6 +613,7 @@ body {
 @media (max-width: 640px) {
   .app-header { padding: 0 14px; }
   .app-header .user-info { gap: 8px; font-size: 12px; }
+  .batch-picker { min-width: 130px; max-width: 150px; }
   .app-content { padding: 16px 14px; }
   .workbench-cards { grid-template-columns: 1fr; gap: 14px; }
   .workbench-card { min-height: 170px; }

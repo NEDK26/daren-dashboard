@@ -1,5 +1,5 @@
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
-const { Layout, Button, Input, Form, Card, message, Space, Tag, Table, Select, Upload, Tooltip, Image, Checkbox, Modal } = antd;
+const { Layout, Button, Input, InputNumber, Form, Card, message, Space, Tag, Table, Select, Upload, Tooltip, Image, Checkbox, Modal } = antd;
 
 // ── API helpers ──
 
@@ -8,7 +8,7 @@ const api = {
   post: (url, data) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
   put: (url, data) => fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
   delete: (url, data) => fetch(url, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-  upload: (url, file) => { const fd = new FormData(); fd.append('file', file); return fetch(url, { method: 'POST', body: fd }).then(r => r.json()); }
+  upload: (url, file, fields = {}) => { const fd = new FormData(); fd.append('file', file); Object.entries(fields).forEach(([key, value]) => fd.append(key, value)); return fetch(url, { method: 'POST', body: fd }).then(r => r.json()); }
 };
 
 const confirmationStatusTag = (status) => {
@@ -16,6 +16,17 @@ const confirmationStatusTag = (status) => {
   const color = value === '已确认' ? 'green' : value === '已提交申诉' ? 'orange' : 'default';
   return <Tag color={color}>{value}</Tag>;
 };
+
+function BatchPicker({ batches, value, onChange }) {
+  const selectable = batches.filter(batch => batch.status !== 'draft');
+  if (!selectable.length) return <span className="batch-picker-empty">暂无批次</span>;
+  return <Select
+    className="batch-picker"
+    value={value?.id}
+    options={selectable.map(batch => ({ value: batch.id, label: batch.name }))}
+    onChange={id => onChange(selectable.find(batch => batch.id === id))}
+  />;
+}
 
 // ── LoginPage ──
 
@@ -87,9 +98,124 @@ function HomePage({ onDataCheck }) {
   );
 }
 
+function BatchManagerPage({ batches, onRefresh, onSelectBatch, onBack }) {
+  const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importStage, setImportStage] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const draft = batches.find(batch => batch.status === 'draft');
+  const importStages = ['正在上传文件…', '正在解析 Excel…', '正在批量写入数据…', '正在切换当前批次…'];
+
+  useEffect(() => {
+    if (!importing) { setImportStage(0); return undefined; }
+    const timer = setInterval(() => setImportStage(stage => (stage + 1) % importStages.length), 1800);
+    return () => clearInterval(timer);
+  }, [importing]);
+
+  const createBatch = async (values) => {
+    setCreating(true);
+    try {
+      const res = await api.post('/api/batches', values);
+      if (!res.ok) return message.error(res.error || '创建批次失败');
+      message.success('草稿批次已创建');
+      await onRefresh();
+    } catch (e) {
+      message.error('创建批次失败');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const importDraft = async (file) => {
+    if (!draft) return false;
+    setImporting(true);
+    try {
+      const res = await api.upload('/api/import', file, { batchId: draft.id });
+      if (!res.ok) return message.error(res.error || '导入失败');
+      message.success(`导入完成：${res.imported} 条数据，新建用户 ${res.newUsers} 人`);
+      const latest = await onRefresh();
+      if (latest?.current) onSelectBatch(latest.current);
+    } catch (e) {
+      message.error('导入失败，请稍后重试');
+    } finally {
+      setImporting(false);
+    }
+    return false;
+  };
+
+  const deleteDraft = () => {
+    if (!draft) return;
+    Modal.confirm({
+      title: '删除草稿批次？',
+      content: '草稿批次及其未完成导入将被删除。',
+      okText: '删除', okButtonProps: { danger: true }, cancelText: '取消',
+      onOk: async () => {
+        setDeleting(true);
+        try {
+          const res = await api.delete('/api/batches/' + draft.id);
+          if (res.ok) { message.success('草稿批次已删除'); await onRefresh(); }
+          else message.error(res.error || '删除失败');
+        } catch (e) {
+          message.error('删除失败');
+        } finally {
+          setDeleting(false);
+        }
+      }
+    });
+  };
+
+  return (
+    <>
+      <div className="video-detail-header">
+        <Button onClick={onBack}>← 返回</Button>
+        <h3>批次管理</h3>
+      </div>
+      <Card title="创建批次" className="batch-manager-card">
+        <Form layout="inline" onFinish={createBatch} initialValues={{ year: new Date().getFullYear(), month: new Date().getMonth() + 1 }}>
+          <Form.Item name="year" rules={[{ required: true, message: '请选择年份' }]}><InputNumber min={2000} max={2100} placeholder="年份" /></Form.Item>
+          <Form.Item name="month" rules={[{ required: true, message: '请选择月份' }]}><InputNumber min={1} max={12} placeholder="月份" /></Form.Item>
+          <Form.Item name="title" rules={[{ required: true, whitespace: true, message: '请输入自定义标题' }]}><Input placeholder="自定义标题" /></Form.Item>
+          <Form.Item><Button type="primary" htmlType="submit" loading={creating} disabled={Boolean(draft)}>创建批次</Button></Form.Item>
+        </Form>
+      </Card>
+      {draft && (
+        <Card title="草稿批次" className="batch-manager-card" extra={<Tag color="blue">{draft.name}</Tag>}>
+          <Space wrap>
+            <Upload beforeUpload={importDraft} showUploadList={false} accept=".xlsx">
+              <Button type="primary" loading={importing}>导入 Excel</Button>
+            </Upload>
+            <Button danger loading={deleting} onClick={deleteDraft}>删除草稿</Button>
+          </Space>
+        </Card>
+      )}
+      <Table
+        className="batch-manager-table"
+        rowKey="id"
+        dataSource={batches.filter(batch => batch.status !== 'draft')}
+        pagination={false}
+        columns={[
+          { title: '批次名称', dataIndex: 'name' },
+          { title: '状态', dataIndex: 'status', width: 100, render: status => <Tag color={status === 'current' ? 'green' : 'default'}>{status === 'current' ? '当前' : '历史'}</Tag> },
+          { title: '导入时间', dataIndex: 'imported_at', width: 180, render: value => value || '-' }
+        ]}
+      />
+      <Modal open={importing} footer={null} closable={false} maskClosable={false} keyboard={false} centered>
+        <div className="import-progress-content">
+          <div className="import-progress-spinner" aria-hidden="true" />
+          <div className="import-progress-copy">
+            <div className="import-progress-title">正在导入 Excel</div>
+            <div className="import-progress-stage">{importStages[importStage]}</div>
+            <div className="import-progress-dots" aria-hidden="true"><span /><span /><span /></div>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 // ── DarenList ──
 
-function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
+function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchManagement, onHome }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -97,23 +223,12 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
-  const [importing, setImporting] = useState(false);
-  const [importStage, setImportStage] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({ pending: 0, confirmed: 0, appealed: 0 });
   const requestRef = useRef(null);
   const isAdmin = user && user.role === 'admin';
-  const importStages = ['正在上传文件…', '正在解析 Excel…', '正在批量写入数据…', '正在整理导入结果…'];
-
-  useEffect(() => {
-    if (!importing) {
-      setImportStage(0);
-      return undefined;
-    }
-    const timer = setInterval(() => setImportStage(stage => (stage + 1) % importStages.length), 1800);
-    return () => clearInterval(timer);
-  }, [importing]);
+  const isReadOnly = batch?.status === 'history';
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -124,6 +239,12 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
   }, [searchInput]);
 
   const fetchData = useCallback(async () => {
+    if (!batch) {
+      setData([]);
+      setTotal(0);
+      setStatusCounts({ pending: 0, confirmed: 0, appealed: 0 });
+      return;
+    }
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -132,6 +253,7 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
       const params = new URLSearchParams();
       params.set('page', page);
       params.set('pageSize', 20);
+      params.set('batchId', batch.id);
       if (search) params.set('search', search);
       if (category) params.set('category', category);
       const res = await api.get('/api/darens?' + params.toString(), { signal: controller.signal });
@@ -145,30 +267,13 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category, page]);
+  }, [search, category, page, batch?.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleImport = async (file) => {
-    setImporting(true);
-    try {
-      const res = await api.upload('/api/import', file);
-      if (res.ok) {
-        message.success(`导入完成：新增 ${res.imported} 条，跳过 ${res.skipped} 条，新建用户 ${res.newUsers} 人`);
-        fetchData();
-      } else {
-        message.error(res.error || '导入失败');
-      }
-    } catch (e) {
-      message.error('导入失败，请稍后重试');
-    } finally {
-      setImporting(false);
-    }
-    return false;
-  };
-
   const handleExport = () => {
     const params = new URLSearchParams();
+    if (batch) params.set('batchId', batch.id);
     if (search) params.set('search', search);
     if (category) params.set('category', category);
     window.open('/api/export?' + params.toString());
@@ -180,14 +285,14 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
     const more = records.length > 5 ? ` 等 ${records.length} 个达人` : '';
     Modal.confirm({
       title: `确认删除 ${records.length} 个达人？`,
-      content: `将永久删除 ${names}${more}、其全部视频、同名普通用户账号和本地截图文件。`,
+      content: `将删除 ${names}${more} 在当前批次内的视频和本地截图；仅当用户没有其他批次数据时才删除其账号。`,
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
         setDeleting(true);
         try {
-          const res = await api.delete('/api/darens', { ids: records.map(r => r.id) });
+          const res = await api.delete('/api/darens', { ids: records.map(r => r.id), batchId: batch?.id });
           if (res.ok) {
             message.success(`已删除 ${res.deletedDarens} 个达人`);
             fetchData();
@@ -263,33 +368,21 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
         <div className="spacer" />
         {isAdmin && (
           <>
-            <Upload beforeUpload={handleImport} showUploadList={false}>
-              <Button loading={importing}>导入Excel</Button>
-            </Upload>
             <Button onClick={handleExport} style={{ marginLeft: 8 }}>导出</Button>
-            <Button danger loading={deleting} disabled={!selectedRowKeys.length} onClick={() => handleDelete(selectedRows)} style={{ marginLeft: 8 }}>删除选中</Button>
+            <Button danger loading={deleting} disabled={isReadOnly || !selectedRowKeys.length} onClick={() => handleDelete(selectedRows)} style={{ marginLeft: 8 }}>删除选中</Button>
+            <Button onClick={onBatchManagement} style={{ marginLeft: 8 }}>批次管理</Button>
             <Button onClick={onSettings} style={{ marginLeft: 8 }}>设置</Button>
             <Button onClick={onAudit} style={{ marginLeft: 8 }}>审核</Button>
           </>
         )}
       </div>
-      <Modal open={importing} footer={null} closable={false} maskClosable={false} keyboard={false} centered>
-        <div className="import-progress-content">
-          <div className="import-progress-spinner" aria-hidden="true" />
-          <div className="import-progress-copy">
-            <div className="import-progress-title">正在导入 Excel</div>
-            <div className="import-progress-stage">{importStages[importStage]}</div>
-            <div className="import-progress-dots" aria-hidden="true"><span /><span /><span /></div>
-          </div>
-        </div>
-      </Modal>
       <Table
         columns={columns}
         dataSource={data}
         rowKey="id"
         loading={loading}
         pagination={{ total, current: page, pageSize: 20, onChange: setPage }}
-        rowSelection={isAdmin ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined}
+        rowSelection={isAdmin && !isReadOnly ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined}
         bordered
         size="middle"
         style={{ marginTop: 16 }}
@@ -298,7 +391,7 @@ function DarenList({ user, onViewVideos, onSettings, onAudit, onHome }) {
   );
 }
 
-function VideoDetail({ daren, user, onBack, onHome }) {
+function VideoDetail({ daren, user, batch, onBack, onHome }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -315,6 +408,7 @@ function VideoDetail({ daren, user, onBack, onHome }) {
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const requestRef = useRef(null);
   const isAdmin = user.role === 'admin';
+  const isReadOnly = batch?.status === 'history';
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -325,6 +419,12 @@ function VideoDetail({ daren, user, onBack, onHome }) {
   }, [titleInput]);
 
   const fetchData = useCallback(async () => {
+    if (!batch) {
+      setData([]);
+      setTotal(0);
+      setAnomalySummary({ anomalyCount: 0, submittedAnomalyCount: 0 });
+      return;
+    }
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -333,6 +433,7 @@ function VideoDetail({ daren, user, onBack, onHome }) {
       const params = new URLSearchParams();
       params.set('page', page);
       params.set('pageSize', 20);
+      params.set('batchId', batch.id);
       if (platformFilter) params.set('platform', platformFilter);
       if (violation) params.set('violation', violation);
       if (compliance) params.set('compliance', compliance);
@@ -347,7 +448,7 @@ function VideoDetail({ daren, user, onBack, onHome }) {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [platformFilter, violation, compliance, titleSearch, page, daren.id]);
+  }, [platformFilter, violation, compliance, titleSearch, page, daren.id, batch?.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -418,7 +519,7 @@ function VideoDetail({ daren, user, onBack, onHome }) {
   };
 
   const renderScreenshot = (record, key, label) => {
-    const canUpload = isAdmin || (editingKey === record.id && editableCols.includes(key));
+    const canUpload = !isReadOnly && (isAdmin || (editingKey === record.id && editableCols.includes(key)));
     const content = record[key] ? (
       <Image src={record[key]} width={60} height={60} style={{objectFit:'cover'}} />
     ) : (
@@ -499,7 +600,7 @@ function VideoDetail({ daren, user, onBack, onHome }) {
         if (editingKey === record.id) {
           return <Space><Button size="small" type="primary" onClick={() => save(record.id)}>保存</Button><Button size="small" onClick={() => setEditingKey('')}>取消</Button></Space>;
         }
-        const canEdit = isAdmin || editableCols.length > 0;
+        const canEdit = !isReadOnly && (isAdmin || editableCols.length > 0);
         return canEdit ? <Button size="small" onClick={() => { setEditingKey(record.id); form.setFieldsValue(record); }}>编辑</Button> : null;
       }
     },
@@ -526,7 +627,7 @@ function VideoDetail({ daren, user, onBack, onHome }) {
         <Button onClick={onHome}>功能首页</Button>
         {isAdmin && <Button onClick={onBack}>← 返回</Button>}
         <h3>{isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'}</h3>
-        {!isAdmin && <Space>当前状态：{confirmationStatusTag(confirmationStatus)}{confirmationStatus === '待确认' && <Button size="small" type="primary" onClick={() => submitConfirmation('已确认')}>确认数据无误</Button>}</Space>}
+        {!isAdmin && <Space>当前状态：{confirmationStatusTag(confirmationStatus)}{!isReadOnly && confirmationStatus === '待确认' && <Button size="small" type="primary" onClick={() => submitConfirmation('已确认')}>确认数据无误</Button>}</Space>}
       </div>
       <div className="anomaly-summary-card" aria-label="视频异常统计">
         <div className="anomaly-summary-item anomaly">
@@ -665,6 +766,8 @@ function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('home');
   const [selectedDaren, setSelectedDaren] = useState(null);
+  const [batches, setBatches] = useState([]);
+  const [selectedBatch, setSelectedBatch] = useState(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -674,21 +777,39 @@ function App() {
       .finally(() => setChecking(false));
   }, []);
 
+  const loadBatches = useCallback(async () => {
+    const res = await api.get('/api/batches');
+    const list = res.batches || [];
+    setBatches(list);
+    setSelectedBatch(current => list.find(batch => batch.id === current?.id) || res.current || list.find(batch => batch.status === 'current') || null);
+    return res;
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setBatches([]);
+      setSelectedBatch(null);
+      return;
+    }
+    loadBatches().catch(() => message.error('加载批次失败'));
+  }, [user, loadBatches]);
+
   const enterDataCheck = useCallback(async () => {
+    if (!selectedBatch) return message.info('暂无可核对的批次');
     if (user.role === 'admin') {
       setPage('darens');
       return;
     }
     try {
-      const darens = await api.get('/api/darens');
+      const darens = await api.get('/api/darens?batchId=' + selectedBatch.id);
       const daren = darens && darens[0];
-      if (!daren) return message.info('暂无可核对的数据');
+      if (!daren) return setPage('empty');
       setSelectedDaren(daren);
       setPage('videos');
     } catch (e) {
       message.error('加载数据失败');
     }
-  }, [user]);
+  }, [user, selectedBatch]);
 
   const navigateToVideos = useCallback((daren) => {
     setSelectedDaren(daren);
@@ -708,8 +829,17 @@ function App() {
     await api.post('/api/logout');
     setUser(null);
     setSelectedDaren(null);
+    setSelectedBatch(null);
+    setBatches([]);
     setPage('home');
   }, []);
+
+  const chooseBatch = useCallback((batch) => {
+    if (!batch) return;
+    setSelectedBatch(batch);
+    setSelectedDaren(null);
+    setPage(user.role === 'admin' ? 'darens' : 'home');
+  }, [user]);
 
   if (checking) return null;
 
@@ -724,13 +854,19 @@ function App() {
       case 'home':
         return <HomePage onDataCheck={enterDataCheck} />;
       case 'videos':
-        return <VideoDetail daren={selectedDaren} user={user} onBack={goBack} onHome={goHome} />;
+        return selectedDaren
+          ? <VideoDetail daren={selectedDaren} user={user} batch={selectedBatch} onBack={goBack} onHome={goHome} />
+          : <Card>本期暂无数据</Card>;
       case 'settings':
         return <SettingsPage onBack={goBack} />;
       case 'audit':
         return <AuditPage onBack={goBack} />;
+      case 'batches':
+        return <BatchManagerPage batches={batches} onRefresh={loadBatches} onSelectBatch={chooseBatch} onBack={() => setPage('darens')} />;
+      case 'empty':
+        return <Card>本期暂无数据</Card>;
       default:
-        return <DarenList user={user} onViewVideos={navigateToVideos} onSettings={() => setPage('settings')} onAudit={() => setPage('audit')} onHome={goHome} />;
+        return <DarenList user={user} batch={selectedBatch} onViewVideos={navigateToVideos} onSettings={() => setPage('settings')} onAudit={() => setPage('audit')} onBatchManagement={() => setPage('batches')} onHome={goHome} />;
     }
   };
 
@@ -739,6 +875,7 @@ function App() {
       <div className="app-header">
         <h2>{user.role === 'admin' ? '达人数据管理' : '达人数据'}</h2>
         <div className="user-info">
+          <BatchPicker batches={batches} value={selectedBatch} onChange={chooseBatch} />
           <span>{user.display_name}（{roleMap[user.role] || user.role}）</span>
           <Button type="text" size="small" onClick={handleLogout} style={{ color: 'var(--ink-secondary)' }}>退出</Button>
         </div>

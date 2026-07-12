@@ -9,6 +9,7 @@ const {
   Layout,
   Button,
   Input,
+  InputNumber,
   Form,
   Card,
   message,
@@ -48,9 +49,10 @@ const api = {
     },
     body: JSON.stringify(data)
   }).then(r => r.json()),
-  upload: (url, file) => {
+  upload: (url, file, fields = {}) => {
     const fd = new FormData();
     fd.append('file', file);
+    Object.entries(fields).forEach(([key, value]) => fd.append(key, value));
     return fetch(url, {
       method: 'POST',
       body: fd
@@ -64,6 +66,25 @@ const confirmationStatusTag = status => {
     color: color
   }, value);
 };
+function BatchPicker({
+  batches,
+  value,
+  onChange
+}) {
+  const selectable = batches.filter(batch => batch.status !== 'draft');
+  if (!selectable.length) return /*#__PURE__*/React.createElement("span", {
+    className: "batch-picker-empty"
+  }, "暂无批次");
+  return /*#__PURE__*/React.createElement(Select, {
+    className: "batch-picker",
+    value: value?.id,
+    options: selectable.map(batch => ({
+      value: batch.id,
+      label: batch.name
+    })),
+    onChange: id => onChange(selectable.find(batch => batch.id === id))
+  });
+}
 
 // ── LoginPage ──
 
@@ -155,14 +176,204 @@ function HomePage({
     className: "workbench-card-action"
   }, "功能正在开发中"))));
 }
+function BatchManagerPage({
+  batches,
+  onRefresh,
+  onSelectBatch,
+  onBack
+}) {
+  const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importStage, setImportStage] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const draft = batches.find(batch => batch.status === 'draft');
+  const importStages = ['正在上传文件…', '正在解析 Excel…', '正在批量写入数据…', '正在切换当前批次…'];
+  useEffect(() => {
+    if (!importing) {
+      setImportStage(0);
+      return undefined;
+    }
+    const timer = setInterval(() => setImportStage(stage => (stage + 1) % importStages.length), 1800);
+    return () => clearInterval(timer);
+  }, [importing]);
+  const createBatch = async values => {
+    setCreating(true);
+    try {
+      const res = await api.post('/api/batches', values);
+      if (!res.ok) return message.error(res.error || '创建批次失败');
+      message.success('草稿批次已创建');
+      await onRefresh();
+    } catch (e) {
+      message.error('创建批次失败');
+    } finally {
+      setCreating(false);
+    }
+  };
+  const importDraft = async file => {
+    if (!draft) return false;
+    setImporting(true);
+    try {
+      const res = await api.upload('/api/import', file, {
+        batchId: draft.id
+      });
+      if (!res.ok) return message.error(res.error || '导入失败');
+      message.success(`导入完成：${res.imported} 条数据，新建用户 ${res.newUsers} 人`);
+      const latest = await onRefresh();
+      if (latest?.current) onSelectBatch(latest.current);
+    } catch (e) {
+      message.error('导入失败，请稍后重试');
+    } finally {
+      setImporting(false);
+    }
+    return false;
+  };
+  const deleteDraft = () => {
+    if (!draft) return;
+    Modal.confirm({
+      title: '删除草稿批次？',
+      content: '草稿批次及其未完成导入将被删除。',
+      okText: '删除',
+      okButtonProps: {
+        danger: true
+      },
+      cancelText: '取消',
+      onOk: async () => {
+        setDeleting(true);
+        try {
+          const res = await api.delete('/api/batches/' + draft.id);
+          if (res.ok) {
+            message.success('草稿批次已删除');
+            await onRefresh();
+          } else message.error(res.error || '删除失败');
+        } catch (e) {
+          message.error('删除失败');
+        } finally {
+          setDeleting(false);
+        }
+      }
+    });
+  };
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "video-detail-header"
+  }, /*#__PURE__*/React.createElement(Button, {
+    onClick: onBack
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, "批次管理")), /*#__PURE__*/React.createElement(Card, {
+    title: "创建批次",
+    className: "batch-manager-card"
+  }, /*#__PURE__*/React.createElement(Form, {
+    layout: "inline",
+    onFinish: createBatch,
+    initialValues: {
+      year: new Date().getFullYear(),
+      month: new Date().getMonth() + 1
+    }
+  }, /*#__PURE__*/React.createElement(Form.Item, {
+    name: "year",
+    rules: [{
+      required: true,
+      message: '请选择年份'
+    }]
+  }, /*#__PURE__*/React.createElement(InputNumber, {
+    min: 2000,
+    max: 2100,
+    placeholder: "年份"
+  })), /*#__PURE__*/React.createElement(Form.Item, {
+    name: "month",
+    rules: [{
+      required: true,
+      message: '请选择月份'
+    }]
+  }, /*#__PURE__*/React.createElement(InputNumber, {
+    min: 1,
+    max: 12,
+    placeholder: "月份"
+  })), /*#__PURE__*/React.createElement(Form.Item, {
+    name: "title",
+    rules: [{
+      required: true,
+      whitespace: true,
+      message: '请输入自定义标题'
+    }]
+  }, /*#__PURE__*/React.createElement(Input, {
+    placeholder: "自定义标题"
+  })), /*#__PURE__*/React.createElement(Form.Item, null, /*#__PURE__*/React.createElement(Button, {
+    type: "primary",
+    htmlType: "submit",
+    loading: creating,
+    disabled: Boolean(draft)
+  }, "创建批次")))), draft && /*#__PURE__*/React.createElement(Card, {
+    title: "草稿批次",
+    className: "batch-manager-card",
+    extra: /*#__PURE__*/React.createElement(Tag, {
+      color: "blue"
+    }, draft.name)
+  }, /*#__PURE__*/React.createElement(Space, {
+    wrap: true
+  }, /*#__PURE__*/React.createElement(Upload, {
+    beforeUpload: importDraft,
+    showUploadList: false,
+    accept: ".xlsx"
+  }, /*#__PURE__*/React.createElement(Button, {
+    type: "primary",
+    loading: importing
+  }, "导入 Excel")), /*#__PURE__*/React.createElement(Button, {
+    danger: true,
+    loading: deleting,
+    onClick: deleteDraft
+  }, "删除草稿"))), /*#__PURE__*/React.createElement(Table, {
+    className: "batch-manager-table",
+    rowKey: "id",
+    dataSource: batches.filter(batch => batch.status !== 'draft'),
+    pagination: false,
+    columns: [{
+      title: '批次名称',
+      dataIndex: 'name'
+    }, {
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: status => /*#__PURE__*/React.createElement(Tag, {
+        color: status === 'current' ? 'green' : 'default'
+      }, status === 'current' ? '当前' : '历史')
+    }, {
+      title: '导入时间',
+      dataIndex: 'imported_at',
+      width: 180,
+      render: value => value || '-'
+    }]
+  }), /*#__PURE__*/React.createElement(Modal, {
+    open: importing,
+    footer: null,
+    closable: false,
+    maskClosable: false,
+    keyboard: false,
+    centered: true
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "import-progress-content"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "import-progress-spinner",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "import-progress-copy"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "import-progress-title"
+  }, "正在导入 Excel"), /*#__PURE__*/React.createElement("div", {
+    className: "import-progress-stage"
+  }, importStages[importStage]), /*#__PURE__*/React.createElement("div", {
+    className: "import-progress-dots",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("span", null))))));
+}
 
 // ── DarenList ──
 
 function DarenList({
   user,
+  batch,
   onViewVideos,
   onSettings,
   onAudit,
+  onBatchManagement,
   onHome
 }) {
   const [data, setData] = useState([]);
@@ -172,8 +383,6 @@ function DarenList({
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
-  const [importing, setImporting] = useState(false);
-  const [importStage, setImportStage] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({
@@ -183,15 +392,7 @@ function DarenList({
   });
   const requestRef = useRef(null);
   const isAdmin = user && user.role === 'admin';
-  const importStages = ['正在上传文件…', '正在解析 Excel…', '正在批量写入数据…', '正在整理导入结果…'];
-  useEffect(() => {
-    if (!importing) {
-      setImportStage(0);
-      return undefined;
-    }
-    const timer = setInterval(() => setImportStage(stage => (stage + 1) % importStages.length), 1800);
-    return () => clearInterval(timer);
-  }, [importing]);
+  const isReadOnly = batch?.status === 'history';
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
@@ -200,6 +401,16 @@ function DarenList({
     return () => clearTimeout(timer);
   }, [searchInput]);
   const fetchData = useCallback(async () => {
+    if (!batch) {
+      setData([]);
+      setTotal(0);
+      setStatusCounts({
+        pending: 0,
+        confirmed: 0,
+        appealed: 0
+      });
+      return;
+    }
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -208,6 +419,7 @@ function DarenList({
       const params = new URLSearchParams();
       params.set('page', page);
       params.set('pageSize', 20);
+      params.set('batchId', batch.id);
       if (search) params.set('search', search);
       if (category) params.set('category', category);
       const res = await api.get('/api/darens?' + params.toString(), {
@@ -230,29 +442,13 @@ function DarenList({
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category, page]);
+  }, [search, category, page, batch?.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-  const handleImport = async file => {
-    setImporting(true);
-    try {
-      const res = await api.upload('/api/import', file);
-      if (res.ok) {
-        message.success(`导入完成：新增 ${res.imported} 条，跳过 ${res.skipped} 条，新建用户 ${res.newUsers} 人`);
-        fetchData();
-      } else {
-        message.error(res.error || '导入失败');
-      }
-    } catch (e) {
-      message.error('导入失败，请稍后重试');
-    } finally {
-      setImporting(false);
-    }
-    return false;
-  };
   const handleExport = () => {
     const params = new URLSearchParams();
+    if (batch) params.set('batchId', batch.id);
     if (search) params.set('search', search);
     if (category) params.set('category', category);
     window.open('/api/export?' + params.toString());
@@ -263,7 +459,7 @@ function DarenList({
     const more = records.length > 5 ? ` 等 ${records.length} 个达人` : '';
     Modal.confirm({
       title: `确认删除 ${records.length} 个达人？`,
-      content: `将永久删除 ${names}${more}、其全部视频、同名普通用户账号和本地截图文件。`,
+      content: `将删除 ${names}${more} 在当前批次内的视频和本地截图；仅当用户没有其他批次数据时才删除其账号。`,
       okText: '删除',
       okButtonProps: {
         danger: true
@@ -273,7 +469,8 @@ function DarenList({
         setDeleting(true);
         try {
           const res = await api.delete('/api/darens', {
-            ids: records.map(r => r.id)
+            ids: records.map(r => r.id),
+            batchId: batch?.id
           });
           if (res.ok) {
             message.success(`已删除 ${res.deletedDarens} 个达人`);
@@ -449,12 +646,7 @@ function DarenList({
     options: categoryOptions
   }), /*#__PURE__*/React.createElement("div", {
     className: "spacer"
-  }), isAdmin && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Upload, {
-    beforeUpload: handleImport,
-    showUploadList: false
-  }, /*#__PURE__*/React.createElement(Button, {
-    loading: importing
-  }, "导入Excel")), /*#__PURE__*/React.createElement(Button, {
+  }), isAdmin && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
     onClick: handleExport,
     style: {
       marginLeft: 8
@@ -462,12 +654,17 @@ function DarenList({
   }, "导出"), /*#__PURE__*/React.createElement(Button, {
     danger: true,
     loading: deleting,
-    disabled: !selectedRowKeys.length,
+    disabled: isReadOnly || !selectedRowKeys.length,
     onClick: () => handleDelete(selectedRows),
     style: {
       marginLeft: 8
     }
   }, "删除选中"), /*#__PURE__*/React.createElement(Button, {
+    onClick: onBatchManagement,
+    style: {
+      marginLeft: 8
+    }
+  }, "批次管理"), /*#__PURE__*/React.createElement(Button, {
     onClick: onSettings,
     style: {
       marginLeft: 8
@@ -477,28 +674,7 @@ function DarenList({
     style: {
       marginLeft: 8
     }
-  }, "审核"))), /*#__PURE__*/React.createElement(Modal, {
-    open: importing,
-    footer: null,
-    closable: false,
-    maskClosable: false,
-    keyboard: false,
-    centered: true
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "import-progress-content"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "import-progress-spinner",
-    "aria-hidden": "true"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "import-progress-copy"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "import-progress-title"
-  }, "正在导入 Excel"), /*#__PURE__*/React.createElement("div", {
-    className: "import-progress-stage"
-  }, importStages[importStage]), /*#__PURE__*/React.createElement("div", {
-    className: "import-progress-dots",
-    "aria-hidden": "true"
-  }, /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("span", null))))), /*#__PURE__*/React.createElement(Table, {
+  }, "审核"))), /*#__PURE__*/React.createElement(Table, {
     columns: columns,
     dataSource: data,
     rowKey: "id",
@@ -509,7 +685,7 @@ function DarenList({
       pageSize: 20,
       onChange: setPage
     },
-    rowSelection: isAdmin ? {
+    rowSelection: isAdmin && !isReadOnly ? {
       selectedRowKeys,
       onChange: setSelectedRowKeys
     } : undefined,
@@ -523,6 +699,7 @@ function DarenList({
 function VideoDetail({
   daren,
   user,
+  batch,
   onBack,
   onHome
 }) {
@@ -545,6 +722,7 @@ function VideoDetail({
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const requestRef = useRef(null);
   const isAdmin = user.role === 'admin';
+  const isReadOnly = batch?.status === 'history';
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
@@ -553,6 +731,15 @@ function VideoDetail({
     return () => clearTimeout(timer);
   }, [titleInput]);
   const fetchData = useCallback(async () => {
+    if (!batch) {
+      setData([]);
+      setTotal(0);
+      setAnomalySummary({
+        anomalyCount: 0,
+        submittedAnomalyCount: 0
+      });
+      return;
+    }
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -561,6 +748,7 @@ function VideoDetail({
       const params = new URLSearchParams();
       params.set('page', page);
       params.set('pageSize', 20);
+      params.set('batchId', batch.id);
       if (platformFilter) params.set('platform', platformFilter);
       if (violation) params.set('violation', violation);
       if (compliance) params.set('compliance', compliance);
@@ -583,7 +771,7 @@ function VideoDetail({
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [platformFilter, violation, compliance, titleSearch, page, daren.id]);
+  }, [platformFilter, violation, compliance, titleSearch, page, daren.id, batch?.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -651,7 +839,7 @@ function VideoDetail({
     }
   };
   const renderScreenshot = (record, key, label) => {
-    const canUpload = isAdmin || editingKey === record.id && editableCols.includes(key);
+    const canUpload = !isReadOnly && (isAdmin || editingKey === record.id && editableCols.includes(key));
     const content = record[key] ? /*#__PURE__*/React.createElement(Image, {
       src: record[key],
       width: 60,
@@ -882,7 +1070,7 @@ function VideoDetail({
           onClick: () => setEditingKey('')
         }, "取消"));
       }
-      const canEdit = isAdmin || editableCols.length > 0;
+      const canEdit = !isReadOnly && (isAdmin || editableCols.length > 0);
       return canEdit ? /*#__PURE__*/React.createElement(Button, {
         size: "small",
         onClick: () => {
@@ -918,7 +1106,7 @@ function VideoDetail({
     onClick: onHome
   }, "功能首页"), isAdmin && /*#__PURE__*/React.createElement(Button, {
     onClick: onBack
-  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'), !isAdmin && /*#__PURE__*/React.createElement(Space, null, "当前状态：", confirmationStatusTag(confirmationStatus), confirmationStatus === '待确认' && /*#__PURE__*/React.createElement(Button, {
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'), !isAdmin && /*#__PURE__*/React.createElement(Space, null, "当前状态：", confirmationStatusTag(confirmationStatus), !isReadOnly && confirmationStatus === '待确认' && /*#__PURE__*/React.createElement(Button, {
     size: "small",
     type: "primary",
     onClick: () => submitConfirmation('已确认')
@@ -1228,27 +1416,45 @@ function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('home');
   const [selectedDaren, setSelectedDaren] = useState(null);
+  const [batches, setBatches] = useState([]);
+  const [selectedBatch, setSelectedBatch] = useState(null);
   const [checking, setChecking] = useState(true);
   useEffect(() => {
     api.get('/api/me').then(res => {
       if (res.user) setUser(res.user);
     }).catch(() => {}).finally(() => setChecking(false));
   }, []);
+  const loadBatches = useCallback(async () => {
+    const res = await api.get('/api/batches');
+    const list = res.batches || [];
+    setBatches(list);
+    setSelectedBatch(current => list.find(batch => batch.id === current?.id) || res.current || list.find(batch => batch.status === 'current') || null);
+    return res;
+  }, []);
+  useEffect(() => {
+    if (!user) {
+      setBatches([]);
+      setSelectedBatch(null);
+      return;
+    }
+    loadBatches().catch(() => message.error('加载批次失败'));
+  }, [user, loadBatches]);
   const enterDataCheck = useCallback(async () => {
+    if (!selectedBatch) return message.info('暂无可核对的批次');
     if (user.role === 'admin') {
       setPage('darens');
       return;
     }
     try {
-      const darens = await api.get('/api/darens');
+      const darens = await api.get('/api/darens?batchId=' + selectedBatch.id);
       const daren = darens && darens[0];
-      if (!daren) return message.info('暂无可核对的数据');
+      if (!daren) return setPage('empty');
       setSelectedDaren(daren);
       setPage('videos');
     } catch (e) {
       message.error('加载数据失败');
     }
-  }, [user]);
+  }, [user, selectedBatch]);
   const navigateToVideos = useCallback(daren => {
     setSelectedDaren(daren);
     setPage('videos');
@@ -1264,8 +1470,16 @@ function App() {
     await api.post('/api/logout');
     setUser(null);
     setSelectedDaren(null);
+    setSelectedBatch(null);
+    setBatches([]);
     setPage('home');
   }, []);
+  const chooseBatch = useCallback(batch => {
+    if (!batch) return;
+    setSelectedBatch(batch);
+    setSelectedDaren(null);
+    setPage(user.role === 'admin' ? 'darens' : 'home');
+  }, [user]);
   if (checking) return null;
   if (!user) {
     return /*#__PURE__*/React.createElement(LoginPage, {
@@ -1284,12 +1498,13 @@ function App() {
           onDataCheck: enterDataCheck
         });
       case 'videos':
-        return /*#__PURE__*/React.createElement(VideoDetail, {
+        return selectedDaren ? /*#__PURE__*/React.createElement(VideoDetail, {
           daren: selectedDaren,
           user: user,
+          batch: selectedBatch,
           onBack: goBack,
           onHome: goHome
-        });
+        }) : /*#__PURE__*/React.createElement(Card, null, "本期暂无数据");
       case 'settings':
         return /*#__PURE__*/React.createElement(SettingsPage, {
           onBack: goBack
@@ -1298,12 +1513,23 @@ function App() {
         return /*#__PURE__*/React.createElement(AuditPage, {
           onBack: goBack
         });
+      case 'batches':
+        return /*#__PURE__*/React.createElement(BatchManagerPage, {
+          batches: batches,
+          onRefresh: loadBatches,
+          onSelectBatch: chooseBatch,
+          onBack: () => setPage('darens')
+        });
+      case 'empty':
+        return /*#__PURE__*/React.createElement(Card, null, "本期暂无数据");
       default:
         return /*#__PURE__*/React.createElement(DarenList, {
           user: user,
+          batch: selectedBatch,
           onViewVideos: navigateToVideos,
           onSettings: () => setPage('settings'),
           onAudit: () => setPage('audit'),
+          onBatchManagement: () => setPage('batches'),
           onHome: goHome
         });
     }
@@ -1317,7 +1543,11 @@ function App() {
     className: "app-header"
   }, /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据'), /*#__PURE__*/React.createElement("div", {
     className: "user-info"
-  }, /*#__PURE__*/React.createElement("span", null, user.display_name, "（", roleMap[user.role] || user.role, "）"), /*#__PURE__*/React.createElement(Button, {
+  }, /*#__PURE__*/React.createElement(BatchPicker, {
+    batches: batches,
+    value: selectedBatch,
+    onChange: chooseBatch
+  }), /*#__PURE__*/React.createElement("span", null, user.display_name, "（", roleMap[user.role] || user.role, "）"), /*#__PURE__*/React.createElement(Button, {
     type: "text",
     size: "small",
     onClick: handleLogout,

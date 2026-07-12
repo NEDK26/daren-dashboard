@@ -39,7 +39,7 @@ test('migrates work_id primary key and allows co-created rows', async () => {
   assert.equal(columns.find(column => column.name === 'id').pk, 1);
   assert.equal(columns.find(column => column.name === 'work_id').pk, 0);
 
-  db.run("INSERT INTO videos (work_id, daren_id, platform, title) VALUES ('work-1', 2, '快手', '共创视频')");
+  db.run("INSERT INTO videos (batch_id, work_id, daren_id, platform, title) VALUES (1, 'work-1', 2, '快手', '共创视频')");
   assert.equal(rows(db, "SELECT id, work_id, daren_id FROM videos WHERE work_id = 'work-1'").length, 2);
 });
 
@@ -48,7 +48,7 @@ test('deduplicates the same work for the same daren and platform', async () => {
   migrateVideosTable(db);
 
   assert.throws(
-    () => db.run("INSERT INTO videos (work_id, daren_id, platform) VALUES ('work-1', 1, '快手')"),
+    () => db.run("INSERT INTO videos (batch_id, work_id, daren_id, platform) VALUES (1, 'work-1', 1, '快手')"),
     /UNIQUE constraint failed/
   );
 });
@@ -56,7 +56,7 @@ test('deduplicates the same work for the same daren and platform', async () => {
 test('updates only the selected co-created video by internal id', async () => {
   const db = await createLegacyDb();
   migrateVideosTable(db);
-  db.run("INSERT INTO videos (work_id, daren_id, platform, title) VALUES ('work-1', 2, '快手', '共创视频')");
+  db.run("INSERT INTO videos (batch_id, work_id, daren_id, platform, title) VALUES (1, 'work-1', 2, '快手', '共创视频')");
 
   const before = rows(db, "SELECT id, daren_id, title FROM videos WHERE work_id = 'work-1' ORDER BY id");
   db.run("UPDATE videos SET title = '仅修改达人 Alice' WHERE id = ?", [before[0].id]);
