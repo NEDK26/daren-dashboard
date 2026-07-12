@@ -32,8 +32,15 @@ function authorizeScreenshotUpload(req, res, next) {
   const allowedFields = ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes'];
   if (!allowedFields.includes(field)) return res.status(400).json({ error: '无效的截图字段' });
 
-  const video = prepare('SELECT v.daren_id, d.nickname FROM videos v JOIN darens d ON v.daren_id = d.id WHERE v.id = ?').get(id);
+  const video = prepare(`
+    SELECT v.daren_id, d.nickname, b.status AS batch_status
+    FROM videos v
+    JOIN darens d ON v.daren_id = d.id
+    JOIN batches b ON b.id = v.batch_id
+    WHERE v.id = ?
+  `).get(id);
   if (!video) return res.status(404).json({ error: '视频不存在' });
+  if (video.batch_status !== 'current') return res.status(403).json({ error: '历史批次只读' });
   const isAdmin = req.session.user.role === 'admin';
   if (!isAdmin && video.nickname !== req.session.user.display_name) {
     return res.status(403).json({ error: '只能编辑自己的数据' });

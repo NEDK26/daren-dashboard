@@ -53,26 +53,25 @@ function deleteUploadFiles(rows, uploadsDir) {
   return warnings;
 }
 
-function deleteDarensByIds({ db, ids, actor, uploadsDir, saveDb }) {
+function deleteDarensByIds({ db, ids, batchId, actor, uploadsDir, saveDb }) {
   const darenIds = normalizeIds(ids);
   const sqlIds = placeholders(darenIds);
-  const darens = queryAll(db, `SELECT id, nickname FROM darens WHERE id IN (${sqlIds})`, darenIds);
+  const normalizedBatchId = Number(batchId);
+  const hasBatch = Number.isInteger(normalizedBatchId) && normalizedBatchId > 0;
+  const batchFilter = hasBatch ? ' AND batch_id = ?' : '';
+  const scopedParams = hasBatch ? [...darenIds, normalizedBatchId] : darenIds;
+  const darens = queryAll(db, `SELECT id, nickname FROM darens WHERE id IN (${sqlIds})${batchFilter}`, scopedParams);
   const found = new Set(darens.map(row => Number(row.id)));
   const missingIds = darenIds.filter(id => !found.has(id));
   if (missingIds.length) throw new Error(`部分达人不存在：${missingIds.join(', ')}`);
 
   const videos = queryAll(
     db,
-    `SELECT work_id, ${SCREENSHOT_COLUMNS.join(', ')} FROM videos WHERE daren_id IN (${sqlIds})`,
-    darenIds
+    `SELECT work_id, ${SCREENSHOT_COLUMNS.join(', ')} FROM videos WHERE daren_id IN (${sqlIds})${batchFilter}`,
+    scopedParams
   );
-  const userNames = darens.map(row => row.nickname);
-  const userSql = placeholders(userNames);
-  const users = queryAll(
-    db,
-    `SELECT id FROM users WHERE role = 'user' AND display_name IN (${userSql})`,
-    userNames
-  );
+  const userNames = [...new Set(darens.map(row => row.nickname))];
+  let deletedUsers = 0;
 
   try {
     db.run('BEGIN');
@@ -84,9 +83,14 @@ function deleteDarensByIds({ db, ids, actor, uploadsDir, saveDb }) {
         );
       }
     }
-    db.run(`DELETE FROM videos WHERE daren_id IN (${sqlIds})`, darenIds);
-    db.run(`DELETE FROM users WHERE role = 'user' AND display_name IN (${userSql})`, userNames);
-    db.run(`DELETE FROM darens WHERE id IN (${sqlIds})`, darenIds);
+    db.run(`DELETE FROM videos WHERE daren_id IN (${sqlIds})${batchFilter}`, scopedParams);
+    db.run(`DELETE FROM darens WHERE id IN (${sqlIds})${batchFilter}`, scopedParams);
+    for (const nickname of userNames) {
+      const remaining = queryAll(db, 'SELECT 1 FROM darens WHERE nickname = ? LIMIT 1', [nickname]);
+      if (remaining.length) continue;
+      db.run("DELETE FROM users WHERE role = 'user' AND display_name = ?", [nickname]);
+      deletedUsers += db.getRowsModified();
+    }
     db.run('COMMIT');
     if (saveDb) saveDb();
   } catch (err) {
@@ -98,7 +102,7 @@ function deleteDarensByIds({ db, ids, actor, uploadsDir, saveDb }) {
   return {
     deletedDarens: darens.length,
     deletedVideos: videos.length,
-    deletedUsers: users.length,
+    deletedUsers,
     fileWarnings
   };
 }

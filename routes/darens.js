@@ -4,9 +4,13 @@ const router = express.Router();
 const { getDb, saveDb, prepare, escapeColumn } = require('../db');
 const { requireLogin, requireAdmin, auditLog } = require('../middleware');
 const { deleteDarensByIds } = require('../services/deleteDarens');
+const { getVisibleBatch } = require('../services/batches');
 
 router.get('/darens', requireLogin, (req, res) => {
-  const { search, category } = req.query;
+  const { search, category, batchId } = req.query;
+  const resolved = getVisibleBatch(req, batchId);
+  if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
+  const batch = resolved.batch;
   const paged = req.query.page !== undefined || req.query.pageSize !== undefined;
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
@@ -21,8 +25,8 @@ router.get('/darens', requireLogin, (req, res) => {
     FROM darens d
     LEFT JOIN videos v ON v.daren_id = d.id
   `;
-  const conditions = [];
-  const params = [];
+  const conditions = ['d.batch_id = ?'];
+  const params = [batch.id];
 
   if (!isAdmin) { conditions.push('d.nickname = ?'); params.push(nickname); }
   if (search) { conditions.push('d.nickname LIKE ?'); params.push(`%${search}%`); }
@@ -41,7 +45,7 @@ router.get('/darens', requireLogin, (req, res) => {
   // Count anomaly cells per daren (count "数据异常" occurrences in anomaly_data JSON)
   // ponytail: string counting instead of SQLite JSON functions for simplicity
   const anomalyRows = rows.length
-    ? prepare(`SELECT daren_id, anomaly_data FROM videos WHERE anomaly_data != '' AND anomaly_data != '{}' AND daren_id IN (${rows.map(() => '?').join(',')})`).all(...rows.map(row => row.id))
+    ? prepare(`SELECT daren_id, anomaly_data FROM videos WHERE batch_id = ? AND anomaly_data != '' AND anomaly_data != '{}' AND daren_id IN (${rows.map(() => '?').join(',')})`).all(batch.id, ...rows.map(row => row.id))
     : [];
   const anomalyCounts = new Map();
   for (const a of anomalyRows) {
@@ -60,7 +64,8 @@ router.get('/darens', requireLogin, (req, res) => {
             SUM(CASE WHEN d.confirmation_status = '已确认' THEN 1 ELSE 0 END) AS confirmed,
             SUM(CASE WHEN d.confirmation_status = '已提交申诉' THEN 1 ELSE 0 END) AS appealed
           FROM darens d
-        `).get()
+          WHERE d.batch_id = ?
+        `).get(batch.id)
       : null;
     return res.json({
       rows,
@@ -81,8 +86,13 @@ router.put('/darens/:id', requireLogin, (req, res) => {
   const { id } = req.params;
   const isAdmin = req.session.user.role === 'admin';
 
-  const daren = prepare('SELECT * FROM darens WHERE id = ?').get(id);
+  const daren = prepare(`
+    SELECT d.*, b.status AS batch_status
+    FROM darens d JOIN batches b ON b.id = d.batch_id
+    WHERE d.id = ?
+  `).get(id);
   if (!daren) return res.status(404).json({ error: '达人不存在' });
+  if (daren.batch_status !== 'current') return res.status(403).json({ error: '历史批次只读' });
   if (!isAdmin && daren.nickname !== req.session.user.display_name) {
     return res.status(403).json({ error: '只能编辑自己的数据' });
   }
@@ -111,8 +121,13 @@ router.put('/darens/:id/confirmation', requireLogin, (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   if (req.session.user.role === 'admin') return res.status(403).json({ error: '管理员仅可查看确认状态' });
-  const daren = prepare('SELECT * FROM darens WHERE id = ?').get(id);
+  const daren = prepare(`
+    SELECT d.*, b.status AS batch_status
+    FROM darens d JOIN batches b ON b.id = d.batch_id
+    WHERE d.id = ?
+  `).get(id);
   if (!daren) return res.status(404).json({ error: '达人不存在' });
+  if (daren.batch_status !== 'current') return res.status(403).json({ error: '历史批次只读' });
   if (daren.nickname !== req.session.user.display_name) {
     return res.status(403).json({ error: '只能确认自己的数据' });
   }
@@ -129,9 +144,13 @@ router.put('/darens/:id/confirmation', requireLogin, (req, res) => {
 
 router.delete('/darens', requireAdmin, (req, res) => {
   try {
+    const resolved = getVisibleBatch(req, req.body.batchId);
+    if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
+    if (resolved.batch.status !== 'current') return res.status(403).json({ error: '历史批次只读' });
     const result = deleteDarensByIds({
       db: getDb(),
       ids: req.body.ids,
+      batchId: resolved.batch.id,
       actor: req.session.user.display_name,
       uploadsDir: path.join(__dirname, '..', 'uploads'),
       saveDb

@@ -3,24 +3,28 @@ const router = express.Router();
 const { getDb, prepare, escapeColumn } = require('../db');
 const { requireLogin, auditLog } = require('../middleware');
 const { resetDarenConfirmation } = require('../services/darenConfirmation');
+const { getVisibleBatch } = require('../services/batches');
 
 router.get('/darens/:id/videos', requireLogin, (req, res) => {
   const { id } = req.params;
-  const { platform, title, violation, compliance } = req.query;
+  const { platform, title, violation, compliance, batchId } = req.query;
+  const resolved = getVisibleBatch(req, batchId);
+  if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
+  const batch = resolved.batch;
   const paged = req.query.page !== undefined || req.query.pageSize !== undefined;
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
   const isAdmin = req.session.user.role === 'admin';
 
   if (!isAdmin) {
-    const daren = prepare('SELECT nickname FROM darens WHERE id = ?').get(id);
+    const daren = prepare('SELECT nickname FROM darens WHERE id = ? AND batch_id = ?').get(id, batch.id);
     if (!daren || daren.nickname !== req.session.user.display_name) {
       return res.status(403).json({ error: '只能查看自己的数据' });
     }
   }
 
-  let sql = 'SELECT * FROM videos WHERE daren_id = ?';
-  const params = [id];
+  let sql = 'SELECT * FROM videos WHERE daren_id = ? AND batch_id = ?';
+  const params = [id, batch.id];
 
   if (platform) { sql += ' AND platform = ?'; params.push(platform); }
   if (title) { sql += ' AND title LIKE ?'; params.push('%' + title + '%'); }
@@ -35,7 +39,7 @@ router.get('/darens/:id/videos', requireLogin, (req, res) => {
   }
 
   const rows = prepare(sql).all(...params);
-  const anomalySummary = getAnomalySummary(id);
+  const anomalySummary = getAnomalySummary(id, batch.id);
   if (paged) {
     return res.json({
       rows,
@@ -52,8 +56,15 @@ router.put('/videos/:id', requireLogin, (req, res) => {
   const { id } = req.params;
   const isAdmin = req.session.user.role === 'admin';
 
-  const video = prepare('SELECT v.*, d.nickname FROM videos v JOIN darens d ON v.daren_id = d.id WHERE v.id = ?').get(id);
+  const video = prepare(`
+    SELECT v.*, d.nickname, b.status AS batch_status
+    FROM videos v
+    JOIN darens d ON v.daren_id = d.id
+    JOIN batches b ON b.id = v.batch_id
+    WHERE v.id = ?
+  `).get(id);
   if (!video) return res.status(404).json({ error: '视频不存在' });
+  if (video.batch_status !== 'current') return res.status(403).json({ error: '历史批次只读' });
   if (!isAdmin && video.nickname !== req.session.user.display_name) {
     return res.status(403).json({ error: '只能编辑自己的数据' });
   }
@@ -92,9 +103,9 @@ function getEditableColumns() {
   return row ? JSON.parse(row.value) : [];
 }
 
-function getAnomalySummary(darenId) {
-  const daren = prepare('SELECT confirmation_status FROM darens WHERE id = ?').get(darenId);
-  const rows = prepare('SELECT anomaly_data, appeal FROM videos WHERE daren_id = ?').all(darenId);
+function getAnomalySummary(darenId, batchId) {
+  const daren = prepare('SELECT confirmation_status FROM darens WHERE id = ? AND batch_id = ?').get(darenId, batchId);
+  const rows = prepare('SELECT anomaly_data, appeal FROM videos WHERE daren_id = ? AND batch_id = ?').all(darenId, batchId);
   const submittedForDaren = daren?.confirmation_status === '已提交申诉';
   let anomalyCount = 0;
   let submittedAnomalyCount = 0;
