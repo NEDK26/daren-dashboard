@@ -92,7 +92,7 @@ router.put('/videos/:id', requireLogin, (req, res) => {
   }
 
   if (Object.keys(changes).length > 0) {
-    resetDarenConfirmation({ prepare, auditLog, req, darenId: video.daren_id });
+    resetDarenConfirmation({ prepare, darenId: video.daren_id, changes });
   }
   auditLog(req, 'videos', id, changes);
   res.json({ ok: true, changes: Object.keys(changes) });

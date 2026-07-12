@@ -138,7 +138,7 @@ router.put('/darens/:id/confirmation', requireLogin, (req, res) => {
   prepare('UPDATE darens SET confirmation_status = ? WHERE id = ?').run(status, id);
   auditLog(req, 'darens', id, {
     confirmation_status: { old: String(daren.confirmation_status ?? '待确认'), new: status }
-  });
+  }, status === '已确认' ? '确认数据' : '提交申诉');
   res.json({ ok: true, status });
 });
 

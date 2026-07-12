@@ -23,7 +23,9 @@ router.post('/upload/:id/:field', requireLogin, authorizeScreenshotUpload, uploa
 
   const filePath = '/uploads/' + req.file.filename;
   prepare(`UPDATE videos SET ${field} = ? WHERE id = ?`).run(filePath, id);
-  resetDarenConfirmation({ prepare, auditLog, req, darenId: video.daren_id });
+  const changes = { [field]: { old: String(video[field] || '未上传'), new: '已上传' } };
+  resetDarenConfirmation({ prepare, darenId: video.daren_id, changes });
+  auditLog(req, 'videos', id, changes, '上传截图');
   res.json({ ok: true, url: filePath });
 });
 
@@ -33,7 +35,7 @@ function authorizeScreenshotUpload(req, res, next) {
   if (!allowedFields.includes(field)) return res.status(400).json({ error: '无效的截图字段' });
 
   const video = prepare(`
-    SELECT v.daren_id, d.nickname, b.status AS batch_status
+    SELECT v.*, d.nickname, b.status AS batch_status
     FROM videos v
     JOIN darens d ON v.daren_id = d.id
     JOIN batches b ON b.id = v.batch_id

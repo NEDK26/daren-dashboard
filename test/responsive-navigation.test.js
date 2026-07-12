@@ -21,8 +21,9 @@ test('responsive navigation exposes role-specific desktop and mobile destination
   assert.match(css, /\.mobile-nav/);
 });
 
-test('regular users can read only their own audit logs', () => {
+test('regular users can read operation events related to their own data', () => {
   assert.match(audit, /router\.get\('\/audit-logs', requireLogin/);
-  assert.match(audit, /user_nickname = \?/);
+  assert.match(audit, /subject_nickname = \?/);
+  assert.match(audit, /operator_name = \?/);
   assert.match(audit, /req\.session\.user\.display_name/);
 });

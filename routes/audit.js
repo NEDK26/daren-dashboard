@@ -4,23 +4,30 @@ const { prepare } = require('../db');
 const { requireLogin } = require('../middleware');
 
 router.get('/audit-logs', requireLogin, (req, res) => {
-  const { table, record, user, limit = 200, offset = 0 } = req.query;
+  const { action, keyword, batchId, limit = 200, offset = 0 } = req.query;
 
-  let sql = 'SELECT * FROM audit_logs';
+  let sql = `SELECT l.* FROM operation_logs l`;
   const conditions = [];
   const params = [];
 
-  if (table) { conditions.push('table_name = ?'); params.push(table); }
-  if (record) { conditions.push('record_id = ?'); params.push(record); }
-  if (req.session.user.role === 'admin' && user) { conditions.push('user_nickname = ?'); params.push(user); }
-  if (req.session.user.role !== 'admin') { conditions.push('user_nickname = ?'); params.push(req.session.user.display_name); }
+  if (action) { conditions.push('l.action_type = ?'); params.push(action); }
+  if (batchId) { conditions.push('l.batch_id = ?'); params.push(Number(batchId)); }
+  if (keyword) {
+    conditions.push('(l.operator_name LIKE ? OR l.subject_name LIKE ? OR l.changes_json LIKE ?)');
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+  }
+  if (req.session.user.role !== 'admin') {
+    conditions.push('(l.subject_nickname = ? OR l.operator_name = ?)');
+    params.push(req.session.user.display_name, req.session.user.display_name);
+  }
   const whereSql = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
   sql += whereSql;
-  sql += ' ORDER BY changed_at DESC LIMIT ? OFFSET ?';
-  params.push(Number(limit), Number(offset));
+  sql += ' ORDER BY l.created_at DESC, l.id DESC LIMIT ? OFFSET ?';
+  const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
+  params.push(pageSize, Math.max(0, Number(offset) || 0));
 
   const rows = prepare(sql).all(...params);
-  const totalRow = prepare('SELECT COUNT(*) as cnt FROM audit_logs' + whereSql).get(...params.slice(0, -2));
+  const totalRow = prepare('SELECT COUNT(*) as cnt FROM operation_logs l' + whereSql).get(...params.slice(0, -2));
   res.json({ rows, total: totalRow ? totalRow.cnt : 0 });
 });
 

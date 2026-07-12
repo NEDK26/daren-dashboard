@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const ExcelJS = require('exceljs');
 const { prepare, withTransaction } = require('../db');
-const { requireAdmin } = require('../middleware');
+const { requireAdmin, operationLog } = require('../middleware');
 const { hashPassword } = require('../auth');
 const { buildHeaderMap } = require('../excel-schema');
 
@@ -121,6 +121,12 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
       });
 
       prepare("UPDATE batches SET source_filename = ?, imported_at = datetime('now','localtime') WHERE id = ?").run(req.file.originalname, batchId);
+    });
+
+    operationLog(req, {
+      actionType: '导入数据', subjectType: '批次', subjectId: batch.id, subjectName: batch.name,
+      batchId: batch.id, batchName: batch.name,
+      changes: [{ field: '导入结果', old: '未导入', new: `成功导入 ${imported} 条，跳过 ${skipped} 条，新增用户 ${newUsers} 人` }]
     });
 
     res.json({ ok: true, imported, skipped, newUsers, totalRows });

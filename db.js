@@ -268,6 +268,23 @@ function initSchema() {
     changed_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   )`);
 
+  // Keep one complete user-visible operation per row.  The old audit_logs table
+  // remains in place so existing installations can upgrade without data loss.
+  _db.run(`CREATE TABLE IF NOT EXISTS operation_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id INTEGER,
+    batch_name TEXT,
+    operator_name TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    subject_type TEXT NOT NULL,
+    subject_id TEXT,
+    subject_name TEXT NOT NULL,
+    subject_nickname TEXT,
+    changes_json TEXT NOT NULL DEFAULT '[]',
+    result TEXT NOT NULL DEFAULT '成功',
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  )`);
+
   try { _db.run("ALTER TABLE videos ADD COLUMN anomaly_data TEXT DEFAULT ''"); } catch {}
   try { _db.run('ALTER TABLE videos ADD COLUMN is_main_platform TEXT'); } catch {}
   try { _db.run("ALTER TABLE darens ADD COLUMN confirmation_status TEXT NOT NULL DEFAULT '待确认'"); } catch {}
@@ -284,6 +301,9 @@ function initSchema() {
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_batch_id ON videos(batch_id)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_platform ON videos(platform)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_audit_table_record ON audit_logs(table_name, record_id)');
+  _db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_created ON operation_logs(created_at DESC)');
+  _db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_subject ON operation_logs(subject_nickname, created_at DESC)');
+  _db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_batch ON operation_logs(batch_id, created_at DESC)');
 }
 
 // Prepare wrapper mimicking better-sqlite3 sync API

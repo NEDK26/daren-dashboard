@@ -78,8 +78,11 @@ function deleteDarensByIds({ db, ids, batchId, actor, uploadsDir, saveDb }) {
     if (actor) {
       for (const daren of darens) {
         db.run(
-          'INSERT INTO audit_logs (user_nickname, table_name, record_id, column_name, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?)',
-          [actor, 'darens', String(daren.id), '__delete__', daren.nickname, '']
+          `INSERT INTO operation_logs
+            (batch_id, operator_name, action_type, subject_type, subject_id, subject_name, subject_nickname, changes_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [hasBatch ? normalizedBatchId : null, actor, '删除数据', '达人', String(daren.id), daren.nickname, daren.nickname,
+            JSON.stringify([{ field: '数据状态', old: '存在', new: '已删除' }])]
         );
       }
     }

@@ -34,14 +34,16 @@ async function createDb() {
     display_name TEXT NOT NULL UNIQUE,
     role TEXT NOT NULL DEFAULT 'user'
   )`);
-  db.run(`CREATE TABLE audit_logs (
+  db.run(`CREATE TABLE operation_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_nickname TEXT NOT NULL,
-    table_name TEXT NOT NULL,
-    record_id TEXT NOT NULL,
-    column_name TEXT NOT NULL,
-    old_value TEXT,
-    new_value TEXT
+    batch_id INTEGER,
+    operator_name TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    subject_type TEXT NOT NULL,
+    subject_id TEXT,
+    subject_name TEXT NOT NULL,
+    subject_nickname TEXT,
+    changes_json TEXT NOT NULL
   )`);
   return db;
 }
@@ -78,7 +80,7 @@ test('deletes selected darens, their videos, matching user accounts, and upload 
   assert.equal(getScalar(db, 'SELECT COUNT(*) FROM videos'), 1);
   assert.equal(getScalar(db, "SELECT COUNT(*) FROM users WHERE display_name = 'alice'"), 0);
   assert.equal(getScalar(db, "SELECT COUNT(*) FROM users WHERE display_name = 'bob'"), 1);
-  assert.equal(getScalar(db, 'SELECT COUNT(*) FROM audit_logs'), 1);
+  assert.equal(getScalar(db, 'SELECT COUNT(*) FROM operation_logs'), 1);
   assert.equal(fs.existsSync(path.join(uploadsDir, 'plays.png')), false);
 });
 
