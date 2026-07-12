@@ -18,7 +18,7 @@ router.get('/darens', requireLogin, (req, res) => {
   const nickname = req.session.user.display_name;
 
   let sql = `
-    SELECT d.id, d.nickname, d.organization, d.content_type, d.category,
+    SELECT d.id, d.nickname, d.organization, d.content_type, d.category, d.platform,
            d.platform_nickname, d.homepage_url, d.account, d.followers,
            d.confirmation_status,
            COALESCE(SUM(v.da_plays), 0) as total_plays
@@ -101,7 +101,7 @@ router.put('/darens/:id', requireLogin, (req, res) => {
   const allowedCols = isAdmin ? Object.keys(req.body) : Object.keys(req.body).filter(k => editableCols.includes(k));
   if (allowedCols.length === 0) return res.status(403).json({ error: '没有可编辑的列' });
 
-  const darenCols = ['organization', 'content_type', 'category', 'platform', 'is_main_platform',
+  const darenCols = ['organization', 'content_type', 'category', 'platform',
     'platform_nickname', 'homepage_url', 'account', 'followers'];
 
   const changes = {};

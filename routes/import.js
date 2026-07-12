@@ -72,8 +72,8 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
 
         let darenId = darenCache.get(nickname);
         if (!darenId) {
-          const info = prepare('INSERT INTO darens (batch_id, nickname, organization, content_type, category, platform, is_main_platform, platform_nickname, homepage_url, account, followers) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-            batchId, nickname, getVal('organization'), getVal('content_type'), getVal('category'), getVal('platform'), getVal('is_main_platform'),
+          const info = prepare('INSERT INTO darens (batch_id, nickname, organization, content_type, category, platform, platform_nickname, homepage_url, account, followers) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+            batchId, nickname, getVal('organization'), getVal('content_type'), getVal('category'), getVal('platform'),
             getVal('platform_nickname'), getVal('homepage_url'), getVal('account'), getNum('followers')
           );
           darenId = info.lastInsertRowid;
@@ -99,17 +99,17 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
           } catch {}
         }
 
-        prepare(`INSERT INTO videos (batch_id, work_id, daren_id, platform, title, tags, content_url, duration, publish_time, da_plays, da_likes, da_7d_plays, da_7d_likes, comments, saves, shares, violation_status, violation_desc, compliance_status, compliance_desc, is_node, node_name, is_hot, appeal, screenshot_plays, screenshot_likes, screenshot_7d_plays, screenshot_7d_likes, anomaly_data)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        prepare(`INSERT INTO videos (batch_id, work_id, daren_id, platform, is_main_platform, title, tags, content_url, duration, publish_time, da_plays, da_likes, da_7d_plays, da_7d_likes, comments, saves, shares, violation_status, violation_desc, compliance_status, compliance_desc, is_node, node_name, is_hot, appeal, screenshot_plays, screenshot_likes, screenshot_7d_plays, screenshot_7d_likes, anomaly_data)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(batch_id, daren_id, platform, work_id) DO UPDATE SET
-            title = excluded.title, tags = excluded.tags, content_url = excluded.content_url, duration = excluded.duration, publish_time = excluded.publish_time,
+            is_main_platform = excluded.is_main_platform, title = excluded.title, tags = excluded.tags, content_url = excluded.content_url, duration = excluded.duration, publish_time = excluded.publish_time,
             da_plays = excluded.da_plays, da_likes = excluded.da_likes, da_7d_plays = excluded.da_7d_plays, da_7d_likes = excluded.da_7d_likes,
             comments = excluded.comments, saves = excluded.saves, shares = excluded.shares, violation_status = excluded.violation_status,
             violation_desc = excluded.violation_desc, compliance_status = excluded.compliance_status, compliance_desc = excluded.compliance_desc,
             is_node = excluded.is_node, node_name = excluded.node_name, is_hot = excluded.is_hot, appeal = excluded.appeal,
             screenshot_plays = excluded.screenshot_plays, screenshot_likes = excluded.screenshot_likes,
             screenshot_7d_plays = excluded.screenshot_7d_plays, screenshot_7d_likes = excluded.screenshot_7d_likes, anomaly_data = excluded.anomaly_data`).run(
-          batchId, workId, darenId, platform,
+          batchId, workId, darenId, platform, getVal('is_main_platform'),
           getVal('title'), getVal('tags'), getVal('content_url'), getNum('duration'), publishTime,
           getNum('da_plays'), getNum('da_likes'), getNum('da_7d_plays'), getNum('da_7d_likes'),
           getNum('comments'), getNum('saves'), getNum('shares'),

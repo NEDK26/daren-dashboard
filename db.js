@@ -67,11 +67,11 @@ const INITIAL_BATCH = {
 
 const DAREN_COLUMNS = [
   'id', 'nickname', 'organization', 'content_type', 'category', 'total_plays', 'platform',
-  'is_main_platform', 'platform_nickname', 'homepage_url', 'account', 'followers', 'confirmation_status'
+  'platform_nickname', 'homepage_url', 'account', 'followers', 'confirmation_status'
 ];
 
 const VIDEO_COLUMNS = [
-  'id', 'work_id', 'daren_id', 'platform', 'title', 'tags', 'content_url', 'duration', 'publish_time',
+  'id', 'work_id', 'daren_id', 'platform', 'is_main_platform', 'title', 'tags', 'content_url', 'duration', 'publish_time',
   'da_plays', 'da_likes', 'da_7d_plays', 'da_7d_likes', 'comments', 'saves', 'shares',
   'violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node',
   'node_name', 'is_hot', 'appeal', 'screenshot_plays', 'screenshot_likes',
@@ -103,7 +103,6 @@ function createDarensTable(db, tableName = 'darens') {
     category TEXT,
     total_plays INTEGER DEFAULT 0,
     platform TEXT,
-    is_main_platform TEXT,
     platform_nickname TEXT,
     homepage_url TEXT,
     account TEXT,
@@ -121,6 +120,7 @@ function createVideosTable(db, tableName = 'videos') {
     work_id TEXT NOT NULL,
     daren_id INTEGER NOT NULL,
     platform TEXT NOT NULL,
+    is_main_platform TEXT,
     title TEXT,
     tags TEXT,
     content_url TEXT,
@@ -269,6 +269,7 @@ function initSchema() {
   )`);
 
   try { _db.run("ALTER TABLE videos ADD COLUMN anomaly_data TEXT DEFAULT ''"); } catch {}
+  try { _db.run('ALTER TABLE videos ADD COLUMN is_main_platform TEXT'); } catch {}
   try { _db.run("ALTER TABLE darens ADD COLUMN confirmation_status TEXT NOT NULL DEFAULT '待确认'"); } catch {}
   _db.run(`CREATE TRIGGER IF NOT EXISTS validate_darens_confirmation_status_insert
     BEFORE INSERT ON darens

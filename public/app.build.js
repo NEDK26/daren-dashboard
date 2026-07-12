@@ -774,6 +774,7 @@ function VideoDetail({
   const requestRef = useRef(null);
   const isAdmin = user.role === 'admin';
   const isReadOnly = batch?.status === 'history';
+  const detailItems = [['全网昵称', daren.nickname], ['机构名称', daren.organization], ['内容类型', daren.content_type], ['达人分类', daren.category], ['平台', daren.platform], ['平台昵称', daren.platform_nickname], ['账号', daren.account], ['粉丝数', (daren.followers || 0).toLocaleString()], ['总播放量', (daren.total_plays || 0).toLocaleString()], ['确认状态', confirmationStatus]];
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
@@ -961,6 +962,11 @@ function VideoDetail({
     dataIndex: 'platform',
     width: 65,
     render: platformTag
+  }, {
+    title: '是否主平台',
+    dataIndex: 'is_main_platform',
+    width: 90,
+    render: value => value || '-'
   }, {
     title: '视频标题',
     dataIndex: 'title',
@@ -1171,7 +1177,22 @@ function VideoDetail({
     size: "small",
     type: "primary",
     onClick: () => submitConfirmation('已确认')
-  }, "确认数据无误"))), /*#__PURE__*/React.createElement("div", {
+  }, "确认数据无误"))), /*#__PURE__*/React.createElement(Card, {
+    title: "达人详情",
+    className: "daren-detail-card",
+    size: "small"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "daren-detail-grid"
+  }, detailItems.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+    className: "daren-detail-item",
+    key: label
+  }, /*#__PURE__*/React.createElement("span", null, label), /*#__PURE__*/React.createElement("strong", null, value || '-'))), /*#__PURE__*/React.createElement("div", {
+    className: "daren-detail-item"
+  }, /*#__PURE__*/React.createElement("span", null, "主页链接"), /*#__PURE__*/React.createElement("strong", null, daren.homepage_url ? /*#__PURE__*/React.createElement("a", {
+    href: daren.homepage_url,
+    target: "_blank",
+    rel: "noreferrer"
+  }, "查看主页") : '-')))), /*#__PURE__*/React.createElement("div", {
     className: "anomaly-summary-card",
     "aria-label": "视频异常统计"
   }, /*#__PURE__*/React.createElement("div", {

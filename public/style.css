@@ -146,6 +146,25 @@ body {
   color: var(--ink);
 }
 
+.daren-detail-card { margin-bottom: 16px; }
+
+.daren-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px 20px;
+}
+
+.daren-detail-item {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.daren-detail-item span { color: var(--ink-muted); font-size: 12px; }
+.daren-detail-item strong { color: var(--ink); font-size: 13px; overflow-wrap: anywhere; }
+.daren-detail-item a { color: var(--accent); }
+
 /* ══ Login ══ */
 
 .login-page {

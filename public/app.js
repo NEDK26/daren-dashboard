@@ -446,6 +446,12 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
   const requestRef = useRef(null);
   const isAdmin = user.role === 'admin';
   const isReadOnly = batch?.status === 'history';
+  const detailItems = [
+    ['全网昵称', daren.nickname], ['机构名称', daren.organization], ['内容类型', daren.content_type],
+    ['达人分类', daren.category], ['平台', daren.platform], ['平台昵称', daren.platform_nickname],
+    ['账号', daren.account], ['粉丝数', (daren.followers || 0).toLocaleString()],
+    ['总播放量', (daren.total_plays || 0).toLocaleString()], ['确认状态', confirmationStatus]
+  ];
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -597,6 +603,7 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
 
   const columns = [
     { title: '平台', dataIndex: 'platform', width: 65, render: platformTag },
+    { title: '是否主平台', dataIndex: 'is_main_platform', width: 90, render: value => value || '-' },
     { title: '视频标题', dataIndex: 'title', width: 200, ellipsis: true, editable: true, render: textTooltip },
     { title: '作品标签', dataIndex: 'tags', width: 120, ellipsis: true, editable: true, render: textTooltip },
     { title: '内容链接', dataIndex: 'content_url', width: 70,
@@ -667,6 +674,12 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
         <h3>{isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'}</h3>
         {!isAdmin && <Space>当前状态：{confirmationStatusTag(confirmationStatus)}{!isReadOnly && confirmationStatus === '待确认' && <Button size="small" type="primary" onClick={() => submitConfirmation('已确认')}>确认数据无误</Button>}</Space>}
       </div>
+      <Card title="达人详情" className="daren-detail-card" size="small">
+        <div className="daren-detail-grid">
+          {detailItems.map(([label, value]) => <div className="daren-detail-item" key={label}><span>{label}</span><strong>{value || '-'}</strong></div>)}
+          <div className="daren-detail-item"><span>主页链接</span><strong>{daren.homepage_url ? <a href={daren.homepage_url} target="_blank" rel="noreferrer">查看主页</a> : '-'}</strong></div>
+        </div>
+      </Card>
       <div className="anomaly-summary-card" aria-label="视频异常统计">
         <div className="anomaly-summary-item anomaly">
           <span>异常数量</span>
