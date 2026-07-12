@@ -100,7 +100,7 @@ function LoginPage({ onLogin }) {
   );
 }
 
-function HomePage({ onDataCheck, onBatchManagement, isAdmin }) {
+function HomePage({ onDataCheck }) {
   return (
     <div className="workbench-page">
       <div className="workbench-heading">
@@ -108,7 +108,6 @@ function HomePage({ onDataCheck, onBatchManagement, isAdmin }) {
           <div className="workbench-eyebrow">本期工作台</div>
           <h3>请选择要核对的内容</h3>
         </div>
-        {isAdmin && <Button onClick={onBatchManagement}>批次管理</Button>}
       </div>
       <div className="workbench-cards">
         <Card className="workbench-card workbench-card-primary" hoverable onClick={onDataCheck}>
@@ -276,7 +275,7 @@ function BatchManagerPage({ batches, onRefresh, onSelectBatch, onBack }) {
 
 // ── DarenList ──
 
-function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchManagement, onHome }) {
+function DarenList({ user, batch, onViewVideos }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -425,7 +424,6 @@ function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchMana
         </div>
       )}
       <div className="toolbar">
-        <Button onClick={onHome}>功能首页</Button>
         <Input.Search placeholder="搜索昵称" value={searchInput} onChange={e => setSearchInput(e.target.value)} onSearch={() => { setPage(1); setSearch(searchInput); }} style={{ width: 200 }} allowClear />
         <Select placeholder="达人分类" value={category || undefined} onChange={v => { setPage(1); setCategory(v || ''); }} style={{ width: 150, marginLeft: 12 }} allowClear options={categoryOptions} />
         <div className="spacer" />
@@ -433,9 +431,6 @@ function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchMana
           <>
             <Button onClick={handleExport} style={{ marginLeft: 8 }}>导出</Button>
             <Button danger loading={deleting} disabled={isReadOnly || !selectedRowKeys.length} onClick={() => handleDelete(selectedRows)} style={{ marginLeft: 8 }}>删除选中</Button>
-            <Button onClick={onBatchManagement} style={{ marginLeft: 8 }}>批次管理</Button>
-            <Button onClick={onSettings} style={{ marginLeft: 8 }}>设置</Button>
-            <Button onClick={onAudit} style={{ marginLeft: 8 }}>审核</Button>
           </>
         )}
       </div>
@@ -454,7 +449,7 @@ function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchMana
   );
 }
 
-function VideoDetail({ daren, user, batch, onBack, onHome }) {
+function VideoDetail({ daren, user, batch, onBack }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -696,7 +691,6 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
   return (
     <>
       <div className="video-detail-header">
-        <Button onClick={onHome}>功能首页</Button>
         {isAdmin && <Button onClick={onBack}>← 返回</Button>}
         <h3>{isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'}</h3>
         {!isAdmin && <Space>当前状态：{confirmationStatusTag(confirmationStatus)}{!isReadOnly && confirmationStatus === '待确认' && <Button size="small" type="primary" onClick={() => submitConfirmation('已确认')}>确认数据无误</Button>}</Space>}
@@ -940,10 +934,10 @@ function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <HomePage onDataCheck={enterDataCheck} onBatchManagement={() => setPage('batches')} isAdmin={user.role === 'admin'} />;
+        return <HomePage onDataCheck={enterDataCheck} />;
       case 'videos':
         return selectedDaren
-          ? <VideoDetail daren={selectedDaren} user={user} batch={selectedBatch} onBack={goBack} onHome={goHome} />
+          ? <VideoDetail daren={selectedDaren} user={user} batch={selectedBatch} onBack={goBack} />
           : <Card>本期暂无数据</Card>;
       case 'settings':
         return <SettingsPage onBack={goBack} />;
@@ -956,7 +950,7 @@ function App() {
       case 'empty':
         return <Card>本期暂无数据</Card>;
       default:
-        return <DarenList user={user} batch={selectedBatch} onViewVideos={navigateToVideos} onSettings={() => setPage('settings')} onAudit={() => setPage('audit')} onBatchManagement={() => setPage('batches')} onHome={goHome} />;
+        return <DarenList user={user} batch={selectedBatch} onViewVideos={navigateToVideos} />;
     }
   };
 

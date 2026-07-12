@@ -210,9 +210,7 @@ function LoginPage({
   }, "登录")))));
 }
 function HomePage({
-  onDataCheck,
-  onBatchManagement,
-  isAdmin
+  onDataCheck
 }) {
   return /*#__PURE__*/React.createElement("div", {
     className: "workbench-page"
@@ -220,9 +218,7 @@ function HomePage({
     className: "workbench-heading"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "workbench-eyebrow"
-  }, "本期工作台"), /*#__PURE__*/React.createElement("h3", null, "请选择要核对的内容")), isAdmin && /*#__PURE__*/React.createElement(Button, {
-    onClick: onBatchManagement
-  }, "批次管理")), /*#__PURE__*/React.createElement("div", {
+  }, "本期工作台"), /*#__PURE__*/React.createElement("h3", null, "请选择要核对的内容"))), /*#__PURE__*/React.createElement("div", {
     className: "workbench-cards"
   }, /*#__PURE__*/React.createElement(Card, {
     className: "workbench-card workbench-card-primary",
@@ -482,11 +478,7 @@ function BatchManagerPage({
 function DarenList({
   user,
   batch,
-  onViewVideos,
-  onSettings,
-  onAudit,
-  onBatchManagement,
-  onHome
+  onViewVideos
 }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -734,9 +726,7 @@ function DarenList({
     className: "confirmation-summary-item appealed"
   }, /*#__PURE__*/React.createElement("span", null, "已申诉"), /*#__PURE__*/React.createElement("strong", null, statusCounts.appealed))), /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
-  }, /*#__PURE__*/React.createElement(Button, {
-    onClick: onHome
-  }, "功能首页"), /*#__PURE__*/React.createElement(Input.Search, {
+  }, /*#__PURE__*/React.createElement(Input.Search, {
     placeholder: "搜索昵称",
     value: searchInput,
     onChange: e => setSearchInput(e.target.value),
@@ -776,22 +766,7 @@ function DarenList({
     style: {
       marginLeft: 8
     }
-  }, "删除选中"), /*#__PURE__*/React.createElement(Button, {
-    onClick: onBatchManagement,
-    style: {
-      marginLeft: 8
-    }
-  }, "批次管理"), /*#__PURE__*/React.createElement(Button, {
-    onClick: onSettings,
-    style: {
-      marginLeft: 8
-    }
-  }, "设置"), /*#__PURE__*/React.createElement(Button, {
-    onClick: onAudit,
-    style: {
-      marginLeft: 8
-    }
-  }, "审核"))), /*#__PURE__*/React.createElement(Table, {
+  }, "删除选中"))), /*#__PURE__*/React.createElement(Table, {
     columns: columns,
     dataSource: data,
     rowKey: "id",
@@ -820,8 +795,7 @@ function VideoDetail({
   daren,
   user,
   batch,
-  onBack,
-  onHome
+  onBack
 }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -1239,9 +1213,7 @@ function VideoDetail({
   };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "video-detail-header"
-  }, /*#__PURE__*/React.createElement(Button, {
-    onClick: onHome
-  }, "功能首页"), isAdmin && /*#__PURE__*/React.createElement(Button, {
+  }, isAdmin && /*#__PURE__*/React.createElement(Button, {
     onClick: onBack
   }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'), !isAdmin && /*#__PURE__*/React.createElement(Space, null, "当前状态：", confirmationStatusTag(confirmationStatus), !isReadOnly && confirmationStatus === '待确认' && /*#__PURE__*/React.createElement(Button, {
     size: "small",
@@ -1668,17 +1640,14 @@ function App() {
     switch (page) {
       case 'home':
         return /*#__PURE__*/React.createElement(HomePage, {
-          onDataCheck: enterDataCheck,
-          onBatchManagement: () => setPage('batches'),
-          isAdmin: user.role === 'admin'
+          onDataCheck: enterDataCheck
         });
       case 'videos':
         return selectedDaren ? /*#__PURE__*/React.createElement(VideoDetail, {
           daren: selectedDaren,
           user: user,
           batch: selectedBatch,
-          onBack: goBack,
-          onHome: goHome
+          onBack: goBack
         }) : /*#__PURE__*/React.createElement(Card, null, "本期暂无数据");
       case 'settings':
         return /*#__PURE__*/React.createElement(SettingsPage, {
@@ -1708,11 +1677,7 @@ function App() {
         return /*#__PURE__*/React.createElement(DarenList, {
           user: user,
           batch: selectedBatch,
-          onViewVideos: navigateToVideos,
-          onSettings: () => setPage('settings'),
-          onAudit: () => setPage('audit'),
-          onBatchManagement: () => setPage('batches'),
-          onHome: goHome
+          onViewVideos: navigateToVideos
         });
     }
   };

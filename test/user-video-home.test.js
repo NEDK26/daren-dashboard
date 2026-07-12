@@ -17,7 +17,7 @@ test('users enter a two-card workbench before opening data reconciliation', () =
 test('admins can manage batches before any data batch is published', () => {
   const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
 
-  assert.match(app, /function HomePage\(\{ onDataCheck, onBatchManagement, isAdmin \}\)/);
-  assert.match(app, /onBatchManagement/);
+  assert.match(app, /function HomePage\(\{ onDataCheck \}\)/);
+  assert.match(app, /label: '批次管理'/);
   assert.match(app, /if \(!selectedBatch\) \{\s+if \(user\.role === 'admin'\) return setPage\('batches'\)/);
 });
