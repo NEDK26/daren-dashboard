@@ -57,17 +57,66 @@ function withTransaction(fn, options = {}) {
   return result;
 }
 
+const INITIAL_BATCH = {
+  name: '2026年05月｜ 数据核对',
+  year: 2026,
+  month: 5,
+  title: '数据核对',
+  status: 'current'
+};
+
+const DAREN_COLUMNS = [
+  'id', 'nickname', 'organization', 'content_type', 'category', 'total_plays', 'platform',
+  'is_main_platform', 'platform_nickname', 'homepage_url', 'account', 'followers', 'confirmation_status'
+];
+
 const VIDEO_COLUMNS = [
-  'work_id', 'daren_id', 'platform', 'title', 'tags', 'content_url', 'duration', 'publish_time',
+  'id', 'work_id', 'daren_id', 'platform', 'title', 'tags', 'content_url', 'duration', 'publish_time',
   'da_plays', 'da_likes', 'da_7d_plays', 'da_7d_likes', 'comments', 'saves', 'shares',
   'violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node',
   'node_name', 'is_hot', 'appeal', 'screenshot_plays', 'screenshot_likes',
   'screenshot_7d_plays', 'screenshot_7d_likes', 'anomaly_data'
 ];
 
+function createBatchesTable(db) {
+  db.run(`CREATE TABLE IF NOT EXISTS batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    year INTEGER NOT NULL,
+    month INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+    title TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('draft', 'current', 'history')),
+    source_filename TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    imported_at TEXT
+  )`);
+}
+
+function createDarensTable(db, tableName = 'darens') {
+  db.run(`CREATE TABLE ${tableName} (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id INTEGER NOT NULL,
+    nickname TEXT NOT NULL,
+    organization TEXT,
+    content_type TEXT,
+    category TEXT,
+    total_plays INTEGER DEFAULT 0,
+    platform TEXT,
+    is_main_platform TEXT,
+    platform_nickname TEXT,
+    homepage_url TEXT,
+    account TEXT,
+    followers INTEGER DEFAULT 0,
+    confirmation_status TEXT NOT NULL DEFAULT '待确认' CHECK (confirmation_status IN ('待确认', '已确认', '已提交申诉')),
+    FOREIGN KEY (batch_id) REFERENCES batches(id),
+    UNIQUE(batch_id, nickname)
+  )`);
+}
+
 function createVideosTable(db, tableName = 'videos') {
   db.run(`CREATE TABLE ${tableName} (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id INTEGER NOT NULL,
     work_id TEXT NOT NULL,
     daren_id INTEGER NOT NULL,
     platform TEXT NOT NULL,
@@ -96,8 +145,9 @@ function createVideosTable(db, tableName = 'videos') {
     screenshot_7d_plays TEXT,
     screenshot_7d_likes TEXT,
     anomaly_data TEXT DEFAULT '',
+    FOREIGN KEY (batch_id) REFERENCES batches(id),
     FOREIGN KEY (daren_id) REFERENCES darens(id),
-    UNIQUE(daren_id, platform, work_id)
+    UNIQUE(batch_id, daren_id, platform, work_id)
   )`);
 }
 
@@ -117,24 +167,28 @@ function tableExists(db, tableName) {
   return exists;
 }
 
+function copyRows(db, sourceTable, targetTable, columns, extra = {}) {
+  const existingNames = new Set(tableColumns(db, sourceTable).map(column => column.name));
+  const copyColumns = columns.filter(column => existingNames.has(column));
+  const targetColumns = [...copyColumns, ...Object.keys(extra)];
+  const selectColumns = [...copyColumns.map(column => `"${column}"`), ...Object.keys(extra).map(() => '?')];
+  if (!copyColumns.length) throw new Error(`${sourceTable} 表缺少迁移所需字段`);
+  db.run(
+    `INSERT INTO ${targetTable} (${targetColumns.map(column => `"${column}"`).join(', ')}) SELECT ${selectColumns.join(', ')} FROM ${sourceTable}`,
+    Object.values(extra)
+  );
+}
+
 function migrateVideosTable(db = _db) {
   const currentColumns = tableColumns(db, 'videos');
-  if (currentColumns.length === 0 || currentColumns.some(column => column.name === 'id' && Number(column.pk) === 1)) {
-    return false;
-  }
-
-  const existingNames = new Set(currentColumns.map(column => column.name));
-  const copyColumns = VIDEO_COLUMNS.filter(column => existingNames.has(column));
-  if (!existingNames.has('work_id') || !existingNames.has('daren_id') || !existingNames.has('platform')) {
-    throw new Error('videos 表缺少迁移所需字段');
-  }
-  const quotedColumns = copyColumns.map(column => `"${column}"`).join(', ');
+  if (currentColumns.length === 0 || currentColumns.some(column => column.name === 'id' && Number(column.pk) === 1)) return false;
+  if (!currentColumns.some(column => column.name === 'batch_id')) return migrateBatchSchema(db);
 
   db.run('PRAGMA foreign_keys = OFF');
   try {
     db.run('BEGIN');
     createVideosTable(db, 'videos_new');
-    db.run(`INSERT INTO videos_new (${quotedColumns}) SELECT ${quotedColumns} FROM videos`);
+    copyRows(db, 'videos', 'videos_new', VIDEO_COLUMNS);
     db.run('DROP TABLE videos');
     db.run('ALTER TABLE videos_new RENAME TO videos');
     db.run('COMMIT');
@@ -147,25 +201,47 @@ function migrateVideosTable(db = _db) {
   return true;
 }
 
-function initSchema() {
-  _db.run(`CREATE TABLE IF NOT EXISTS darens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nickname TEXT NOT NULL UNIQUE,
-    organization TEXT,
-    content_type TEXT,
-    category TEXT,
-    total_plays INTEGER DEFAULT 0,
-    platform TEXT,
-    is_main_platform TEXT,
-    platform_nickname TEXT,
-    homepage_url TEXT,
-    account TEXT,
-    followers INTEGER DEFAULT 0,
-    confirmation_status TEXT NOT NULL DEFAULT '待确认' CHECK (confirmation_status IN ('待确认', '已确认', '已提交申诉'))
-  )`);
+function migrateBatchSchema(db = _db) {
+  const darenColumns = tableColumns(db, 'darens');
+  const videoColumns = tableColumns(db, 'videos');
+  if (darenColumns.some(column => column.name === 'batch_id') && videoColumns.some(column => column.name === 'batch_id')) {
+    createBatchesTable(db);
+    return false;
+  }
 
+  db.run('PRAGMA foreign_keys = OFF');
+  try {
+    db.run('BEGIN');
+    createBatchesTable(db);
+    db.run(
+      'INSERT OR IGNORE INTO batches (name, year, month, title, status) VALUES (?, ?, ?, ?, ?)',
+      [INITIAL_BATCH.name, INITIAL_BATCH.year, INITIAL_BATCH.month, INITIAL_BATCH.title, INITIAL_BATCH.status]
+    );
+    const batchId = db.exec("SELECT id FROM batches WHERE name = '2026年05月｜ 数据核对'")[0].values[0][0];
+    createDarensTable(db, 'darens_new');
+    copyRows(db, 'darens', 'darens_new', DAREN_COLUMNS, { batch_id: batchId });
+    createVideosTable(db, 'videos_new');
+    copyRows(db, 'videos', 'videos_new', VIDEO_COLUMNS, { batch_id: batchId });
+    db.run('DROP TABLE videos');
+    db.run('DROP TABLE darens');
+    db.run('ALTER TABLE darens_new RENAME TO darens');
+    db.run('ALTER TABLE videos_new RENAME TO videos');
+    db.run('COMMIT');
+  } catch (error) {
+    try { db.run('ROLLBACK'); } catch {}
+    throw error;
+  } finally {
+    db.run('PRAGMA foreign_keys = ON');
+  }
+  return true;
+}
+
+function initSchema() {
+  createBatchesTable(_db);
+  if (!tableExists(_db, 'darens')) createDarensTable(_db);
   if (!tableExists(_db, 'videos')) createVideosTable(_db);
-  else migrateVideosTable(_db);
+  else if (tableColumns(_db, 'darens').some(column => column.name === 'batch_id') && tableColumns(_db, 'videos').some(column => column.name === 'batch_id')) migrateVideosTable(_db);
+  else migrateBatchSchema(_db);
 
   _db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -201,6 +277,8 @@ function initSchema() {
     FOR EACH ROW WHEN NEW.confirmation_status NOT IN ('待确认', '已确认', '已提交申诉')
     BEGIN SELECT RAISE(ABORT, 'invalid confirmation status'); END`);
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_daren_id ON videos(daren_id)');
+  _db.run('CREATE INDEX IF NOT EXISTS idx_darens_batch_id ON darens(batch_id)');
+  _db.run('CREATE INDEX IF NOT EXISTS idx_videos_batch_id ON videos(batch_id)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_platform ON videos(platform)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_audit_table_record ON audit_logs(table_name, record_id)');
 }
@@ -241,4 +319,4 @@ function escapeColumn(col) {
   return col;
 }
 
-module.exports = { initDb, getDb, saveDb, prepare, escapeColumn, migrateVideosTable, withTransaction };
+module.exports = { initDb, getDb, saveDb, prepare, escapeColumn, migrateVideosTable, migrateBatchSchema, withTransaction };
