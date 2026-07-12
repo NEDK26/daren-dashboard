@@ -81,6 +81,8 @@ body {
 .desktop-nav .ant-btn span:first-child { display: none; }
 .desktop-nav .ant-btn.active { color: var(--paper) !important; border-bottom: 2px solid var(--paper); }
 
+.workspace-back { color: rgba(250,247,242,0.68) !important; }
+
 .mobile-nav { display: none; }
 
 .app-header .user-info {
@@ -282,6 +284,10 @@ body {
 }
 
 .workbench-card-disabled .workbench-card-action { color: var(--ink-muted); }
+
+.fee-placeholder-card { max-width: 520px; }
+.fee-placeholder-card h3 { color: var(--ink); font-size: 18px; }
+.fee-placeholder-card p { margin-top: 6px; color: var(--ink-secondary); }
 
 /* ═══════════════════════════════════════════
    ANT DESIGN OVERRIDES
@@ -660,6 +666,7 @@ body {
   .app-header { padding: 0 14px; }
   .app-header .user-info { gap: 8px; font-size: 12px; }
   .desktop-nav { display: none; }
+  .workspace-back { padding: 0 6px; font-size: 12px; }
   .batch-picker { display: none; }
   .app-content { padding: 16px 14px 84px; }
   .mobile-nav {

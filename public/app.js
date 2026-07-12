@@ -100,7 +100,7 @@ function LoginPage({ onLogin }) {
   );
 }
 
-function HomePage({ onDataCheck }) {
+function HomePage({ onDataCheck, onFeeCheck }) {
   return (
     <div className="workbench-page">
       <div className="workbench-heading">
@@ -116,7 +116,7 @@ function HomePage({ onDataCheck }) {
           <div className="workbench-card-desc">查看和核对本期达人视频数据</div>
           <div className="workbench-card-action">进入核对 →</div>
         </Card>
-        <Card className="workbench-card workbench-card-disabled" hoverable onClick={() => message.info('功能正在开发中')}>
+        <Card className="workbench-card workbench-card-disabled" hoverable onClick={onFeeCheck}>
           <div className="workbench-card-icon">费</div>
           <div className="workbench-card-title">本期费用核对</div>
           <div className="workbench-card-desc">费用数据核对功能</div>
@@ -125,6 +125,13 @@ function HomePage({ onDataCheck }) {
       </div>
     </div>
   );
+}
+
+function FeePlaceholderPage({ onBack }) {
+  return <div className="workbench-page">
+    <div className="video-detail-header"><Button onClick={onBack}>← 返回选择</Button><h3>本期费用核对</h3></div>
+    <Card className="fee-placeholder-card"><h3>功能开发中</h3><p>本期费用核对即将上线。</p></Card>
+  </div>;
 }
 
 function BatchManagerPage({ batches, onRefresh, onSelectBatch, onBack }) {
@@ -842,6 +849,7 @@ function App() {
   const [selectedDaren, setSelectedDaren] = useState(null);
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
+  const [activeWorkspace, setActiveWorkspace] = useState(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -869,6 +877,7 @@ function App() {
   }, [user, loadBatches]);
 
   const enterDataCheck = useCallback(async () => {
+    setActiveWorkspace('data');
     if (!selectedBatch) {
       if (user.role === 'admin') return setPage('batches');
       return message.info('暂无可核对的批次');
@@ -888,6 +897,11 @@ function App() {
     }
   }, [user, selectedBatch]);
 
+  const enterFeeCheck = useCallback(() => {
+    setActiveWorkspace(null);
+    setPage('fees');
+  }, []);
+
   const navigateToVideos = useCallback((daren) => {
     setSelectedDaren(daren);
     setPage('videos');
@@ -899,6 +913,7 @@ function App() {
 
   const goHome = useCallback(() => {
     setSelectedDaren(null);
+    setActiveWorkspace(null);
     setPage('home');
   }, []);
 
@@ -908,6 +923,7 @@ function App() {
     setSelectedDaren(null);
     setSelectedBatch(null);
     setBatches([]);
+    setActiveWorkspace(null);
     setPage('home');
   }, []);
 
@@ -934,7 +950,9 @@ function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <HomePage onDataCheck={enterDataCheck} />;
+        return <HomePage onDataCheck={enterDataCheck} onFeeCheck={enterFeeCheck} />;
+      case 'fees':
+        return <FeePlaceholderPage onBack={goHome} />;
       case 'videos':
         return selectedDaren
           ? <VideoDetail daren={selectedDaren} user={user} batch={selectedBatch} onBack={goBack} />
@@ -958,7 +976,8 @@ function App() {
     <Layout style={{ minHeight: '100vh', background: 'var(--paper)' }}>
       <div className="app-header">
         <h2>{user.role === 'admin' ? '达人数据管理' : '达人数据'}</h2>
-        <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="desktop" />
+        {activeWorkspace === 'data' && <Button className="workspace-back" type="text" onClick={goHome}>返回选择</Button>}
+        {activeWorkspace === 'data' && <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="desktop" />}
         <div className="user-info">
           {user.role === 'admin' && <BatchPicker batches={batches} value={selectedBatch} onChange={chooseBatch} />}
           <span>{user.display_name}（{roleMap[user.role] || user.role}）</span>
@@ -968,7 +987,7 @@ function App() {
       <div className="app-content">
         {renderPage()}
       </div>
-      <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="mobile" />
+      {activeWorkspace === 'data' && <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="mobile" />}
     </Layout>
   );
 }

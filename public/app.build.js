@@ -210,7 +210,8 @@ function LoginPage({
   }, "登录")))));
 }
 function HomePage({
-  onDataCheck
+  onDataCheck,
+  onFeeCheck
 }) {
   return /*#__PURE__*/React.createElement("div", {
     className: "workbench-page"
@@ -235,7 +236,7 @@ function HomePage({
   }, "进入核对 →")), /*#__PURE__*/React.createElement(Card, {
     className: "workbench-card workbench-card-disabled",
     hoverable: true,
-    onClick: () => message.info('功能正在开发中')
+    onClick: onFeeCheck
   }, /*#__PURE__*/React.createElement("div", {
     className: "workbench-card-icon"
   }, "费"), /*#__PURE__*/React.createElement("div", {
@@ -245,6 +246,19 @@ function HomePage({
   }, "费用数据核对功能"), /*#__PURE__*/React.createElement("div", {
     className: "workbench-card-action"
   }, "功能正在开发中"))));
+}
+function FeePlaceholderPage({
+  onBack
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "workbench-page"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "video-detail-header"
+  }, /*#__PURE__*/React.createElement(Button, {
+    onClick: onBack
+  }, "← 返回选择"), /*#__PURE__*/React.createElement("h3", null, "本期费用核对")), /*#__PURE__*/React.createElement(Card, {
+    className: "fee-placeholder-card"
+  }, /*#__PURE__*/React.createElement("h3", null, "功能开发中"), /*#__PURE__*/React.createElement("p", null, "本期费用核对即将上线。")));
 }
 function BatchManagerPage({
   batches,
@@ -1556,6 +1570,7 @@ function App() {
   const [selectedDaren, setSelectedDaren] = useState(null);
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
+  const [activeWorkspace, setActiveWorkspace] = useState(null);
   const [checking, setChecking] = useState(true);
   useEffect(() => {
     api.get('/api/me').then(res => {
@@ -1578,6 +1593,7 @@ function App() {
     loadBatches().catch(() => message.error('加载批次失败'));
   }, [user, loadBatches]);
   const enterDataCheck = useCallback(async () => {
+    setActiveWorkspace('data');
     if (!selectedBatch) {
       if (user.role === 'admin') return setPage('batches');
       return message.info('暂无可核对的批次');
@@ -1596,6 +1612,10 @@ function App() {
       message.error('加载数据失败');
     }
   }, [user, selectedBatch]);
+  const enterFeeCheck = useCallback(() => {
+    setActiveWorkspace(null);
+    setPage('fees');
+  }, []);
   const navigateToVideos = useCallback(daren => {
     setSelectedDaren(daren);
     setPage('videos');
@@ -1605,6 +1625,7 @@ function App() {
   }, []);
   const goHome = useCallback(() => {
     setSelectedDaren(null);
+    setActiveWorkspace(null);
     setPage('home');
   }, []);
   const handleLogout = useCallback(async () => {
@@ -1613,6 +1634,7 @@ function App() {
     setSelectedDaren(null);
     setSelectedBatch(null);
     setBatches([]);
+    setActiveWorkspace(null);
     setPage('home');
   }, []);
   const chooseBatch = useCallback(batch => {
@@ -1640,7 +1662,12 @@ function App() {
     switch (page) {
       case 'home':
         return /*#__PURE__*/React.createElement(HomePage, {
-          onDataCheck: enterDataCheck
+          onDataCheck: enterDataCheck,
+          onFeeCheck: enterFeeCheck
+        });
+      case 'fees':
+        return /*#__PURE__*/React.createElement(FeePlaceholderPage, {
+          onBack: goHome
         });
       case 'videos':
         return selectedDaren ? /*#__PURE__*/React.createElement(VideoDetail, {
@@ -1688,7 +1715,11 @@ function App() {
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "app-header"
-  }, /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据'), /*#__PURE__*/React.createElement(AppNavigation, {
+  }, /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据'), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(Button, {
+    className: "workspace-back",
+    type: "text",
+    onClick: goHome
+  }, "返回选择"), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(AppNavigation, {
     user: user,
     page: page,
     onNavigate: navigatePrimary,
@@ -1708,7 +1739,7 @@ function App() {
     }
   }, "退出"))), /*#__PURE__*/React.createElement("div", {
     className: "app-content"
-  }, renderPage()), /*#__PURE__*/React.createElement(AppNavigation, {
+  }, renderPage()), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(AppNavigation, {
     user: user,
     page: page,
     onNavigate: navigatePrimary,
