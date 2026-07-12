@@ -74,7 +74,7 @@ function LoginPage({ onLogin }) {
   );
 }
 
-function HomePage({ onDataCheck }) {
+function HomePage({ onDataCheck, onBatchManagement, isAdmin }) {
   return (
     <div className="workbench-page">
       <div className="workbench-heading">
@@ -82,6 +82,7 @@ function HomePage({ onDataCheck }) {
           <div className="workbench-eyebrow">本期工作台</div>
           <h3>请选择要核对的内容</h3>
         </div>
+        {isAdmin && <Button onClick={onBatchManagement}>批次管理</Button>}
       </div>
       <div className="workbench-cards">
         <Card className="workbench-card workbench-card-primary" hoverable onClick={onDataCheck}>
@@ -848,7 +849,10 @@ function App() {
   }, [user, loadBatches]);
 
   const enterDataCheck = useCallback(async () => {
-    if (!selectedBatch) return message.info('暂无可核对的批次');
+    if (!selectedBatch) {
+      if (user.role === 'admin') return setPage('batches');
+      return message.info('暂无可核对的批次');
+    }
     if (user.role === 'admin') {
       setPage('darens');
       return;
@@ -905,7 +909,7 @@ function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <HomePage onDataCheck={enterDataCheck} />;
+        return <HomePage onDataCheck={enterDataCheck} onBatchManagement={() => setPage('batches')} isAdmin={user.role === 'admin'} />;
       case 'videos':
         return selectedDaren
           ? <VideoDetail daren={selectedDaren} user={user} batch={selectedBatch} onBack={goBack} onHome={goHome} />
@@ -915,7 +919,7 @@ function App() {
       case 'audit':
         return <AuditPage onBack={goBack} />;
       case 'batches':
-        return <BatchManagerPage batches={batches} onRefresh={loadBatches} onSelectBatch={chooseBatch} onBack={() => setPage('darens')} />;
+        return <BatchManagerPage batches={batches} onRefresh={loadBatches} onSelectBatch={chooseBatch} onBack={goHome} />;
       case 'empty':
         return <Card>本期暂无数据</Card>;
       default:

@@ -144,7 +144,9 @@ function LoginPage({
   }, "登录")))));
 }
 function HomePage({
-  onDataCheck
+  onDataCheck,
+  onBatchManagement,
+  isAdmin
 }) {
   return /*#__PURE__*/React.createElement("div", {
     className: "workbench-page"
@@ -152,7 +154,9 @@ function HomePage({
     className: "workbench-heading"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "workbench-eyebrow"
-  }, "本期工作台"), /*#__PURE__*/React.createElement("h3", null, "请选择要核对的内容"))), /*#__PURE__*/React.createElement("div", {
+  }, "本期工作台"), /*#__PURE__*/React.createElement("h3", null, "请选择要核对的内容")), isAdmin && /*#__PURE__*/React.createElement(Button, {
+    onClick: onBatchManagement
+  }, "批次管理")), /*#__PURE__*/React.createElement("div", {
     className: "workbench-cards"
   }, /*#__PURE__*/React.createElement(Card, {
     className: "workbench-card workbench-card-primary",
@@ -1536,7 +1540,10 @@ function App() {
     loadBatches().catch(() => message.error('加载批次失败'));
   }, [user, loadBatches]);
   const enterDataCheck = useCallback(async () => {
-    if (!selectedBatch) return message.info('暂无可核对的批次');
+    if (!selectedBatch) {
+      if (user.role === 'admin') return setPage('batches');
+      return message.info('暂无可核对的批次');
+    }
     if (user.role === 'admin') {
       setPage('darens');
       return;
@@ -1591,7 +1598,9 @@ function App() {
     switch (page) {
       case 'home':
         return /*#__PURE__*/React.createElement(HomePage, {
-          onDataCheck: enterDataCheck
+          onDataCheck: enterDataCheck,
+          onBatchManagement: () => setPage('batches'),
+          isAdmin: user.role === 'admin'
         });
       case 'videos':
         return selectedDaren ? /*#__PURE__*/React.createElement(VideoDetail, {
@@ -1614,7 +1623,7 @@ function App() {
           batches: batches,
           onRefresh: loadBatches,
           onSelectBatch: chooseBatch,
-          onBack: () => setPage('darens')
+          onBack: goHome
         });
       case 'empty':
         return /*#__PURE__*/React.createElement(Card, null, "本期暂无数据");
