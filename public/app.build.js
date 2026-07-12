@@ -66,6 +66,10 @@ const confirmationStatusTag = status => {
     color: color
   }, value);
 };
+const PAGE_SIZE_OPTIONS = ['20', '50', '100'];
+const textTooltip = value => value ? /*#__PURE__*/React.createElement(Tooltip, {
+  title: value
+}, /*#__PURE__*/React.createElement("span", null, value)) : '-';
 function BatchPicker({
   batches,
   value,
@@ -417,6 +421,7 @@ function DarenList({
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -456,7 +461,7 @@ function DarenList({
     try {
       const params = new URLSearchParams();
       params.set('page', page);
-      params.set('pageSize', 20);
+      params.set('pageSize', pageSize);
       params.set('batchId', batch.id);
       if (search) params.set('search', search);
       if (category) params.set('category', category);
@@ -480,7 +485,7 @@ function DarenList({
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category, page, batch?.id]);
+  }, [search, category, page, pageSize, batch?.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -644,6 +649,10 @@ function DarenList({
   }];
   const selectedKeySet = new Set(selectedRowKeys.map(String));
   const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
+  const handlePageSizeChange = (_, nextPageSize) => {
+    setPage(1);
+    setPageSize(nextPageSize);
+  };
   return /*#__PURE__*/React.createElement("div", null, isAdmin && /*#__PURE__*/React.createElement("div", {
     className: "confirmation-summary-card",
     "aria-label": "达人确认状态统计"
@@ -720,8 +729,11 @@ function DarenList({
     pagination: {
       total,
       current: page,
-      pageSize: 20,
-      onChange: setPage
+      pageSize,
+      showSizeChanger: true,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
+      onChange: setPage,
+      onShowSizeChange: handlePageSizeChange
     },
     rowSelection: isAdmin && !isReadOnly ? {
       selectedRowKeys,
@@ -744,6 +756,7 @@ function VideoDetail({
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [platformFilter, setPlatformFilter] = useState(undefined);
   const [violation, setViolation] = useState(undefined);
@@ -785,7 +798,7 @@ function VideoDetail({
     try {
       const params = new URLSearchParams();
       params.set('page', page);
-      params.set('pageSize', 20);
+      params.set('pageSize', pageSize);
       params.set('batchId', batch.id);
       if (platformFilter) params.set('platform', platformFilter);
       if (violation) params.set('violation', violation);
@@ -809,7 +822,7 @@ function VideoDetail({
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [platformFilter, violation, compliance, titleSearch, page, daren.id, batch?.id]);
+  }, [platformFilter, violation, compliance, titleSearch, page, pageSize, daren.id, batch?.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -953,13 +966,15 @@ function VideoDetail({
     dataIndex: 'title',
     width: 200,
     ellipsis: true,
-    editable: true
+    editable: true,
+    render: textTooltip
   }, {
     title: '作品标签',
     dataIndex: 'tags',
     width: 120,
     ellipsis: true,
-    editable: true
+    editable: true,
+    render: textTooltip
   }, {
     title: '内容链接',
     dataIndex: 'content_url',
@@ -1055,7 +1070,8 @@ function VideoDetail({
     dataIndex: 'violation_desc',
     width: 130,
     ellipsis: true,
-    editable: true
+    editable: true,
+    render: textTooltip
   }, {
     title: '合规',
     dataIndex: 'compliance_status',
@@ -1070,7 +1086,8 @@ function VideoDetail({
     dataIndex: 'compliance_desc',
     width: 130,
     ellipsis: true,
-    editable: true
+    editable: true,
+    render: textTooltip
   }, {
     title: '节点',
     dataIndex: 'is_node',
@@ -1081,7 +1098,8 @@ function VideoDetail({
     dataIndex: 'node_name',
     width: 110,
     ellipsis: true,
-    editable: true
+    editable: true,
+    render: textTooltip
   }, {
     title: '爆款',
     dataIndex: 'is_hot',
@@ -1092,7 +1110,8 @@ function VideoDetail({
     dataIndex: 'appeal',
     width: 100,
     editable: true,
-    ellipsis: true
+    ellipsis: true,
+    render: textTooltip
   }, {
     title: '操作',
     key: 'actions',
@@ -1138,6 +1157,10 @@ function VideoDetail({
       className: isAnomaly(record, col.dataIndex) ? 'cell-anomaly' : undefined
     })
   }));
+  const handlePageSizeChange = (_, nextPageSize) => {
+    setPage(1);
+    setPageSize(nextPageSize);
+  };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "video-detail-header"
   }, /*#__PURE__*/React.createElement(Button, {
@@ -1246,8 +1269,11 @@ function VideoDetail({
     pagination: {
       total,
       current: page,
-      pageSize: 20,
-      onChange: setPage
+      pageSize,
+      showSizeChanger: true,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
+      onChange: setPage,
+      onShowSizeChange: handlePageSizeChange
     },
     bordered: true,
     size: "small",
@@ -1383,13 +1409,14 @@ function AuditPage({
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const fetchLogs = useCallback(async () => {
     setLoading(true);
-    const res = await api.get('/api/audit-logs?limit=50&offset=' + (page - 1) * 50);
+    const res = await api.get('/api/audit-logs?limit=' + pageSize + '&offset=' + (page - 1) * pageSize);
     setLogs(res.rows || []);
     setTotal(res.total || 0);
     setLoading(false);
-  }, [page]);
+  }, [page, pageSize]);
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
@@ -1405,7 +1432,8 @@ function AuditPage({
     title: '记录ID',
     dataIndex: 'record_id',
     width: 200,
-    ellipsis: true
+    ellipsis: true,
+    render: textTooltip
   }, {
     title: '字段',
     dataIndex: 'column_name',
@@ -1414,17 +1442,23 @@ function AuditPage({
     title: '旧值',
     dataIndex: 'old_value',
     width: 160,
-    ellipsis: true
+    ellipsis: true,
+    render: textTooltip
   }, {
     title: '新值',
     dataIndex: 'new_value',
     width: 160,
-    ellipsis: true
+    ellipsis: true,
+    render: textTooltip
   }, {
     title: '时间',
     dataIndex: 'changed_at',
     width: 160
   }];
+  const handlePageSizeChange = (_, nextPageSize) => {
+    setPage(1);
+    setPageSize(nextPageSize);
+  };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "video-detail-header"
   }, /*#__PURE__*/React.createElement(Button, {
@@ -1439,9 +1473,12 @@ function AuditPage({
     },
     pagination: {
       total,
-      pageSize: 50,
+      pageSize,
       current: page,
-      onChange: setPage
+      showSizeChanger: true,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
+      onChange: setPage,
+      onShowSizeChange: handlePageSizeChange
     },
     bordered: true,
     size: "small"

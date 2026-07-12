@@ -17,6 +17,9 @@ const confirmationStatusTag = (status) => {
   return <Tag color={color}>{value}</Tag>;
 };
 
+const PAGE_SIZE_OPTIONS = ['20', '50', '100'];
+const textTooltip = value => value ? <Tooltip title={value}><span>{value}</span></Tooltip> : '-';
+
 function BatchPicker({ batches, value, onChange }) {
   const selectable = batches.filter(batch => batch.status !== 'draft');
   if (!selectable.length) return <span className="batch-picker-empty">暂无批次</span>;
@@ -250,6 +253,7 @@ function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchMana
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -283,7 +287,7 @@ function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchMana
     try {
       const params = new URLSearchParams();
       params.set('page', page);
-      params.set('pageSize', 20);
+      params.set('pageSize', pageSize);
       params.set('batchId', batch.id);
       if (search) params.set('search', search);
       if (category) params.set('category', category);
@@ -298,7 +302,7 @@ function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchMana
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category, page, batch?.id]);
+  }, [search, category, page, pageSize, batch?.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -373,6 +377,7 @@ function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchMana
 
   const selectedKeySet = new Set(selectedRowKeys.map(String));
   const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
+  const handlePageSizeChange = (_, nextPageSize) => { setPage(1); setPageSize(nextPageSize); };
 
   return (
     <div>
@@ -412,7 +417,7 @@ function DarenList({ user, batch, onViewVideos, onSettings, onAudit, onBatchMana
         dataSource={data}
         rowKey="id"
         loading={loading}
-        pagination={{ total, current: page, pageSize: 20, onChange: setPage }}
+        pagination={{ total, current: page, pageSize, showSizeChanger: true, pageSizeOptions: PAGE_SIZE_OPTIONS, onChange: setPage, onShowSizeChange: handlePageSizeChange }}
         rowSelection={isAdmin && !isReadOnly ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined}
         bordered
         size="middle"
@@ -426,6 +431,7 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [platformFilter, setPlatformFilter] = useState(undefined);
   const [violation, setViolation] = useState(undefined);
@@ -463,7 +469,7 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
     try {
       const params = new URLSearchParams();
       params.set('page', page);
-      params.set('pageSize', 20);
+      params.set('pageSize', pageSize);
       params.set('batchId', batch.id);
       if (platformFilter) params.set('platform', platformFilter);
       if (violation) params.set('violation', violation);
@@ -479,7 +485,7 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [platformFilter, violation, compliance, titleSearch, page, daren.id, batch?.id]);
+  }, [platformFilter, violation, compliance, titleSearch, page, pageSize, daren.id, batch?.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -591,8 +597,8 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
 
   const columns = [
     { title: '平台', dataIndex: 'platform', width: 65, render: platformTag },
-    { title: '视频标题', dataIndex: 'title', width: 200, ellipsis: true, editable: true },
-    { title: '作品标签', dataIndex: 'tags', width: 120, ellipsis: true, editable: true },
+    { title: '视频标题', dataIndex: 'title', width: 200, ellipsis: true, editable: true, render: textTooltip },
+    { title: '作品标签', dataIndex: 'tags', width: 120, ellipsis: true, editable: true, render: textTooltip },
     { title: '内容链接', dataIndex: 'content_url', width: 70,
       render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" style={{color:'#5a6e8a'}}>查看</a> : '-' },
     { title: '时长', dataIndex: 'duration', width: 65, editable: true },
@@ -618,14 +624,14 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
     { title: '转发', dataIndex: 'shares', width: 65, editable: true },
     { title: '违规', dataIndex: 'violation_status', width: 65,
       render: v => v==='违规' ? <Tag color="red">违规</Tag> : <Tag color="green">未违规</Tag> },
-    { title: '违规描述', dataIndex: 'violation_desc', width: 130, ellipsis: true, editable: true },
+    { title: '违规描述', dataIndex: 'violation_desc', width: 130, ellipsis: true, editable: true, render: textTooltip },
     { title: '合规', dataIndex: 'compliance_status', width: 65,
       render: v => v==='合规' ? <Tag color="green">合规</Tag> : <Tag color="orange">不合规</Tag> },
-    { title: '合规描述', dataIndex: 'compliance_desc', width: 130, ellipsis: true, editable: true },
+    { title: '合规描述', dataIndex: 'compliance_desc', width: 130, ellipsis: true, editable: true, render: textTooltip },
     { title: '节点', dataIndex: 'is_node', width: 60, editable: true },
-    { title: '节点名称', dataIndex: 'node_name', width: 110, ellipsis: true, editable: true },
+    { title: '节点名称', dataIndex: 'node_name', width: 110, ellipsis: true, editable: true, render: textTooltip },
     { title: '爆款', dataIndex: 'is_hot', width: 60, editable: true },
-    { title: '申诉', dataIndex: 'appeal', width: 100, editable: true, ellipsis: true },
+    { title: '申诉', dataIndex: 'appeal', width: 100, editable: true, ellipsis: true, render: textTooltip },
     { title: '操作', key: 'actions', width: 80,
       render: (_, record) => {
         if (editingKey === record.id) {
@@ -651,6 +657,7 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
     ...col,
     onCell: record => ({ record, dataIndex: col.dataIndex, editable: col.editable && (isAdmin || editableCols.includes(col.dataIndex)), className: isAnomaly(record, col.dataIndex) ? 'cell-anomaly' : undefined })
   }));
+  const handlePageSizeChange = (_, nextPageSize) => { setPage(1); setPageSize(nextPageSize); };
 
   return (
     <>
@@ -681,7 +688,7 @@ function VideoDetail({ daren, user, batch, onBack, onHome }) {
       </div>
       <Form form={form} component={false}>
         <Table columns={mergedColumns} dataSource={data} rowKey="id"
-          loading={loading} scroll={{x:2600}} pagination={{total, current:page, pageSize:20, onChange:setPage}}
+          loading={loading} scroll={{x:2600}} pagination={{total, current:page, pageSize, showSizeChanger: true, pageSizeOptions: PAGE_SIZE_OPTIONS, onChange:setPage, onShowSizeChange:handlePageSizeChange}}
           bordered size="small" components={{body:{cell:EditableCell}}} />
       </Form>
     </>
@@ -756,26 +763,28 @@ function AuditPage({ onBack }) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
-    const res = await api.get('/api/audit-logs?limit=50&offset=' + ((page - 1) * 50));
+    const res = await api.get('/api/audit-logs?limit=' + pageSize + '&offset=' + ((page - 1) * pageSize));
     setLogs(res.rows || []);
     setTotal(res.total || 0);
     setLoading(false);
-  }, [page]);
+  }, [page, pageSize]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   const columns = [
     { title: '操作人', dataIndex: 'user_nickname', width: 130 },
     { title: '表名', dataIndex: 'table_name', width: 80 },
-    { title: '记录ID', dataIndex: 'record_id', width: 200, ellipsis: true },
+    { title: '记录ID', dataIndex: 'record_id', width: 200, ellipsis: true, render: textTooltip },
     { title: '字段', dataIndex: 'column_name', width: 130 },
-    { title: '旧值', dataIndex: 'old_value', width: 160, ellipsis: true },
-    { title: '新值', dataIndex: 'new_value', width: 160, ellipsis: true },
+    { title: '旧值', dataIndex: 'old_value', width: 160, ellipsis: true, render: textTooltip },
+    { title: '新值', dataIndex: 'new_value', width: 160, ellipsis: true, render: textTooltip },
     { title: '时间', dataIndex: 'changed_at', width: 160 },
   ];
+  const handlePageSizeChange = (_, nextPageSize) => { setPage(1); setPageSize(nextPageSize); };
 
   return (
     <>
@@ -785,7 +794,7 @@ function AuditPage({ onBack }) {
       </div>
       <Table columns={columns} dataSource={logs} rowKey="id"
         loading={loading} scroll={{x:1000}}
-        pagination={{ total, pageSize: 50, current: page, onChange: setPage }}
+        pagination={{ total, pageSize, current: page, showSizeChanger: true, pageSizeOptions: PAGE_SIZE_OPTIONS, onChange: setPage, onShowSizeChange: handlePageSizeChange }}
         bordered size="small" />
     </>
   );

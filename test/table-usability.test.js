@@ -1,0 +1,15 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+
+test('tables reveal truncated text and let users choose page size', () => {
+  assert.match(app, /const PAGE_SIZE_OPTIONS = \['20', '50', '100'\]/);
+  assert.match(app, /const textTooltip = value => value \? <Tooltip title=\{value\}>/);
+  assert.match(app, /render: textTooltip/);
+  assert.match(app, /showSizeChanger: true/);
+  assert.match(app, /pageSizeOptions: PAGE_SIZE_OPTIONS/);
+  assert.match(app, /params\.set\('pageSize', pageSize\)/);
+});
