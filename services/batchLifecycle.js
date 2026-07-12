@@ -16,8 +16,9 @@ function revokeBatch({ prepare, withTransaction, batchId }) {
   withTransaction(() => {
     const current = prepare("SELECT * FROM batches WHERE id = ? AND status = 'current'").get(batchId);
     if (!current) throw new Error('只能撤销已发布批次');
-    if (!current.previous_batch_id) throw new Error('没有可恢复的上一个批次');
-    const previous = prepare("SELECT * FROM batches WHERE id = ? AND status = 'history'").get(current.previous_batch_id);
+    const previous = current.previous_batch_id
+      ? prepare("SELECT * FROM batches WHERE id = ? AND status = 'history'").get(current.previous_batch_id)
+      : prepare("SELECT * FROM batches WHERE status = 'history' ORDER BY id DESC LIMIT 1").get();
     if (!previous) throw new Error('上一个批次不存在');
     prepare("UPDATE batches SET status = 'draft', previous_batch_id = NULL WHERE id = ?").run(current.id);
     prepare("UPDATE batches SET status = 'current' WHERE id = ?").run(previous.id);

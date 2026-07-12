@@ -60,6 +60,16 @@ test('revoking the current batch restores the previous current batch', async () 
   assert.deepEqual(prepare('SELECT status, previous_batch_id FROM batches WHERE id = ?').get(2), { status: 'draft', previous_batch_id: null });
 });
 
+test('revoking a legacy current batch restores the latest history when no link was recorded', async () => {
+  const db = await createDb();
+  const prepare = createPrepare(db);
+  db.run("UPDATE batches SET status = 'history' WHERE id = 1");
+  db.run("UPDATE batches SET status = 'current' WHERE id = 2");
+  lifecycle.revokeBatch({ prepare, withTransaction: createTransaction(db), batchId: 2 });
+  assert.equal(prepare('SELECT status FROM batches WHERE id = ?').get(1).status, 'current');
+  assert.equal(prepare('SELECT status FROM batches WHERE id = ?').get(2).status, 'draft');
+});
+
 test('batch route exposes publish and revoke actions', () => {
   const route = fs.readFileSync(path.join(__dirname, '../routes/batches.js'), 'utf8');
   assert.match(route, /router\.post\('\/batches\/:id\/publish'/);
