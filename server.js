@@ -24,6 +24,7 @@ async function main() {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
   app.use('/api', require('./routes/auth'));
+  app.use('/api', require('./routes/batches'));
   app.use('/api', require('./routes/darens'));
   app.use('/api', require('./routes/videos'));
   app.use('/api', require('./routes/upload'));
