@@ -13,10 +13,10 @@
 - Work directly on `master`; do not create a worktree.
 - Do not add dependencies.
 - Batch name format is `YYYY年MM月｜ 自定义标题`; name is globally unique.
-- Keep at most one `draft` and one `current` batch; any number of `history` batches.
+- Keep at most one `draft` and one published `current` batch; any number of `history` batches.
 - Migrate existing rows into current batch `2026年05月｜ 数据核对`.
 - A failed draft import rolls back rows and newly created users but leaves the draft batch retryable.
-- A successful batch is immutable; current/history batches cannot be imported again or deleted.
+- A successful import remains a draft until an admin publishes it; published/history batches cannot be imported again or deleted. Revoking a published batch restores its previous published batch and returns the revoked batch to draft.
 - Use test-first development and run `npm test`, `npm run build`, and `git diff --check` before completion.
 
 ---
@@ -25,13 +25,14 @@
 
 - `db.js`: create and migrate batch-aware SQLite tables.
 - `services/batches.js`: validate batch names, resolve current/selected batches, and enforce visibility/editability.
-- `routes/batches.js`: admin batch creation, listing, and draft deletion API.
-- `routes/import.js`: draft-bound transactional import and current-batch activation.
+- `services/batchLifecycle.js`: publish and revoke the current batch atomically.
+- `routes/batches.js`: admin batch creation, listing, draft deletion, publish, and revoke APIs.
+- `routes/import.js`: draft-bound transactional import; publishing is explicit.
 - `routes/darens.js`, `routes/videos.js`, `routes/export.js`, `routes/upload.js`: batch-scoped reads and writes.
 - `services/deleteDarens.js`: delete only selected batch records; retain a global user if their nickname remains in another batch.
 - `server.js`: mount batch routes.
 - `public/app.js`, `public/style.css`: batch picker, admin batch manager, and selected-batch requests.
-- `test/batch-schema.test.js`, `test/batch-service.test.js`, `test/batch-routes.test.js`, `test/batch-ui.test.js`: regression coverage.
+- `test/batch-schema.test.js`, `test/batch-service.test.js`, `test/batch-lifecycle.test.js`, `test/batch-ui.test.js`: regression coverage.
 
 ### Task 1: Batch schema and legacy migration
 
@@ -41,7 +42,7 @@
 
 **Interfaces:**
 - Produces `migrateBatchSchema(db)` exported from `db.js`.
-- Produces tables `batches(id, name, year, month, title, status, source_filename, created_at, imported_at)` and batch-aware `darens`/`videos`.
+- Produces tables `batches(id, name, year, month, title, status, previous_batch_id, source_filename, created_at, imported_at)` and batch-aware `darens`/`videos`.
 
 - [ ] **Step 1: Write the failing migration tests**
 
@@ -136,15 +137,17 @@ git commit -m "feat: add batch schema migration"
 
 **Files:**
 - Create: `services/batches.js`
+- Create: `services/batchLifecycle.js`
 - Create: `routes/batches.js`
 - Modify: `server.js`
 - Create: `test/batch-service.test.js`
-- Create: `test/batch-routes.test.js`
+- Create: `test/batch-lifecycle.test.js`
 
 **Interfaces:**
 - `buildBatchName(year, month, title)` returns `YYYY年MM月｜ ${title.trim()}`.
 - `resolveBatch(req, batchId)` returns the requested visible batch or `{ error, status }`.
 - `GET /api/batches`, `POST /api/batches`, `DELETE /api/batches/:id`.
+- `POST /api/batches/:id/publish` and `POST /api/batches/:id/revoke` change lifecycle atomically.
 
 - [ ] **Step 1: Write failing tests for naming and lifecycle guards**
 
@@ -195,7 +198,7 @@ router.post('/batches', requireAdmin, (req, res) => {
 });
 ```
 
-`GET /batches` returns all current/history batches for admins, plus a draft for batch management; ordinary users receive current plus only history batches containing a same-nickname daren. `DELETE /batches/:id` rejects non-drafts and deletes only the draft metadata.
+`GET /batches` returns all current/history batches for admins, plus a draft for batch management; ordinary users receive current plus only history batches containing a same-nickname daren. `DELETE /batches/:id` rejects non-drafts and removes the draft's scoped videos, darens, and orphaned user accounts before deleting its metadata.
 
 - [ ] **Step 4: Mount and verify routes**
 
@@ -220,7 +223,7 @@ git commit -m "feat: add batch management api"
 
 **Interfaces:**
 - `POST /api/import` receives multipart `file` and `batchId`.
-- A successful import changes the draft to `current` and any old current to `history` inside `withTransaction`.
+- A successful import keeps the draft status and records the source file; explicit publish changes the draft to `current` and any old current to `history` inside a transaction.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -233,10 +236,10 @@ test('import requires a draft batch and stores batch_id on both record types', (
   assert.match(source, /INSERT INTO videos \(batch_id, work_id, daren_id/);
 });
 
-test('successful import switches the current batch atomically', () => {
+test('successful import keeps the batch draft until explicit publish', () => {
   const source = fs.readFileSync(path.join(__dirname, '../routes/import.js'), 'utf8');
-  assert.match(source, /UPDATE batches SET status = 'history' WHERE status = 'current'/);
-  assert.match(source, /UPDATE batches SET status = 'current', source_filename = \?, imported_at = datetime\('now','localtime'\) WHERE id = \?/);
+  assert.match(source, /UPDATE batches SET source_filename = \?, imported_at = datetime\('now','localtime'\) WHERE id = \?/);
+  assert.doesNotMatch(source, /UPDATE batches SET status = 'current'/);
 });
 ```
 
@@ -270,8 +273,7 @@ withTransaction(() => {
   // appeal = excluded.appeal, screenshot_plays = excluded.screenshot_plays,
   // screenshot_likes = excluded.screenshot_likes, screenshot_7d_plays = excluded.screenshot_7d_plays,
   // screenshot_7d_likes = excluded.screenshot_7d_likes, anomaly_data = excluded.anomaly_data.
-  prepare("UPDATE batches SET status = 'history' WHERE status = 'current'").run();
-  prepare("UPDATE batches SET status = 'current', source_filename = ?, imported_at = datetime('now','localtime') WHERE id = ?")
+  prepare("UPDATE batches SET source_filename = ?, imported_at = datetime('now','localtime') WHERE id = ?")
     .run(req.file.originalname, batchId);
 });
 ```

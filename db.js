@@ -86,6 +86,7 @@ function createBatchesTable(db) {
     month INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
     title TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('draft', 'current', 'history')),
+    previous_batch_id INTEGER,
     source_filename TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     imported_at TEXT
@@ -238,6 +239,7 @@ function migrateBatchSchema(db = _db) {
 
 function initSchema() {
   createBatchesTable(_db);
+  try { _db.run('ALTER TABLE batches ADD COLUMN previous_batch_id INTEGER'); } catch {}
   if (!tableExists(_db, 'darens')) createDarensTable(_db);
   if (!tableExists(_db, 'videos')) createVideosTable(_db);
   else if (tableColumns(_db, 'darens').some(column => column.name === 'batch_id') && tableColumns(_db, 'videos').some(column => column.name === 'batch_id')) migrateVideosTable(_db);

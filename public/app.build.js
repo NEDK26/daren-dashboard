@@ -217,15 +217,41 @@ function BatchManagerPage({
         batchId: draft.id
       });
       if (!res.ok) return message.error(res.error || '导入失败');
-      message.success(`导入完成：${res.imported} 条数据，新建用户 ${res.newUsers} 人`);
-      const latest = await onRefresh();
-      if (latest?.current) onSelectBatch(latest.current);
+      message.success(`导入完成：${res.imported} 条数据，新建用户 ${res.newUsers} 人，请发布批次后让用户查看`);
+      await onRefresh();
     } catch (e) {
       message.error('导入失败，请稍后重试');
     } finally {
       setImporting(false);
     }
     return false;
+  };
+  const publishDraft = async () => {
+    if (!draft || !draft.imported_at) return;
+    try {
+      const res = await api.post('/api/batches/' + draft.id + '/publish', {});
+      if (!res.ok) return message.error(res.error || '发布失败');
+      message.success('批次已发布');
+      const latest = await onRefresh();
+      if (latest?.current) onSelectBatch(latest.current);
+    } catch (e) {
+      message.error('发布失败');
+    }
+  };
+  const revokePublished = async batch => {
+    Modal.confirm({
+      title: '撤销当前批次发布？',
+      content: '撤销后用户将恢复查看上一个已发布批次。',
+      okText: '撤销发布',
+      cancelText: '取消',
+      onOk: async () => {
+        const res = await api.post('/api/batches/' + batch.id + '/revoke', {});
+        if (!res.ok) return message.error(res.error || '撤销失败');
+        message.success('已撤销发布');
+        const latest = await onRefresh();
+        if (latest?.current) onSelectBatch(latest.current);
+      }
+    });
   };
   const deleteDraft = () => {
     if (!draft) return;
@@ -317,6 +343,10 @@ function BatchManagerPage({
     type: "primary",
     loading: importing
   }, "导入 Excel")), /*#__PURE__*/React.createElement(Button, {
+    type: "primary",
+    disabled: !draft.imported_at || importing,
+    onClick: publishDraft
+  }, "发布批次"), /*#__PURE__*/React.createElement(Button, {
     danger: true,
     loading: deleting,
     onClick: deleteDraft
@@ -334,12 +364,20 @@ function BatchManagerPage({
       width: 100,
       render: status => /*#__PURE__*/React.createElement(Tag, {
         color: status === 'current' ? 'green' : 'default'
-      }, status === 'current' ? '当前' : '历史')
+      }, status === 'current' ? '已发布' : '历史')
     }, {
       title: '导入时间',
       dataIndex: 'imported_at',
       width: 180,
       render: value => value || '-'
+    }, {
+      title: '操作',
+      key: 'actions',
+      width: 120,
+      render: (_, record) => record.status === 'current' ? /*#__PURE__*/React.createElement(Button, {
+        size: "small",
+        onClick: () => revokePublished(record)
+      }, "撤销发布") : null
     }]
   }), /*#__PURE__*/React.createElement(Modal, {
     open: importing,

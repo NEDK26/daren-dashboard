@@ -16,6 +16,8 @@ test('admin frontend exposes batch creation, draft import, and deletion', () => 
   assert.match(app, /创建批次/);
   assert.match(app, /草稿批次/);
   assert.match(app, /批次管理/);
+  assert.match(app, /发布批次/);
+  assert.match(app, /撤销发布/);
 });
 
 test('regular users receive an empty-current-batch state and history becomes read-only', () => {

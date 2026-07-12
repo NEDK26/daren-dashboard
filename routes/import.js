@@ -120,8 +120,7 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
         imported++;
       });
 
-      prepare("UPDATE batches SET status = 'history' WHERE status = 'current'").run();
-      prepare("UPDATE batches SET status = 'current', source_filename = ?, imported_at = datetime('now','localtime') WHERE id = ?").run(req.file.originalname, batchId);
+      prepare("UPDATE batches SET source_filename = ?, imported_at = datetime('now','localtime') WHERE id = ?").run(req.file.originalname, batchId);
     });
 
     res.json({ ok: true, imported, skipped, newUsers, totalRows });

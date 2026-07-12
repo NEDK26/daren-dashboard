@@ -12,10 +12,10 @@ test('import requires a draft batch and writes batch ids', () => {
   assert.match(source, /INSERT INTO videos \(batch_id, work_id, daren_id/);
 });
 
-test('successful import atomically activates the new batch', () => {
+test('successful import keeps the batch as draft until an explicit publish', () => {
   assert.match(source, /withTransaction\(\(\) =>/);
-  assert.match(source, /UPDATE batches SET status = 'history' WHERE status = 'current'/);
-  assert.match(source, /UPDATE batches SET status = 'current', source_filename = \?, imported_at = datetime\('now','localtime'\) WHERE id = \?/);
+  assert.match(source, /UPDATE batches SET source_filename = \?, imported_at = datetime\('now','localtime'\) WHERE id = \?/);
+  assert.doesNotMatch(source, /UPDATE batches SET status = 'current'/);
 });
 
 test('same-batch duplicate rows update instead of being skipped', () => {

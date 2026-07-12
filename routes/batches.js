@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { prepare } = require('../db');
+const { prepare, withTransaction } = require('../db');
 const { requireLogin, requireAdmin } = require('../middleware');
 const { buildBatchName, getCurrentBatch } = require('../services/batches');
+const { publishBatch, revokeBatch } = require('../services/batchLifecycle');
 
 router.get('/batches', requireLogin, (req, res) => {
   const isAdmin = req.session.user.role === 'admin';
@@ -39,8 +40,40 @@ router.delete('/batches/:id', requireAdmin, (req, res) => {
   const batch = prepare('SELECT * FROM batches WHERE id = ?').get(req.params.id);
   if (!batch) return res.status(404).json({ error: '批次不存在' });
   if (batch.status !== 'draft') return res.status(400).json({ error: '只能删除草稿批次' });
-  prepare('DELETE FROM batches WHERE id = ?').run(batch.id);
-  res.json({ ok: true });
+  try {
+    withTransaction(() => {
+      const names = [...new Set(prepare('SELECT nickname FROM darens WHERE batch_id = ?').all(batch.id).map(row => row.nickname))];
+      prepare('DELETE FROM videos WHERE batch_id = ?').run(batch.id);
+      prepare('DELETE FROM darens WHERE batch_id = ?').run(batch.id);
+      for (const nickname of names) {
+        if (!prepare('SELECT 1 FROM darens WHERE nickname = ? LIMIT 1').get(nickname)) {
+          prepare("DELETE FROM users WHERE role = 'user' AND display_name = ?").run(nickname);
+        }
+      }
+      prepare('DELETE FROM batches WHERE id = ?').run(batch.id);
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(400).json({ error: error.message || '删除失败' });
+  }
+});
+
+router.post('/batches/:id/publish', requireAdmin, (req, res) => {
+  try {
+    const batch = publishBatch({ prepare, withTransaction, batchId: req.params.id });
+    res.json({ ok: true, batch });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/batches/:id/revoke', requireAdmin, (req, res) => {
+  try {
+    const batch = revokeBatch({ prepare, withTransaction, batchId: req.params.id });
+    res.json({ ok: true, batch });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
 module.exports = router;
