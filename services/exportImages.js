@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const XlsxTemplate = require('xlsx-template');
 
 const supportedExtensions = new Set(['png', 'jpeg', 'gif']);
 
@@ -12,7 +13,8 @@ function resolveUpload(filePath, uploadsDir) {
   return fs.existsSync(fullPath) ? fullPath : null;
 }
 
-function addScreenshotImages({ workbook, sheet, rows, uploadsDir, screenshotColumns }) {
+function addScreenshotImages({ sheet, rows, uploadsDir, screenshotColumns }) {
+  const images = {};
   for (let index = 0; index < rows.length; index++) {
     const excelRow = sheet.getRow(index + 2);
     for (const [field, column] of Object.entries(screenshotColumns)) {
@@ -23,12 +25,21 @@ function addScreenshotImages({ workbook, sheet, rows, uploadsDir, screenshotColu
       const extension = path.extname(filePath).slice(1).toLowerCase().replace('jpg', 'jpeg');
       if (!supportedExtensions.has(extension)) continue;
 
-      const imageId = workbook.addImage({ buffer: fs.readFileSync(filePath), extension });
-      sheet.addImage(imageId, { tl: { col: column - 1, row: index + 1 }, ext: { width: 60, height: 60 } });
+      const key = `screenshot_${index}_${field}`;
+      excelRow.getCell(column).value = '${imageincell:' + key + '}';
+      images[key] = fs.readFileSync(filePath);
       excelRow.height = Math.max(excelRow.height || 15, 45);
       sheet.getColumn(column).width = Math.max(sheet.getColumn(column).width || 9, 12);
     }
   }
+  return images;
 }
 
-module.exports = { addScreenshotImages };
+function renderCellImages(workbookBuffer, images) {
+  if (!Object.keys(images).length) return Buffer.from(workbookBuffer);
+  const template = new XlsxTemplate(Buffer.from(workbookBuffer));
+  template.substitute(1, images);
+  return template.generate({ type: 'nodebuffer' });
+}
+
+module.exports = { addScreenshotImages, renderCellImages };

@@ -5,7 +5,7 @@ const path = require('path');
 const { prepare } = require('../db');
 const { requireAdmin } = require('../middleware');
 const { exportColumns } = require('../excel-schema');
-const { addScreenshotImages } = require('../services/exportImages');
+const { addScreenshotImages, renderCellImages } = require('../services/exportImages');
 const { getVisibleBatch } = require('../services/batches');
 
 const exportKeyCol = Object.fromEntries(exportColumns.map(({ key }, index) => [key, index + 1]));
@@ -33,8 +33,7 @@ router.get('/export', requireAdmin, async (req, res) => {
   ws.columns = exportColumns;
 
   ws.addRows(rows);
-  addScreenshotImages({
-    workbook: wb,
+  const screenshotImages = addScreenshotImages({
     sheet: ws,
     rows,
     uploadsDir: path.join(__dirname, '..', 'uploads'),
@@ -62,8 +61,7 @@ router.get('/export', requireAdmin, async (req, res) => {
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', 'attachment; filename=daren-data.xlsx');
-  await wb.xlsx.write(res);
-  res.end();
+  res.end(renderCellImages(await wb.xlsx.writeBuffer(), screenshotImages));
 });
 
 module.exports = router;
