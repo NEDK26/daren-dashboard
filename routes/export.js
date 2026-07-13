@@ -61,7 +61,7 @@ router.get('/export', requireAdmin, async (req, res) => {
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', 'attachment; filename=daren-data.xlsx');
-  res.end(renderCellImages(await wb.xlsx.writeBuffer(), screenshotImages));
+  res.end(await renderCellImages(await wb.xlsx.writeBuffer(), screenshotImages));
 });
 
 module.exports = router;

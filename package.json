@@ -14,9 +14,9 @@
     "exceljs": "^4.4.0",
     "express": "^4.21.0",
     "express-session": "^1.18.0",
+    "jszip": "^3.10.1",
     "multer": "^1.4.5-lts.1",
-    "sql.js": "^1.11.0",
-    "xlsx-template": "^1.4.7"
+    "sql.js": "^1.11.0"
   },
   "devDependencies": {
     "@babel/cli": "^8.0.4",
