@@ -504,6 +504,7 @@ function DarenList({
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({
@@ -521,6 +522,22 @@ function DarenList({
     }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
+  useEffect(() => {
+    setCategory('');
+    if (!isAdmin || !batch) return setCategoryOptions([]);
+    let cancelled = false;
+    api.get('/api/daren-categories?batchId=' + batch.id).then(res => {
+      if (!cancelled) setCategoryOptions((res.categories || []).map(value => ({
+        value,
+        label: value
+      })));
+    }).catch(() => {
+      if (!cancelled) setCategoryOptions([]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, batch?.id]);
   const fetchData = useCallback(async () => {
     if (!batch) {
       setData([]);
@@ -688,43 +705,6 @@ function DarenList({
       render: confirmationStatusTag
     });
   }
-  const categoryOptions = [{
-    value: '美食',
-    label: '美食'
-  }, {
-    value: '美妆',
-    label: '美妆'
-  }, {
-    value: '搞笑',
-    label: '搞笑'
-  }, {
-    value: '游戏',
-    label: '游戏'
-  }, {
-    value: '音乐',
-    label: '音乐'
-  }, {
-    value: '舞蹈',
-    label: '舞蹈'
-  }, {
-    value: '知识',
-    label: '知识'
-  }, {
-    value: '时尚',
-    label: '时尚'
-  }, {
-    value: '旅游',
-    label: '旅游'
-  }, {
-    value: '体育',
-    label: '体育'
-  }, {
-    value: '科技',
-    label: '科技'
-  }, {
-    value: '生活',
-    label: '生活'
-  }];
   const selectedKeySet = new Set(selectedRowKeys.map(String));
   const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
   const handlePageSizeChange = (_, nextPageSize) => {
@@ -754,7 +734,7 @@ function DarenList({
       width: 200
     },
     allowClear: true
-  }), /*#__PURE__*/React.createElement(Select, {
+  }), isAdmin && /*#__PURE__*/React.createElement(Select, {
     placeholder: "达人分类",
     value: category || undefined,
     onChange: v => {

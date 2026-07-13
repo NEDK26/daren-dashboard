@@ -29,3 +29,13 @@ test('batch daren deletion preserves users that still have records in other batc
   assert.match(deletion, /SELECT 1 FROM darens WHERE nickname = \? LIMIT 1/);
   assert.match(deletion, /batchId/);
 });
+
+test('category filter options come from distinct non-empty categories in the selected batch', () => {
+  const route = read('routes/darens.js');
+  const app = read('public/app.js');
+  assert.match(route, /router\.get\('\/daren-categories', requireAdmin/);
+  assert.match(route, /SELECT category FROM darens WHERE batch_id = \? AND TRIM\(category\) != '' GROUP BY category ORDER BY MIN\(id\)/);
+  assert.match(app, /api\.get\('\/api\/daren-categories\?batchId=' \+ batch\.id\)/);
+  assert.match(app, /isAdmin && <Select placeholder="达人分类"/);
+  assert.doesNotMatch(app, /const categoryOptions = \[/);
+});

@@ -291,6 +291,7 @@ function DarenList({ user, batch, onViewVideos }) {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({ pending: 0, confirmed: 0, appealed: 0 });
@@ -305,6 +306,16 @@ function DarenList({ user, batch, onViewVideos }) {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  useEffect(() => {
+    setCategory('');
+    if (!isAdmin || !batch) return setCategoryOptions([]);
+    let cancelled = false;
+    api.get('/api/daren-categories?batchId=' + batch.id)
+      .then(res => { if (!cancelled) setCategoryOptions((res.categories || []).map(value => ({ value, label: value }))); })
+      .catch(() => { if (!cancelled) setCategoryOptions([]); });
+    return () => { cancelled = true; };
+  }, [isAdmin, batch?.id]);
 
   const fetchData = useCallback(async () => {
     if (!batch) {
@@ -399,15 +410,6 @@ function DarenList({ user, batch, onViewVideos }) {
     });
   }
 
-  const categoryOptions = [
-    { value: '美食', label: '美食' }, { value: '美妆', label: '美妆' },
-    { value: '搞笑', label: '搞笑' }, { value: '游戏', label: '游戏' },
-    { value: '音乐', label: '音乐' }, { value: '舞蹈', label: '舞蹈' },
-    { value: '知识', label: '知识' }, { value: '时尚', label: '时尚' },
-    { value: '旅游', label: '旅游' }, { value: '体育', label: '体育' },
-    { value: '科技', label: '科技' }, { value: '生活', label: '生活' },
-  ];
-
   const selectedKeySet = new Set(selectedRowKeys.map(String));
   const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
   const handlePageSizeChange = (_, nextPageSize) => { setPage(1); setPageSize(nextPageSize); };
@@ -432,7 +434,7 @@ function DarenList({ user, batch, onViewVideos }) {
       )}
       <div className="toolbar">
         <Input.Search placeholder="搜索昵称" value={searchInput} onChange={e => setSearchInput(e.target.value)} onSearch={() => { setPage(1); setSearch(searchInput); }} style={{ width: 200 }} allowClear />
-        <Select placeholder="达人分类" value={category || undefined} onChange={v => { setPage(1); setCategory(v || ''); }} style={{ width: 150, marginLeft: 12 }} allowClear options={categoryOptions} />
+        {isAdmin && <Select placeholder="达人分类" value={category || undefined} onChange={v => { setPage(1); setCategory(v || ''); }} style={{ width: 150, marginLeft: 12 }} allowClear options={categoryOptions} />}
         <div className="spacer" />
         {isAdmin && (
           <>

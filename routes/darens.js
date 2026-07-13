@@ -6,6 +6,15 @@ const { requireLogin, requireAdmin, auditLog } = require('../middleware');
 const { deleteDarensByIds } = require('../services/deleteDarens');
 const { getVisibleBatch } = require('../services/batches');
 
+router.get('/daren-categories', requireAdmin, (req, res) => {
+  const resolved = getVisibleBatch(req, req.query.batchId);
+  if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
+  const categories = prepare("SELECT category FROM darens WHERE batch_id = ? AND TRIM(category) != '' GROUP BY category ORDER BY MIN(id)")
+    .all(resolved.batch.id)
+    .map(row => row.category);
+  res.json({ categories });
+});
+
 router.get('/darens', requireLogin, (req, res) => {
   const { search, category, batchId } = req.query;
   const resolved = getVisibleBatch(req, batchId);
