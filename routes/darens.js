@@ -15,8 +15,17 @@ router.get('/daren-categories', requireAdmin, (req, res) => {
   res.json({ categories });
 });
 
+router.get('/daren-content-types', requireAdmin, (req, res) => {
+  const resolved = getVisibleBatch(req, req.query.batchId);
+  if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
+  const contentTypes = prepare("SELECT content_type FROM darens WHERE batch_id = ? AND TRIM(content_type) != '' GROUP BY content_type ORDER BY MIN(id)")
+    .all(resolved.batch.id)
+    .map(row => row.content_type);
+  res.json({ contentTypes });
+});
+
 router.get('/darens', requireLogin, (req, res) => {
-  const { search, category, batchId } = req.query;
+  const { search, category, contentType, batchId } = req.query;
   const resolved = getVisibleBatch(req, batchId);
   if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
   const batch = resolved.batch;
@@ -40,6 +49,7 @@ router.get('/darens', requireLogin, (req, res) => {
   if (!isAdmin) { conditions.push('d.nickname = ?'); params.push(nickname); }
   if (search) { conditions.push('d.nickname LIKE ?'); params.push(`%${search}%`); }
   if (category) { conditions.push('d.category = ?'); params.push(category); }
+  if (contentType) { conditions.push('d.content_type = ?'); params.push(contentType); }
 
   const whereSql = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
   if (paged) {

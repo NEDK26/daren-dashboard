@@ -292,6 +292,8 @@ function DarenList({ user, batch, onViewVideos }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [categoryOptions, setCategoryOptions] = useState([]);
+  const [contentType, setContentType] = useState('');
+  const [contentTypeOptions, setContentTypeOptions] = useState([]);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({ pending: 0, confirmed: 0, appealed: 0 });
@@ -309,11 +311,24 @@ function DarenList({ user, batch, onViewVideos }) {
 
   useEffect(() => {
     setCategory('');
-    if (!isAdmin || !batch) return setCategoryOptions([]);
+    setContentType('');
+    if (!isAdmin || !batch) {
+      setCategoryOptions([]);
+      return setContentTypeOptions([]);
+    }
     let cancelled = false;
-    api.get('/api/daren-categories?batchId=' + batch.id)
-      .then(res => { if (!cancelled) setCategoryOptions((res.categories || []).map(value => ({ value, label: value }))); })
-      .catch(() => { if (!cancelled) setCategoryOptions([]); });
+    Promise.all([
+      api.get('/api/daren-categories?batchId=' + batch.id),
+      api.get('/api/daren-content-types?batchId=' + batch.id)
+    ]).then(([categories, contentTypes]) => {
+      if (cancelled) return;
+      setCategoryOptions((categories.categories || []).map(value => ({ value, label: value })));
+      setContentTypeOptions((contentTypes.contentTypes || []).map(value => ({ value, label: value })));
+    }).catch(() => {
+      if (cancelled) return;
+      setCategoryOptions([]);
+      setContentTypeOptions([]);
+    });
     return () => { cancelled = true; };
   }, [isAdmin, batch?.id]);
 
@@ -335,6 +350,7 @@ function DarenList({ user, batch, onViewVideos }) {
       params.set('batchId', batch.id);
       if (search) params.set('search', search);
       if (category) params.set('category', category);
+      if (contentType) params.set('contentType', contentType);
       const res = await api.get('/api/darens?' + params.toString(), { signal: controller.signal });
       const payload = Array.isArray(res) ? { rows: res, total: res.length } : res;
       setData(payload.rows || []);
@@ -346,7 +362,7 @@ function DarenList({ user, batch, onViewVideos }) {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category, page, pageSize, batch?.id]);
+  }, [search, category, contentType, page, pageSize, batch?.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -355,6 +371,7 @@ function DarenList({ user, batch, onViewVideos }) {
     if (batch) params.set('batchId', batch.id);
     if (search) params.set('search', search);
     if (category) params.set('category', category);
+    if (contentType) params.set('contentType', contentType);
     window.open('/api/export?' + params.toString());
   };
 
@@ -434,6 +451,7 @@ function DarenList({ user, batch, onViewVideos }) {
       )}
       <div className="toolbar">
         <Input.Search placeholder="搜索昵称" value={searchInput} onChange={e => setSearchInput(e.target.value)} onSearch={() => { setPage(1); setSearch(searchInput); }} style={{ width: 200 }} allowClear />
+        {isAdmin && <Select placeholder="内容类型" value={contentType || undefined} onChange={v => { setPage(1); setContentType(v || ''); }} style={{ width: 150, marginLeft: 12 }} allowClear options={contentTypeOptions} />}
         {isAdmin && <Select placeholder="达人分类" value={category || undefined} onChange={v => { setPage(1); setCategory(v || ''); }} style={{ width: 150, marginLeft: 12 }} allowClear options={categoryOptions} />}
         <div className="spacer" />
         {isAdmin && (

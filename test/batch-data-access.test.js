@@ -39,3 +39,15 @@ test('category filter options come from distinct non-empty categories in the sel
   assert.match(app, /isAdmin && <Select placeholder="达人分类"/);
   assert.doesNotMatch(app, /const categoryOptions = \[/);
 });
+
+test('content type filter options come from the selected batch and filter list and export', () => {
+  const darens = read('routes/darens.js');
+  const exportRoute = read('routes/export.js');
+  const app = read('public/app.js');
+  assert.match(darens, /router\.get\('\/daren-content-types', requireAdmin/);
+  assert.match(darens, /SELECT content_type FROM darens WHERE batch_id = \? AND TRIM\(content_type\) != '' GROUP BY content_type ORDER BY MIN\(id\)/);
+  assert.match(darens, /if \(contentType\) \{ conditions\.push\('d\.content_type = \?'\); params\.push\(contentType\); \}/);
+  assert.match(exportRoute, /if \(contentType\) \{ conditions\.push\('d\.content_type = \?'\); params\.push\(contentType\); \}/);
+  assert.match(app, /api\.get\('\/api\/daren-content-types\?batchId=' \+ batch\.id\)/);
+  assert.match(app, /isAdmin && <Select placeholder="内容类型"/);
+});

@@ -505,6 +505,8 @@ function DarenList({
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [categoryOptions, setCategoryOptions] = useState([]);
+  const [contentType, setContentType] = useState('');
+  const [contentTypeOptions, setContentTypeOptions] = useState([]);
   const [deleting, setDeleting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({
@@ -524,15 +526,26 @@ function DarenList({
   }, [searchInput]);
   useEffect(() => {
     setCategory('');
-    if (!isAdmin || !batch) return setCategoryOptions([]);
+    setContentType('');
+    if (!isAdmin || !batch) {
+      setCategoryOptions([]);
+      return setContentTypeOptions([]);
+    }
     let cancelled = false;
-    api.get('/api/daren-categories?batchId=' + batch.id).then(res => {
-      if (!cancelled) setCategoryOptions((res.categories || []).map(value => ({
+    Promise.all([api.get('/api/daren-categories?batchId=' + batch.id), api.get('/api/daren-content-types?batchId=' + batch.id)]).then(([categories, contentTypes]) => {
+      if (cancelled) return;
+      setCategoryOptions((categories.categories || []).map(value => ({
+        value,
+        label: value
+      })));
+      setContentTypeOptions((contentTypes.contentTypes || []).map(value => ({
         value,
         label: value
       })));
     }).catch(() => {
-      if (!cancelled) setCategoryOptions([]);
+      if (cancelled) return;
+      setCategoryOptions([]);
+      setContentTypeOptions([]);
     });
     return () => {
       cancelled = true;
@@ -560,6 +573,7 @@ function DarenList({
       params.set('batchId', batch.id);
       if (search) params.set('search', search);
       if (category) params.set('category', category);
+      if (contentType) params.set('contentType', contentType);
       const res = await api.get('/api/darens?' + params.toString(), {
         signal: controller.signal
       });
@@ -580,7 +594,7 @@ function DarenList({
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category, page, pageSize, batch?.id]);
+  }, [search, category, contentType, page, pageSize, batch?.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -589,6 +603,7 @@ function DarenList({
     if (batch) params.set('batchId', batch.id);
     if (search) params.set('search', search);
     if (category) params.set('category', category);
+    if (contentType) params.set('contentType', contentType);
     window.open('/api/export?' + params.toString());
   };
   const handleDelete = records => {
@@ -734,6 +749,19 @@ function DarenList({
       width: 200
     },
     allowClear: true
+  }), isAdmin && /*#__PURE__*/React.createElement(Select, {
+    placeholder: "内容类型",
+    value: contentType || undefined,
+    onChange: v => {
+      setPage(1);
+      setContentType(v || '');
+    },
+    style: {
+      width: 150,
+      marginLeft: 12
+    },
+    allowClear: true,
+    options: contentTypeOptions
   }), isAdmin && /*#__PURE__*/React.createElement(Select, {
     placeholder: "达人分类",
     value: category || undefined,
