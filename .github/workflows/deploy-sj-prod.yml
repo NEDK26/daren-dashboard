@@ -1,0 +1,27 @@
+name: Deploy SJ Production
+
+on:
+  push:
+    branches: [sj-prod]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SJ_SERVER_HOST }}
+          username: ${{ secrets.SJ_SERVER_USER }}
+          key: ${{ secrets.SJ_SERVER_SSH_KEY }}
+          port: ${{ secrets.SJ_SERVER_PORT || 22 }}
+          script: |
+            set -e
+            cd /home/deploy/daren-dashboard
+            git fetch origin sj-prod
+            git reset --hard origin/sj-prod
+            npm ci --omit=dev
+            npx --yes pm2 restart daren-dashboard || npx --yes pm2 start ecosystem.config.js
+            npx --yes pm2 save
+            sleep 2
+            curl --fail --silent --show-error http://127.0.0.1:3001/ > /dev/null
