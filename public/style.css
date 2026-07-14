@@ -530,6 +530,27 @@ body {
   background: #fff1f0 !important;
 }
 
+.anomaly-marker-hint {
+  margin: 0 0 16px;
+  color: var(--ink-secondary);
+  font-size: 13px;
+}
+
+.anomaly-marker-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 72px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.anomaly-marker-field .ant-checkbox-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── Confirmation status summary ── */
 
 .confirmation-summary-card {

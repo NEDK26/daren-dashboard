@@ -69,6 +69,19 @@ const confirmationStatusTag = status => {
   }, value);
 };
 const PAGE_SIZE_OPTIONS = ['20', '50', '100'];
+const SCREENSHOT_ANOMALY_FIELDS = [{
+  key: 'screenshot_plays',
+  label: '播放截图'
+}, {
+  key: 'screenshot_likes',
+  label: '点赞截图'
+}, {
+  key: 'screenshot_7d_plays',
+  label: '7日播放截图'
+}, {
+  key: 'screenshot_7d_likes',
+  label: '7日点赞截图'
+}];
 const textTooltip = value => value ? /*#__PURE__*/React.createElement(Tooltip, {
   title: value
 }, /*#__PURE__*/React.createElement("span", null, value)) : '-';
@@ -508,6 +521,7 @@ function DarenList({
   const [contentType, setContentType] = useState('');
   const [contentTypeOptions, setContentTypeOptions] = useState([]);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({
     pending: 0,
@@ -598,13 +612,34 @@ function DarenList({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-  const handleExport = () => {
+  const handleExport = async () => {
+    if (!batch || exporting) return;
     const params = new URLSearchParams();
-    if (batch) params.set('batchId', batch.id);
-    if (search) params.set('search', search);
-    if (category) params.set('category', category);
-    if (contentType) params.set('contentType', contentType);
-    window.open('/api/export?' + params.toString());
+    params.set('batchId', batch.id);
+    setExporting(true);
+    try {
+      const response = await fetch('/api/export?' + params.toString());
+      const contentTypeHeader = response.headers.get('content-type') || '';
+      if (!response.ok || !contentTypeHeader.includes('spreadsheet')) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || '导出失败');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const filename = (batch.name || '达人数据').replace(/[\\/:*?"<>|]/g, '_') + '.xlsx';
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      message.success('导出完成');
+    } catch (e) {
+      message.error(e.message || '导出失败，请稍后重试');
+    } finally {
+      setExporting(false);
+    }
   };
   const handleDelete = records => {
     if (!records.length) return;
@@ -778,11 +813,14 @@ function DarenList({
   }), /*#__PURE__*/React.createElement("div", {
     className: "spacer"
   }), isAdmin && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
+    type: "primary",
+    loading: exporting,
+    disabled: !batch || isReadOnly,
     onClick: handleExport,
     style: {
       marginLeft: 8
     }
-  }, "导出"), /*#__PURE__*/React.createElement(Button, {
+  }, "导出当前批次"), /*#__PURE__*/React.createElement(Button, {
     danger: true,
     loading: deleting,
     disabled: isReadOnly || !selectedRowKeys.length,
@@ -837,6 +875,9 @@ function VideoDetail({
     anomalyCount: 0,
     submittedAnomalyCount: 0
   });
+  const [anomalyTarget, setAnomalyTarget] = useState(null);
+  const [anomalyFields, setAnomalyFields] = useState([]);
+  const [anomalySaving, setAnomalySaving] = useState(false);
   const [form] = Form.useForm();
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const requestRef = useRef(null);
@@ -931,6 +972,35 @@ function VideoDetail({
     await fetchData();
     confirmModification();
   };
+  const openAnomalyMarker = record => {
+    let anomalies = {};
+    try {
+      anomalies = JSON.parse(record.anomaly_data || '{}');
+    } catch {}
+    setAnomalyTarget(record);
+    setAnomalyFields(SCREENSHOT_ANOMALY_FIELDS.filter(({
+      key
+    }) => anomalies[key]).map(({
+      key
+    }) => key));
+  };
+  const saveAnomalyMarkers = async () => {
+    if (!anomalyTarget) return;
+    setAnomalySaving(true);
+    try {
+      const res = await api.put('/api/videos/' + anomalyTarget.id + '/anomaly-markers', {
+        fields: anomalyFields
+      });
+      if (!res.ok) return message.error(res.error || '异常标记保存失败');
+      setAnomalyTarget(null);
+      await fetchData();
+      message.success('异常标记已保存');
+    } catch (e) {
+      message.error('异常标记保存失败');
+    } finally {
+      setAnomalySaving(false);
+    }
+  };
   const save = async videoId => {
     try {
       const row = await form.validateFields();
@@ -991,6 +1061,22 @@ function VideoDetail({
       showUploadList: false
     }, content) : record[key] ? content : '-');
   };
+  const statusOptions = {
+    violation_status: [{
+      label: '未违规',
+      value: '未违规'
+    }, {
+      label: '违规',
+      value: '违规'
+    }],
+    compliance_status: [{
+      label: '不合规',
+      value: '不合规'
+    }, {
+      label: '合规',
+      value: '合规'
+    }]
+  };
   const EditableCell = ({
     title,
     dataIndex,
@@ -1000,7 +1086,10 @@ function VideoDetail({
     ...rest
   }) => {
     if (!editable || editingKey !== record.id) return /*#__PURE__*/React.createElement("td", rest, children);
-    const inputNode = dataIndex === 'publish_time' ? /*#__PURE__*/React.createElement(Input, {
+    const inputNode = statusOptions[dataIndex] ? /*#__PURE__*/React.createElement(Select, {
+      size: "small",
+      options: statusOptions[dataIndex]
+    }) : dataIndex === 'publish_time' ? /*#__PURE__*/React.createElement(Input, {
       size: "small",
       placeholder: "YYYY-MM-DD"
     }) : /*#__PURE__*/React.createElement(Input, {
@@ -1080,6 +1169,7 @@ function VideoDetail({
   }, {
     title: '播放截图',
     key: 'screenshot_plays',
+    dataIndex: 'screenshot_plays',
     width: 80,
     render: (_, record) => renderScreenshot(record, 'screenshot_plays', '播放')
   }, {
@@ -1091,6 +1181,7 @@ function VideoDetail({
   }, {
     title: '点赞截图',
     key: 'screenshot_likes',
+    dataIndex: 'screenshot_likes',
     width: 80,
     render: (_, record) => renderScreenshot(record, 'screenshot_likes', '点赞')
   }, {
@@ -1102,6 +1193,7 @@ function VideoDetail({
   }, {
     title: '7日播放截图',
     key: 'screenshot_7d_plays',
+    dataIndex: 'screenshot_7d_plays',
     width: 95,
     render: (_, record) => renderScreenshot(record, 'screenshot_7d_plays', '7日播放')
   }, {
@@ -1113,6 +1205,7 @@ function VideoDetail({
   }, {
     title: '7日点赞截图',
     key: 'screenshot_7d_likes',
+    dataIndex: 'screenshot_7d_likes',
     width: 95,
     render: (_, record) => renderScreenshot(record, 'screenshot_7d_likes', '7日点赞')
   }, {
@@ -1134,6 +1227,7 @@ function VideoDetail({
     title: '违规',
     dataIndex: 'violation_status',
     width: 65,
+    editable: true,
     render: v => v === '违规' ? /*#__PURE__*/React.createElement(Tag, {
       color: "red"
     }, "违规") : /*#__PURE__*/React.createElement(Tag, {
@@ -1150,6 +1244,7 @@ function VideoDetail({
     title: '合规',
     dataIndex: 'compliance_status',
     width: 65,
+    editable: true,
     render: v => v === '合规' ? /*#__PURE__*/React.createElement(Tag, {
       color: "green"
     }, "合规") : /*#__PURE__*/React.createElement(Tag, {
@@ -1189,7 +1284,8 @@ function VideoDetail({
   }, {
     title: '操作',
     key: 'actions',
-    width: 80,
+    width: 150,
+    fixed: 'right',
     render: (_, record) => {
       if (editingKey === record.id) {
         return /*#__PURE__*/React.createElement(Space, null, /*#__PURE__*/React.createElement(Button, {
@@ -1202,13 +1298,18 @@ function VideoDetail({
         }, "取消"));
       }
       const canEdit = !isReadOnly && (isAdmin || editableCols.length > 0);
-      return canEdit ? /*#__PURE__*/React.createElement(Button, {
+      return canEdit || isAdmin && !isReadOnly ? /*#__PURE__*/React.createElement(Space, {
+        size: 4
+      }, canEdit && /*#__PURE__*/React.createElement(Button, {
         size: "small",
         onClick: () => {
           setEditingKey(record.id);
           form.setFieldsValue(record);
         }
-      }, "编辑") : null;
+      }, "编辑"), isAdmin && !isReadOnly && /*#__PURE__*/React.createElement(Button, {
+        size: "small",
+        onClick: () => openAnomalyMarker(record)
+      }, "异常")) : null;
     }
   }];
   const anomalyMap = useMemo(() => {
@@ -1369,6 +1470,41 @@ function VideoDetail({
         cell: EditableCell
       }
     }
+  })), /*#__PURE__*/React.createElement(Drawer, {
+    className: "anomaly-marker-drawer",
+    title: "标记截图异常",
+    open: Boolean(anomalyTarget),
+    onClose: () => setAnomalyTarget(null),
+    width: "min(380px, 100vw)",
+    destroyOnClose: true,
+    footer: /*#__PURE__*/React.createElement(Space, null, /*#__PURE__*/React.createElement(Button, {
+      onClick: () => setAnomalyTarget(null)
+    }, "取消"), /*#__PURE__*/React.createElement(Button, {
+      type: "primary",
+      loading: anomalySaving,
+      onClick: saveAnomalyMarkers
+    }, "确认"))
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "anomaly-marker-hint"
+  }, "请选择需要补充或核查的截图字段"), SCREENSHOT_ANOMALY_FIELDS.map(({
+    key,
+    label
+  }) => {
+    const checked = anomalyFields.includes(key);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "anomaly-marker-field",
+      key: key
+    }, /*#__PURE__*/React.createElement(Checkbox, {
+      checked: checked,
+      onChange: event => setAnomalyFields(fields => event.target.checked ? [...fields, key] : fields.filter(field => field !== key))
+    }, label), anomalyTarget?.[key] ? /*#__PURE__*/React.createElement(Image, {
+      src: anomalyTarget[key],
+      width: 64,
+      height: 64,
+      style: {
+        objectFit: 'cover'
+      }
+    }) : /*#__PURE__*/React.createElement(Tag, null, "未上传"));
   })));
 }
 const allColumns = [{

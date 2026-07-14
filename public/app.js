@@ -18,6 +18,12 @@ const confirmationStatusTag = (status) => {
 };
 
 const PAGE_SIZE_OPTIONS = ['20', '50', '100'];
+const SCREENSHOT_ANOMALY_FIELDS = [
+  { key: 'screenshot_plays', label: '播放截图' },
+  { key: 'screenshot_likes', label: '点赞截图' },
+  { key: 'screenshot_7d_plays', label: '7日播放截图' },
+  { key: 'screenshot_7d_likes', label: '7日点赞截图' }
+];
 const textTooltip = value => value ? <Tooltip title={value}><span>{value}</span></Tooltip> : '-';
 
 function BatchPicker({ batches, value, onChange }) {
@@ -295,6 +301,7 @@ function DarenList({ user, batch, onViewVideos }) {
   const [contentType, setContentType] = useState('');
   const [contentTypeOptions, setContentTypeOptions] = useState([]);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({ pending: 0, confirmed: 0, appealed: 0 });
   const requestRef = useRef(null);
@@ -366,13 +373,34 @@ function DarenList({ user, batch, onViewVideos }) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    if (!batch || exporting) return;
     const params = new URLSearchParams();
-    if (batch) params.set('batchId', batch.id);
-    if (search) params.set('search', search);
-    if (category) params.set('category', category);
-    if (contentType) params.set('contentType', contentType);
-    window.open('/api/export?' + params.toString());
+    params.set('batchId', batch.id);
+    setExporting(true);
+    try {
+      const response = await fetch('/api/export?' + params.toString());
+      const contentTypeHeader = response.headers.get('content-type') || '';
+      if (!response.ok || !contentTypeHeader.includes('spreadsheet')) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || '导出失败');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const filename = (batch.name || '达人数据').replace(/[\\/:*?"<>|]/g, '_') + '.xlsx';
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      message.success('导出完成');
+    } catch (e) {
+      message.error(e.message || '导出失败，请稍后重试');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleDelete = (records) => {
@@ -456,7 +484,7 @@ function DarenList({ user, batch, onViewVideos }) {
         <div className="spacer" />
         {isAdmin && (
           <>
-            <Button onClick={handleExport} style={{ marginLeft: 8 }}>导出</Button>
+            <Button type="primary" loading={exporting} disabled={!batch || isReadOnly} onClick={handleExport} style={{ marginLeft: 8 }}>导出当前批次</Button>
             <Button danger loading={deleting} disabled={isReadOnly || !selectedRowKeys.length} onClick={() => handleDelete(selectedRows)} style={{ marginLeft: 8 }}>删除选中</Button>
           </>
         )}
@@ -490,6 +518,9 @@ function VideoDetail({ daren, user, batch, onBack }) {
   const [editingKey, setEditingKey] = useState('');
   const [editableCols, setEditableCols] = useState([]);
   const [anomalySummary, setAnomalySummary] = useState({ anomalyCount: 0, submittedAnomalyCount: 0 });
+  const [anomalyTarget, setAnomalyTarget] = useState(null);
+  const [anomalyFields, setAnomalyFields] = useState([]);
+  const [anomalySaving, setAnomalySaving] = useState(false);
   const [form] = Form.useForm();
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const requestRef = useRef(null);
@@ -582,6 +613,29 @@ function VideoDetail({ daren, user, batch, onBack }) {
     confirmModification();
   };
 
+  const openAnomalyMarker = (record) => {
+    let anomalies = {};
+    try { anomalies = JSON.parse(record.anomaly_data || '{}'); } catch {}
+    setAnomalyTarget(record);
+    setAnomalyFields(SCREENSHOT_ANOMALY_FIELDS.filter(({ key }) => anomalies[key]).map(({ key }) => key));
+  };
+
+  const saveAnomalyMarkers = async () => {
+    if (!anomalyTarget) return;
+    setAnomalySaving(true);
+    try {
+      const res = await api.put('/api/videos/' + anomalyTarget.id + '/anomaly-markers', { fields: anomalyFields });
+      if (!res.ok) return message.error(res.error || '异常标记保存失败');
+      setAnomalyTarget(null);
+      await fetchData();
+      message.success('异常标记已保存');
+    } catch (e) {
+      message.error('异常标记保存失败');
+    } finally {
+      setAnomalySaving(false);
+    }
+  };
+
   const save = async (videoId) => {
     try {
       const row = await form.validateFields();
@@ -635,11 +689,18 @@ function VideoDetail({ daren, user, batch, onBack }) {
     );
   };
 
+  const statusOptions = {
+    violation_status: [{ label: '未违规', value: '未违规' }, { label: '违规', value: '违规' }],
+    compliance_status: [{ label: '不合规', value: '不合规' }, { label: '合规', value: '合规' }]
+  };
+
   const EditableCell = ({ title, dataIndex, children, editable, record, ...rest }) => {
     if (!editable || editingKey !== record.id) return <td {...rest}>{children}</td>;
-    const inputNode = dataIndex === 'publish_time'
-      ? <Input size="small" placeholder="YYYY-MM-DD" />
-      : <Input size="small" />;
+    const inputNode = statusOptions[dataIndex]
+      ? <Select size="small" options={statusOptions[dataIndex]} />
+      : dataIndex === 'publish_time'
+        ? <Input size="small" placeholder="YYYY-MM-DD" />
+        : <Input size="small" />;
     return <td {...rest}><Form.Item name={dataIndex} style={{margin:0}}>{inputNode}</Form.Item></td>;
   };
 
@@ -661,40 +722,43 @@ function VideoDetail({ daren, user, batch, onBack }) {
     { title: '发布时间', dataIndex: 'publish_time', width: 105, editable: true },
     { title: 'DA播放', dataIndex: 'da_plays', width: 85,
       render: v => (v||0).toLocaleString(), editable: true },
-    { title: '播放截图', key: 'screenshot_plays', width: 80,
+    { title: '播放截图', key: 'screenshot_plays', dataIndex: 'screenshot_plays', width: 80,
       render: (_, record) => renderScreenshot(record, 'screenshot_plays', '播放') },
     { title: 'DA点赞', dataIndex: 'da_likes', width: 75,
       render: v => (v||0).toLocaleString(), editable: true },
-    { title: '点赞截图', key: 'screenshot_likes', width: 80,
+    { title: '点赞截图', key: 'screenshot_likes', dataIndex: 'screenshot_likes', width: 80,
       render: (_, record) => renderScreenshot(record, 'screenshot_likes', '点赞') },
     { title: '7日播放', dataIndex: 'da_7d_plays', width: 85,
       render: v => (v||0).toLocaleString(), editable: true },
-    { title: '7日播放截图', key: 'screenshot_7d_plays', width: 95,
+    { title: '7日播放截图', key: 'screenshot_7d_plays', dataIndex: 'screenshot_7d_plays', width: 95,
       render: (_, record) => renderScreenshot(record, 'screenshot_7d_plays', '7日播放') },
     { title: '7日点赞', dataIndex: 'da_7d_likes', width: 75,
       render: v => (v||0).toLocaleString(), editable: true },
-    { title: '7日点赞截图', key: 'screenshot_7d_likes', width: 95,
+    { title: '7日点赞截图', key: 'screenshot_7d_likes', dataIndex: 'screenshot_7d_likes', width: 95,
       render: (_, record) => renderScreenshot(record, 'screenshot_7d_likes', '7日点赞') },
     { title: '评论', dataIndex: 'comments', width: 65, editable: true },
     { title: '收藏', dataIndex: 'saves', width: 65, editable: true },
     { title: '转发', dataIndex: 'shares', width: 65, editable: true },
-    { title: '违规', dataIndex: 'violation_status', width: 65,
+    { title: '违规', dataIndex: 'violation_status', width: 65, editable: true,
       render: v => v==='违规' ? <Tag color="red">违规</Tag> : <Tag color="green">未违规</Tag> },
     { title: '违规描述', dataIndex: 'violation_desc', width: 130, ellipsis: true, editable: true, render: textTooltip },
-    { title: '合规', dataIndex: 'compliance_status', width: 65,
+    { title: '合规', dataIndex: 'compliance_status', width: 65, editable: true,
       render: v => v==='合规' ? <Tag color="green">合规</Tag> : <Tag color="orange">不合规</Tag> },
     { title: '合规描述', dataIndex: 'compliance_desc', width: 130, ellipsis: true, editable: true, render: textTooltip },
     { title: '节点', dataIndex: 'is_node', width: 60, editable: true },
     { title: '节点名称', dataIndex: 'node_name', width: 110, ellipsis: true, editable: true, render: textTooltip },
     { title: '爆款', dataIndex: 'is_hot', width: 60, editable: true },
     { title: '申诉', dataIndex: 'appeal', width: 100, editable: true, ellipsis: true, render: textTooltip },
-    { title: '操作', key: 'actions', width: 80,
+    { title: '操作', key: 'actions', width: 150, fixed: 'right',
       render: (_, record) => {
         if (editingKey === record.id) {
           return <Space><Button size="small" type="primary" onClick={() => save(record.id)}>保存</Button><Button size="small" onClick={() => setEditingKey('')}>取消</Button></Space>;
         }
         const canEdit = !isReadOnly && (isAdmin || editableCols.length > 0);
-        return canEdit ? <Button size="small" onClick={() => { setEditingKey(record.id); form.setFieldsValue(record); }}>编辑</Button> : null;
+        return (canEdit || (isAdmin && !isReadOnly)) ? <Space size={4}>
+          {canEdit && <Button size="small" onClick={() => { setEditingKey(record.id); form.setFieldsValue(record); }}>编辑</Button>}
+          {isAdmin && !isReadOnly && <Button size="small" onClick={() => openAnomalyMarker(record)}>异常</Button>}
+        </Space> : null;
       }
     },
   ];
@@ -752,6 +816,28 @@ function VideoDetail({ daren, user, batch, onBack }) {
           loading={loading} scroll={{x:2600}} pagination={{total, current:page, pageSize, showSizeChanger: true, pageSizeOptions: PAGE_SIZE_OPTIONS, onChange:setPage, onShowSizeChange:handlePageSizeChange}}
           bordered size="small" components={{body:{cell:EditableCell}}} />
       </Form>
+      <Drawer
+        className="anomaly-marker-drawer"
+        title="标记截图异常"
+        open={Boolean(anomalyTarget)}
+        onClose={() => setAnomalyTarget(null)}
+        width="min(380px, 100vw)"
+        destroyOnClose
+        footer={<Space><Button onClick={() => setAnomalyTarget(null)}>取消</Button><Button type="primary" loading={anomalySaving} onClick={saveAnomalyMarkers}>确认</Button></Space>}
+      >
+        <p className="anomaly-marker-hint">请选择需要补充或核查的截图字段</p>
+        {SCREENSHOT_ANOMALY_FIELDS.map(({ key, label }) => {
+          const checked = anomalyFields.includes(key);
+          return <div className="anomaly-marker-field" key={key}>
+            <Checkbox checked={checked} onChange={event => setAnomalyFields(fields => event.target.checked ? [...fields, key] : fields.filter(field => field !== key))}>
+              {label}
+            </Checkbox>
+            {anomalyTarget?.[key]
+              ? <Image src={anomalyTarget[key]} width={64} height={64} style={{ objectFit: 'cover' }} />
+              : <Tag>未上传</Tag>}
+          </div>;
+        })}
+      </Drawer>
     </>
   );
 }

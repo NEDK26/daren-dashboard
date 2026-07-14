@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { getDb, prepare, escapeColumn } = require('../db');
-const { requireLogin, auditLog } = require('../middleware');
+const { requireLogin, requireAdmin, auditLog } = require('../middleware');
 const { resetDarenConfirmation } = require('../services/darenConfirmation');
+const { updateScreenshotAnomalies } = require('../services/anomalyMarkers');
 const { getVisibleBatch } = require('../services/batches');
 
 router.get('/darens/:id/videos', requireLogin, (req, res) => {
@@ -96,6 +97,31 @@ router.put('/videos/:id', requireLogin, (req, res) => {
   }
   auditLog(req, 'videos', id, changes);
   res.json({ ok: true, changes: Object.keys(changes) });
+});
+
+router.put('/videos/:id/anomaly-markers', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  const fields = req.body?.fields;
+  if (!Array.isArray(fields)) return res.status(400).json({ error: 'fields 必须是数组' });
+
+  const video = prepare(`
+    SELECT v.anomaly_data, b.status AS batch_status
+    FROM videos v JOIN batches b ON b.id = v.batch_id
+    WHERE v.id = ?
+  `).get(id);
+  if (!video) return res.status(404).json({ error: '视频不存在' });
+  if (video.batch_status !== 'current') return res.status(403).json({ error: '历史批次只读' });
+
+  try {
+    const result = updateScreenshotAnomalies(video.anomaly_data, fields);
+    if (Object.keys(result.changes).length > 0) {
+      prepare('UPDATE videos SET anomaly_data = ? WHERE id = ?').run(result.anomalyData, id);
+      auditLog(req, 'videos', id, result.changes, '标记异常');
+    }
+    res.json({ ok: true, changes: Object.keys(result.changes) });
+  } catch (error) {
+    res.status(400).json({ error: error.message || '异常标记保存失败' });
+  }
 });
 
 function getEditableColumns() {
