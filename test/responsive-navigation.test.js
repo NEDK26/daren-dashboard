@@ -9,16 +9,22 @@ const audit = fs.readFileSync(path.join(__dirname, '../routes/audit.js'), 'utf8'
 
 test('responsive navigation exposes role-specific desktop and mobile destinations', () => {
   assert.match(app, /function AppNavigation/);
-  assert.match(app, /达人页/);
-  assert.match(app, /批次管理/);
-  assert.match(app, /编辑设置/);
-  assert.match(app, /完整审计日志/);
+  assert.match(app, /达人核对/);
+  assert.match(app, /label: '批次'/);
+  assert.match(app, /label: '权限'/);
+  assert.match(app, /label: '操作日志'/);
   assert.match(app, /数据核对/);
   assert.match(app, /我的日志/);
   assert.match(app, /切换批次/);
   assert.match(app, /function BatchSwitchPage/);
   assert.match(css, /\.desktop-nav/);
   assert.match(css, /\.mobile-nav/);
+});
+
+test('tablet widths switch to compact navigation before the header becomes crowded', () => {
+  assert.match(css, /@media\s*\(max-width:\s*960px\)/);
+  assert.match(css, /@media\s*\(max-width:\s*960px\)[\s\S]*?\.desktop-nav\s*\{[^}]*display:\s*none/s);
+  assert.match(css, /@media\s*\(max-width:\s*960px\)[\s\S]*?\.mobile-nav\s*\{[^}]*display:\s*flex/s);
 });
 
 test('regular users can read operation events related to their own data', () => {

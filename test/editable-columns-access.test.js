@@ -16,3 +16,15 @@ test('the video editor enables only configured columns for regular users', () =>
 
   assert.match(app, /editable:\s*col\.editable\s*&&\s*\(isAdmin\s*\|\|\s*editableCols\.includes\(col\.dataIndex\)\)/);
 });
+
+test('editable columns are grouped into scannable permission sections', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../public/style.css'), 'utf8');
+
+  assert.match(app, /基础内容/);
+  assert.match(app, /数据指标/);
+  assert.match(app, /截图凭证/);
+  assert.match(app, /合规与申诉/);
+  assert.match(app, /editable-column-groups/);
+  assert.match(css, /\.editable-column-groups\s*\{/);
+});
