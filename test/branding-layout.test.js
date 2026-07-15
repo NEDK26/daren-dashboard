@@ -34,6 +34,16 @@ test('global theme uses white surfaces with black text', () => {
   assert.match(css, /\.ant-btn-primary\s*\{[^}]*background:\s*var\(--paper\)\s*!important[^}]*color:\s*var\(--ink\)\s*!important/s);
 });
 
+test('neutral theme removes warm surface and text colors', () => {
+  assert.match(css, /html,\s*body,\s*#root,\s*\.ant-layout\s*\{[^}]*background:\s*#fff\s*!important[^}]*color:\s*#000/s);
+  assert.match(css, /--success:\s*#000\s*;/);
+  assert.match(css, /--warning:\s*#000\s*;/);
+  assert.match(css, /--douyin:\s*#000\s*;/);
+  assert.match(css, /--kuaishou:\s*#000\s*;/);
+  assert.match(css, /--bilibili:\s*#000\s*;/);
+  assert.doesNotMatch(css, /#c47a23|#5a8a6a|#ff6b00|rgba\(139,94,60/i);
+});
+
 test('fixed table action cells are opaque while scrolling', () => {
   assert.match(css, /\.ant-table-cell-fix-right[^}]*background:\s*var\(--card\)\s*!important/s);
   assert.match(css, /\.ant-table-tbody\s*>\s*tr:hover\s*>\s*td\.ant-table-cell-fix-right[^}]*background:\s*var\(--hover\)\s*!important/s);

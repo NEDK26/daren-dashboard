@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════
-   纸墨工作台 — Ink & Paper Dashboard
-   宣纸米白 · 松烟墨字 · 线条分层 · 零阴影
+   黑白工作台 — Neutral Dashboard
+   纯白背景 · 黑色文字 · 中性灰分层 · 零阴影
    v1.0 — 2026.07.10 — zero CDN
    ═══════════════════════════════════════════ */
 
@@ -18,19 +18,27 @@
   --accent:       #000;
   --accent-hover: #333;
   --danger:       #c2543d;
-  --danger-bg:    #fdf2ef;
-  --success:      #5a8a6a;
-  --success-bg:   #f1f7f2;
-  --warning:      #c47a23;
-  --douyin:       #ff2e63;
-  --kuaishou:     #ff6b00;
-  --bilibili:     #00aeec;
+  --danger-bg:    #fff;
+  --success:      #000;
+  --success-bg:   #fff;
+  --warning:      #000;
+  --douyin:       #000;
+  --kuaishou:     #000;
+  --bilibili:     #000;
   --radius-sm:    4px;
   --radius-md:    6px;
   --radius-lg:    10px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+html,
+body,
+#root,
+.ant-layout {
+  background: #fff !important;
+  color: #000;
+}
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', 'PingFang SC', sans-serif;
@@ -118,6 +126,7 @@ body {
   max-width: 1520px;
   margin: 0 auto;
   min-height: calc(100vh - 52px);
+  background: var(--paper);
 }
 
 /* ══ Toolbar ══ */
@@ -413,7 +422,7 @@ body {
 .ant-select-selector:focus,
 .ant-picker-focused {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 2px rgba(139,94,60,0.12) !important;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.12) !important;
 }
 
 .ant-input::placeholder { color: var(--ink-muted) !important; }
@@ -462,7 +471,9 @@ body {
   font-weight: 500;
   border-radius: var(--radius-sm);
   line-height: 20px;
-  border: none;
+  color: var(--ink) !important;
+  background: var(--paper) !important;
+  border: 1px solid var(--border);
 }
 
 /* ── Card ── */
