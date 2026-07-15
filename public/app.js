@@ -129,7 +129,7 @@ function HomePage({ onDataCheck, onFeeCheck }) {
           <div className="workbench-card-icon">费</div>
           <div className="workbench-card-title">本期费用核对</div>
           <div className="workbench-card-desc">费用数据核对功能</div>
-          <div className="workbench-card-action">功能正在开发中</div>
+          <div className="workbench-card-action">暂未开启</div>
         </Card>
       </div>
     </div>
@@ -139,7 +139,7 @@ function HomePage({ onDataCheck, onFeeCheck }) {
 function FeePlaceholderPage({ onBack }) {
   return <div className="workbench-page">
     <div className="video-detail-header"><Button onClick={onBack}>← 返回选择</Button><h3>本期费用核对</h3></div>
-    <Card className="fee-placeholder-card"><h3>功能开发中</h3><p>本期费用核对即将上线。</p></Card>
+    <Card className="fee-placeholder-card"><h3>暂未开启</h3><p>本期费用核对功能暂未开启。</p></Card>
   </div>;
 }
 

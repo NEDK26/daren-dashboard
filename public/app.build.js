@@ -268,7 +268,7 @@ function HomePage({
     className: "workbench-card-desc"
   }, "费用数据核对功能"), /*#__PURE__*/React.createElement("div", {
     className: "workbench-card-action"
-  }, "功能正在开发中"))));
+  }, "暂未开启"))));
 }
 function FeePlaceholderPage({
   onBack
@@ -281,7 +281,7 @@ function FeePlaceholderPage({
     onClick: onBack
   }, "← 返回选择"), /*#__PURE__*/React.createElement("h3", null, "本期费用核对")), /*#__PURE__*/React.createElement(Card, {
     className: "fee-placeholder-card"
-  }, /*#__PURE__*/React.createElement("h3", null, "功能开发中"), /*#__PURE__*/React.createElement("p", null, "本期费用核对即将上线。")));
+  }, /*#__PURE__*/React.createElement("h3", null, "暂未开启"), /*#__PURE__*/React.createElement("p", null, "本期费用核对功能暂未开启。")));
 }
 function BatchManagerPage({
   batches,

@@ -14,6 +14,12 @@ test('login page uses the provided logo in a centered panel', () => {
   assert.match(css, /\.login-panel\s*\{[^}]*display:\s*flex/s);
 });
 
+test('fee placeholder uses the paused label and white logo surface', () => {
+  assert.match(app, /暂未开启/);
+  assert.doesNotMatch(app, /功能正在开发中/);
+  assert.match(css, /\.login-logo-frame\s*\{[^}]*background:\s*var\(--paper\)/s);
+});
+
 test('dashboard base surfaces use white backgrounds', () => {
   assert.match(css, /--paper:\s*#fff\s*;/);
   assert.match(css, /--page:\s*#fff\s*;/);
