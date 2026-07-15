@@ -427,6 +427,14 @@ body {
 
 .ant-input::placeholder { color: var(--ink-muted) !important; }
 
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--paper) inset !important;
+  caret-color: var(--ink);
+}
+
 /* ── Buttons ── */
 
 .ant-btn {

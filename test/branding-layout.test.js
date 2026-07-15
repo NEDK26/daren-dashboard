@@ -44,6 +44,10 @@ test('neutral theme removes warm surface and text colors', () => {
   assert.doesNotMatch(css, /#c47a23|#5a8a6a|#ff6b00|rgba\(139,94,60/i);
 });
 
+test('browser autofill keeps login inputs white with black text', () => {
+  assert.match(css, /input:-webkit-autofill[^}]*-webkit-text-fill-color:\s*var\(--ink\)[^}]*-webkit-box-shadow:\s*0 0 0 1000px var\(--paper\) inset/s);
+});
+
 test('fixed table action cells are opaque while scrolling', () => {
   assert.match(css, /\.ant-table-cell-fix-right[^}]*background:\s*var\(--card\)\s*!important/s);
   assert.match(css, /\.ant-table-tbody\s*>\s*tr:hover\s*>\s*td\.ant-table-cell-fix-right[^}]*background:\s*var\(--hover\)\s*!important/s);
