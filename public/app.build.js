@@ -23,6 +23,7 @@ const {
   Checkbox,
   Modal,
   Drawer,
+  Dropdown,
   Pagination
 } = antd;
 
@@ -69,6 +70,9 @@ const confirmationStatusTag = status => {
   }, value);
 };
 const PAGE_SIZE_OPTIONS = ['20', '50', '100'];
+const TABLE_LOCALE = {
+  emptyText: '当前批次暂无数据'
+};
 const SCREENSHOT_ANOMALY_FIELDS = [{
   key: 'screenshot_plays',
   label: '播放截图'
@@ -133,19 +137,19 @@ function AppNavigation({
   const isAdmin = user.role === 'admin';
   const items = isAdmin ? [{
     key: 'darens',
-    label: '达人页',
+    label: '达人核对',
     icon: '人'
   }, {
     key: 'batches',
-    label: '批次管理',
+    label: '批次',
     icon: '批'
   }, {
     key: 'settings',
-    label: '编辑设置',
+    label: '权限',
     icon: '设'
   }, {
     key: 'audit',
-    label: '完整审计日志',
+    label: '操作日志',
     icon: '审'
   }] : [{
     key: 'data',
@@ -247,10 +251,11 @@ function HomePage({
   }, /*#__PURE__*/React.createElement(Card, {
     className: "workbench-card workbench-card-primary",
     hoverable: true,
-    onClick: onDataCheck
+    role: "button",
+    tabIndex: 0,
+    onClick: onDataCheck,
+    onKeyDown: event => event.key === 'Enter' && onDataCheck()
   }, /*#__PURE__*/React.createElement("div", {
-    className: "workbench-card-icon"
-  }, "数"), /*#__PURE__*/React.createElement("div", {
     className: "workbench-card-title"
   }, "本期数据核对"), /*#__PURE__*/React.createElement("div", {
     className: "workbench-card-desc"
@@ -261,12 +266,10 @@ function HomePage({
     hoverable: true,
     onClick: onFeeCheck
   }, /*#__PURE__*/React.createElement("div", {
-    className: "workbench-card-icon"
-  }, "费"), /*#__PURE__*/React.createElement("div", {
     className: "workbench-card-title"
   }, "本期费用核对"), /*#__PURE__*/React.createElement("div", {
     className: "workbench-card-desc"
-  }, "费用数据核对功能"), /*#__PURE__*/React.createElement("div", {
+  }, "核对本期达人合作费用"), /*#__PURE__*/React.createElement("div", {
     className: "workbench-card-action"
   }, "暂未开启"))));
 }
@@ -401,6 +404,7 @@ function BatchManagerPage({
       month: new Date().getMonth() + 1
     }
   }, /*#__PURE__*/React.createElement(Form.Item, {
+    label: "年份",
     name: "year",
     rules: [{
       required: true,
@@ -408,9 +412,9 @@ function BatchManagerPage({
     }]
   }, /*#__PURE__*/React.createElement(InputNumber, {
     min: 2000,
-    max: 2100,
-    placeholder: "年份"
+    max: 2100
   })), /*#__PURE__*/React.createElement(Form.Item, {
+    label: "月份",
     name: "month",
     rules: [{
       required: true,
@@ -418,9 +422,9 @@ function BatchManagerPage({
     }]
   }, /*#__PURE__*/React.createElement(InputNumber, {
     min: 1,
-    max: 12,
-    placeholder: "月份"
+    max: 12
   })), /*#__PURE__*/React.createElement(Form.Item, {
+    label: "批次标题",
     name: "title",
     rules: [{
       required: true,
@@ -428,7 +432,7 @@ function BatchManagerPage({
       message: '请输入自定义标题'
     }]
   }, /*#__PURE__*/React.createElement(Input, {
-    placeholder: "自定义标题"
+    placeholder: "如：数据核对"
   })), /*#__PURE__*/React.createElement(Form.Item, null, /*#__PURE__*/React.createElement(Button, {
     type: "primary",
     htmlType: "submit",
@@ -687,19 +691,17 @@ function DarenList({
     dataIndex: 'nickname',
     key: 'nickname',
     width: 140,
-    render: (text, record) => /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("a", {
-      style: {
-        fontWeight: 600,
-        cursor: 'pointer',
-        color: '#8b5e3c'
-      },
+    fixed: 'left',
+    render: (text, record) => /*#__PURE__*/React.createElement("span", {
+      className: "daren-name-cell"
+    }, /*#__PURE__*/React.createElement(Tooltip, {
+      title: text
+    }, /*#__PURE__*/React.createElement("a", {
+      className: "data-link",
       onClick: () => onViewVideos(record)
-    }, text), record.anomaly_count > 0 && /*#__PURE__*/React.createElement(Tag, {
-      color: "red",
-      style: {
-        marginLeft: 6,
-        fontSize: 11
-      }
+    }, text)), record.anomaly_count > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "anomaly-count-badge",
+      "aria-label": `${record.anomaly_count} 个异常`
     }, record.anomaly_count))
   }, {
     title: '机构名称',
@@ -770,7 +772,7 @@ function DarenList({
     setPageSize(nextPageSize);
   };
   return /*#__PURE__*/React.createElement("div", null, isAdmin && /*#__PURE__*/React.createElement("div", {
-    className: "confirmation-summary-card",
+    className: "confirmation-summary-card status-rail",
     "aria-label": "达人确认状态统计"
   }, /*#__PURE__*/React.createElement("div", {
     className: "confirmation-summary-item pending"
@@ -800,8 +802,7 @@ function DarenList({
       setContentType(v || '');
     },
     style: {
-      width: 150,
-      marginLeft: 12
+      width: 150
     },
     allowClear: true,
     options: contentTypeOptions
@@ -813,8 +814,7 @@ function DarenList({
       setCategory(v || '');
     },
     style: {
-      width: 150,
-      marginLeft: 12
+      width: 150
     },
     allowClear: true,
     options: categoryOptions
@@ -824,23 +824,21 @@ function DarenList({
     type: "primary",
     loading: exporting,
     disabled: !batch || isReadOnly,
-    onClick: handleExport,
-    style: {
-      marginLeft: 8
-    }
+    onClick: handleExport
   }, "导出当前批次"), /*#__PURE__*/React.createElement(Button, {
     danger: true,
     loading: deleting,
     disabled: isReadOnly || !selectedRowKeys.length,
-    onClick: () => handleDelete(selectedRows),
-    style: {
-      marginLeft: 8
-    }
+    onClick: () => handleDelete(selectedRows)
   }, "删除选中"))), /*#__PURE__*/React.createElement(Table, {
     columns: columns,
     dataSource: data,
     rowKey: "id",
     loading: loading,
+    locale: TABLE_LOCALE,
+    scroll: {
+      x: 1200
+    },
     pagination: {
       total,
       current: page,
@@ -1151,12 +1149,10 @@ function VideoDetail({
     dataIndex: 'content_url',
     width: 70,
     render: v => v ? /*#__PURE__*/React.createElement("a", {
+      className: "data-link",
       href: v,
       target: "_blank",
-      rel: "noreferrer",
-      style: {
-        color: '#5a6e8a'
-      }
+      rel: "noreferrer"
     }, "查看") : '-'
   }, {
     title: '时长',
@@ -1368,7 +1364,7 @@ function VideoDetail({
     target: "_blank",
     rel: "noreferrer"
   }, "查看主页") : '-')))), /*#__PURE__*/React.createElement("div", {
-    className: "anomaly-summary-card",
+    className: "anomaly-summary-card status-rail",
     "aria-label": "视频异常统计"
   }, /*#__PURE__*/React.createElement("div", {
     className: "anomaly-summary-item anomaly"
@@ -1459,6 +1455,7 @@ function VideoDetail({
     dataSource: data,
     rowKey: "id",
     loading: loading,
+    locale: TABLE_LOCALE,
     scroll: {
       x: 2600
     },
@@ -1588,6 +1585,19 @@ const allColumns = [{
   key: 'appeal',
   label: '申诉'
 }];
+const EDITABLE_COLUMN_GROUPS = [{
+  title: '基础内容',
+  keys: ['title', 'tags', 'content_url', 'duration', 'publish_time']
+}, {
+  title: '数据指标',
+  keys: ['da_plays', 'da_likes', 'da_7d_plays', 'da_7d_likes', 'comments', 'saves', 'shares']
+}, {
+  title: '截图凭证',
+  keys: ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes']
+}, {
+  title: '合规与申诉',
+  keys: ['violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot', 'appeal']
+}];
 function SettingsPage({
   onBack
 }) {
@@ -1609,29 +1619,30 @@ function SettingsPage({
   }, /*#__PURE__*/React.createElement(Button, {
     onClick: onBack
   }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, "可编辑列权限设置")), /*#__PURE__*/React.createElement(Card, {
-    title: "勾选普通用户可编辑的列",
-    style: {
-      maxWidth: 500
-    }
+    title: "普通用户可编辑权限",
+    className: "settings-card"
   }, /*#__PURE__*/React.createElement(Checkbox.Group, {
     value: checked,
     onChange: setChecked,
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10
-    }
-  }, allColumns.map(c => /*#__PURE__*/React.createElement(Checkbox, {
-    key: c.key,
-    value: c.key
-  }, c.label))), /*#__PURE__*/React.createElement(Button, {
+    className: "editable-column-groups"
+  }, EDITABLE_COLUMN_GROUPS.map(group => /*#__PURE__*/React.createElement("section", {
+    className: "editable-column-group",
+    key: group.title
+  }, /*#__PURE__*/React.createElement("h4", null, group.title), /*#__PURE__*/React.createElement("div", {
+    className: "editable-column-options"
+  }, group.keys.map(key => {
+    const column = allColumns.find(item => item.key === key);
+    return /*#__PURE__*/React.createElement(Checkbox, {
+      key: key,
+      value: key
+    }, column.label);
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "settings-actions"
+  }, /*#__PURE__*/React.createElement(Button, {
     type: "primary",
     onClick: save,
-    loading: loading,
-    style: {
-      marginTop: 16
-    }
-  }, "保存设置")));
+    loading: loading
+  }, "保存设置"))));
 }
 function AuditPage({
   onBack
@@ -1853,11 +1864,6 @@ function App() {
       onLogin: setUser
     });
   }
-  const roleMap = {
-    admin: '管理员',
-    editor: '编辑者',
-    viewer: '查看者'
-  };
   const renderPage = () => {
     switch (page) {
       case 'home':
@@ -1930,14 +1936,26 @@ function App() {
     batches: batches,
     value: selectedBatch,
     onChange: chooseBatch
-  }), /*#__PURE__*/React.createElement("span", null, user.display_name, "（", roleMap[user.role] || user.role, "）"), /*#__PURE__*/React.createElement(Button, {
-    type: "text",
-    size: "small",
-    onClick: handleLogout,
-    style: {
-      color: 'var(--ink-secondary)'
-    }
-  }, "退出"))), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement(Dropdown, {
+    menu: {
+      items: [{
+        key: 'logout',
+        label: '退出登录'
+      }],
+      onClick: handleLogout
+    },
+    trigger: ['click'],
+    placement: "bottomRight"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "account-trigger",
+    type: "button",
+    "aria-label": `${user.display_name}，打开账户菜单`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "account-name"
+  }, user.display_name), /*#__PURE__*/React.createElement("span", {
+    className: "account-chevron",
+    "aria-hidden": "true"
+  }, "›"))))), /*#__PURE__*/React.createElement("div", {
     className: "app-content"
   }, renderPage()), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(AppNavigation, {
     user: user,

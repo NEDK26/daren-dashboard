@@ -58,3 +58,20 @@ test('fixed table action cells are opaque while scrolling', () => {
   assert.match(css, /\.ant-table-cell-fix-right[^}]*background:\s*var\(--card\)\s*!important/s);
   assert.match(css, /\.ant-table-tbody\s*>\s*tr:hover\s*>\s*td\.ant-table-cell-fix-right[^}]*background:\s*var\(--hover\)\s*!important/s);
 });
+
+test('application pages keep the full available width without shrinking to their content', () => {
+  assert.match(css, /\.app-content\s*\{[^}]*width:\s*100%[^}]*min-width:\s*0/s);
+  assert.match(css, /\.app-header h2\s*\{[^}]*white-space:\s*nowrap/s);
+});
+
+test('header account opens logout from the username menu', () => {
+  assert.match(app, /\bDropdown\b/);
+  assert.match(app, /className="account-trigger"/);
+  assert.match(app, /className="account-name"/);
+  assert.match(app, /className="account-chevron"/);
+  assert.match(app, /key: 'logout', label: '退出登录'/);
+  assert.match(app, /trigger=\{\['click'\]\}/);
+  assert.doesNotMatch(app, /className="account-role"|className="logout-button"/);
+  assert.match(css, /\.account-trigger\s*\{[^}]*display:\s*flex[^}]*background:\s*transparent[^}]*border:\s*0/s);
+  assert.match(css, /\.account-chevron\s*\{[^}]*color:\s*var\(--ink-muted\)/s);
+});

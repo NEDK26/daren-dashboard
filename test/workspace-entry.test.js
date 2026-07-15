@@ -14,3 +14,9 @@ test('users choose a work area before data navigation is shown', () => {
   assert.match(app, /activeWorkspace === 'data' && <AppNavigation/);
   assert.match(app, /返回选择/);
 });
+
+test('the active workbench card can be opened with a keyboard', () => {
+  assert.match(app, /role="button"/);
+  assert.match(app, /tabIndex=\{0\}/);
+  assert.match(app, /event\.key === 'Enter'/);
+});

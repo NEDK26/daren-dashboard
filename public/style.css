@@ -18,6 +18,7 @@
   --accent:       #000;
   --accent-hover: #333;
   --danger:       #c2543d;
+  --danger-soft:  #fff1f0;
   --danger-bg:    #fff;
   --success:      #000;
   --success-bg:   #fff;
@@ -38,6 +39,7 @@ body,
 .ant-layout {
   background: #fff !important;
   color: #000;
+  min-width: 0;
 }
 
 body {
@@ -69,6 +71,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.3px;
   color: var(--ink);
+  white-space: nowrap;
 }
 
 .desktop-nav {
@@ -97,14 +100,41 @@ body {
 .app-header .user-info {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   font-size: 13px;
   color: var(--ink-secondary);
 }
 
-.app-header .user-info button {
-  color: var(--ink-secondary) !important;
-  font-size: 13px;
+.account-trigger {
+  display: flex;
+  min-width: 0;
+  padding: 4px 0;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.account-trigger:hover .account-chevron { color: var(--ink); }
+.account-trigger:focus-visible { outline-offset: 4px; }
+
+.account-name {
+  max-width: 120px;
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-chevron {
+  color: var(--ink-muted);
+  font-size: 18px;
+  line-height: 1;
+  transition: color 160ms ease;
 }
 
 .batch-picker { min-width: 190px; }
@@ -112,8 +142,8 @@ body {
 .batch-picker .ant-select-selection-item, .batch-picker .ant-select-arrow { color: var(--ink) !important; }
 .batch-picker-empty { color: var(--ink-secondary); font-size: 12px; }
 
-.batch-manager-card { margin-bottom: 16px; }
-.batch-manager-table { margin-top: 16px; }
+.batch-manager-card { max-width: 860px; margin-bottom: 16px; }
+.batch-manager-table { max-width: 860px; margin-top: 16px; }
 
 .batch-switch-list { display: grid; gap: 12px; max-width: 720px; }
 .batch-switch-card { cursor: pointer; }
@@ -122,6 +152,8 @@ body {
 .batch-switch-card span { color: var(--ink-muted); font-size: 12px; }
 
 .app-content {
+  width: 100%;
+  min-width: 0;
   padding: 24px 28px;
   max-width: 1520px;
   margin: 0 auto;
@@ -144,6 +176,46 @@ body {
 }
 
 .toolbar .spacer { flex: 1; }
+
+.data-link {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--border-em);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.data-link:hover { color: var(--ink); text-decoration-color: var(--ink); }
+
+.daren-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.daren-name-cell .data-link {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.anomaly-count-badge {
+  flex: 0 0 auto;
+  min-width: 22px;
+  padding: 0 6px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 0;
+  border-radius: 999px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
 
 /* ══ Platform pills ══ */
 
@@ -252,7 +324,7 @@ body {
 
 /* ── Workbench ── */
 
-.workbench-page { padding-top: 10px; }
+.workbench-page { max-width: 960px; margin: 0 auto; padding-top: 10px; }
 
 .workbench-heading {
   margin-bottom: 20px;
@@ -278,37 +350,28 @@ body {
 }
 
 .workbench-card {
-  min-height: 210px;
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease;
 }
 
+.workbench-card .ant-card-body {
+  display: flex;
+  min-height: 180px;
+  padding: 28px;
+  flex-direction: column;
+}
+
 .workbench-card:hover { transform: translateY(-2px); }
+.workbench-card:focus-visible { outline-offset: 4px; }
 
 .workbench-card-primary { border-color: var(--accent) !important; }
 .workbench-card-disabled { color: var(--ink-muted); }
 
-.workbench-card-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  margin-bottom: 24px;
-  background: var(--paper);
-  color: var(--ink);
-  border: 1px solid var(--ink);
-  border-radius: 50%;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.workbench-card-disabled .workbench-card-icon { background: var(--paper); border-color: var(--border-em); color: var(--ink-muted); }
-
 .workbench-card-title {
   color: var(--ink);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 .workbench-card-desc {
@@ -318,7 +381,8 @@ body {
 }
 
 .workbench-card-action {
-  margin-top: 24px;
+  margin-top: auto;
+  padding-top: 28px;
   color: var(--accent);
   font-size: 13px;
   font-weight: 600;
@@ -336,6 +400,11 @@ body {
    ═══════════════════════════════════════════ */
 
 /* ── Table ── */
+
+.ant-table-wrapper {
+  min-width: 0;
+  max-width: 100%;
+}
 
 .ant-table {
   background: var(--card) !important;
@@ -645,6 +714,16 @@ input:-webkit-autofill:focus {
   overflow: hidden;
 }
 
+.status-rail {
+  border-top: 3px solid var(--ink);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.status-rail strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: -1px;
+}
+
 .confirmation-summary-item {
   display: flex;
   align-items: center;
@@ -706,6 +785,43 @@ input:-webkit-autofill:focus {
 
 .anomaly-summary-item.anomaly strong { color: var(--danger); }
 .anomaly-summary-item.submitted strong { color: var(--warning); }
+
+/* ── Editable permissions ── */
+
+.settings-card { max-width: 960px; }
+
+.editable-column-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  width: 100%;
+  overflow: hidden;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.editable-column-group {
+  min-width: 0;
+  padding: 18px;
+  background: var(--paper);
+}
+
+.editable-column-group h4 {
+  margin-bottom: 12px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.editable-column-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+
+.editable-column-options .ant-checkbox-wrapper { min-width: 0; margin-inline-start: 0; }
+.settings-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
 
 /* ── Import progress ── */
 
@@ -779,9 +895,10 @@ input:-webkit-autofill:focus {
   30% { opacity: 1; transform: translateY(-3px); }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 960px) {
   .app-header { padding: 0 14px; }
   .app-header .user-info { gap: 8px; font-size: 12px; }
+  .account-name { max-width: 80px; }
   .desktop-nav { display: none; }
   .workspace-back { padding: 0 6px; font-size: 12px; }
   .batch-picker { display: none; }
@@ -811,8 +928,9 @@ input:-webkit-autofill:focus {
   }
   .mobile-nav .ant-btn span:first-child { font-size: 16px; line-height: 1; }
   .mobile-nav .ant-btn.active { color: var(--accent) !important; font-weight: 600; }
+  .workbench-page { max-width: 720px; }
   .workbench-cards { grid-template-columns: 1fr; gap: 14px; }
-  .workbench-card { min-height: 170px; }
+  .workbench-card .ant-card-body { min-height: 156px; padding: 22px; }
   .confirmation-summary-item { min-height: 76px; padding: 14px; }
   .confirmation-summary-item strong { font-size: 24px; }
   .anomaly-summary-item { min-height: 76px; padding: 14px; }
@@ -838,4 +956,24 @@ input:-webkit-autofill:focus {
   .audit-mobile-empty { padding: 24px 0; color: var(--ink-muted); text-align: center; }
   .audit-mobile-pagination { display: flex; justify-content: center; margin-top: 16px; }
   .audit-detail > div { grid-template-columns: 72px minmax(0, 1fr); }
+  .editable-column-groups { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .app-header h2 { font-size: 14px; }
+  .user-label { display: none; }
+  .confirmation-summary-item,
+  .anomaly-summary-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .editable-column-options { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

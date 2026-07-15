@@ -13,3 +13,9 @@ test('tables reveal truncated text and let users choose page size', () => {
   assert.match(app, /pageSizeOptions: PAGE_SIZE_OPTIONS/);
   assert.match(app, /params\.set\('pageSize', pageSize\)/);
 });
+
+test('wide data tables scroll inside the page and use a Chinese empty state', () => {
+  assert.match(app, /const TABLE_LOCALE = \{ emptyText: '当前批次暂无数据' \}/);
+  assert.match(app, /scroll=\{\{x:1200\}\}/);
+  assert.match(app, /locale=\{TABLE_LOCALE\}/);
+});

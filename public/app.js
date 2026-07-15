@@ -1,5 +1,5 @@
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
-const { Layout, Button, Input, InputNumber, Form, Card, message, Space, Tag, Table, Select, Upload, Tooltip, Image, Checkbox, Modal, Drawer, Pagination } = antd;
+const { Layout, Button, Input, InputNumber, Form, Card, message, Space, Tag, Table, Select, Upload, Tooltip, Image, Checkbox, Modal, Drawer, Dropdown, Pagination } = antd;
 
 // ── API helpers ──
 
@@ -18,6 +18,7 @@ const confirmationStatusTag = (status) => {
 };
 
 const PAGE_SIZE_OPTIONS = ['20', '50', '100'];
+const TABLE_LOCALE = { emptyText: '当前批次暂无数据' };
 const SCREENSHOT_ANOMALY_FIELDS = [
   { key: 'screenshot_plays', label: '播放截图' },
   { key: 'screenshot_likes', label: '点赞截图' },
@@ -55,7 +56,7 @@ function BatchSwitchPage({ batches, selectedBatch, onSelectBatch, onBack }) {
 function AppNavigation({ user, page, onNavigate, placement }) {
   const isAdmin = user.role === 'admin';
   const items = isAdmin
-    ? [{ key: 'darens', label: '达人页', icon: '人' }, { key: 'batches', label: '批次管理', icon: '批' }, { key: 'settings', label: '编辑设置', icon: '设' }, { key: 'audit', label: '完整审计日志', icon: '审' }]
+    ? [{ key: 'darens', label: '达人核对', icon: '人' }, { key: 'batches', label: '批次', icon: '批' }, { key: 'settings', label: '权限', icon: '设' }, { key: 'audit', label: '操作日志', icon: '审' }]
     : [{ key: 'data', label: '数据核对', icon: '数' }, { key: 'audit', label: '我的日志', icon: '记' }, { key: 'batch-switch', label: '切换批次', icon: '批' }];
   const activeKey = isAdmin
     ? (page === 'videos' || page === 'home' || page === 'empty' ? 'darens' : page)
@@ -119,16 +120,15 @@ function HomePage({ onDataCheck, onFeeCheck }) {
         </div>
       </div>
       <div className="workbench-cards">
-        <Card className="workbench-card workbench-card-primary" hoverable onClick={onDataCheck}>
-          <div className="workbench-card-icon">数</div>
+        <Card className="workbench-card workbench-card-primary" hoverable role="button" tabIndex={0} onClick={onDataCheck}
+          onKeyDown={event => event.key === 'Enter' && onDataCheck()}>
           <div className="workbench-card-title">本期数据核对</div>
           <div className="workbench-card-desc">查看和核对本期达人视频数据</div>
           <div className="workbench-card-action">进入核对 →</div>
         </Card>
         <Card className="workbench-card workbench-card-disabled" hoverable onClick={onFeeCheck}>
-          <div className="workbench-card-icon">费</div>
           <div className="workbench-card-title">本期费用核对</div>
-          <div className="workbench-card-desc">费用数据核对功能</div>
+          <div className="workbench-card-desc">核对本期达人合作费用</div>
           <div className="workbench-card-action">暂未开启</div>
         </Card>
       </div>
@@ -244,9 +244,9 @@ function BatchManagerPage({ batches, onRefresh, onSelectBatch, onBack }) {
       </div>
       <Card title="创建批次" className="batch-manager-card">
         <Form layout="inline" onFinish={createBatch} initialValues={{ year: new Date().getFullYear(), month: new Date().getMonth() + 1 }}>
-          <Form.Item name="year" rules={[{ required: true, message: '请选择年份' }]}><InputNumber min={2000} max={2100} placeholder="年份" /></Form.Item>
-          <Form.Item name="month" rules={[{ required: true, message: '请选择月份' }]}><InputNumber min={1} max={12} placeholder="月份" /></Form.Item>
-          <Form.Item name="title" rules={[{ required: true, whitespace: true, message: '请输入自定义标题' }]}><Input placeholder="自定义标题" /></Form.Item>
+          <Form.Item label="年份" name="year" rules={[{ required: true, message: '请选择年份' }]}><InputNumber min={2000} max={2100} /></Form.Item>
+          <Form.Item label="月份" name="month" rules={[{ required: true, message: '请选择月份' }]}><InputNumber min={1} max={12} /></Form.Item>
+          <Form.Item label="批次标题" name="title" rules={[{ required: true, whitespace: true, message: '请输入自定义标题' }]}><Input placeholder="如：数据核对" /></Form.Item>
           <Form.Item><Button type="primary" htmlType="submit" loading={creating} disabled={Boolean(draft)}>创建批次</Button></Form.Item>
         </Form>
       </Card>
@@ -436,8 +436,8 @@ function DarenList({ user, batch, onViewVideos }) {
   };
 
   const columns = [
-    { title: '全网昵称', dataIndex: 'nickname', key: 'nickname', width: 140,
-      render: (text, record) => <span><a style={{ fontWeight: 600, cursor: 'pointer', color: '#8b5e3c' }} onClick={() => onViewVideos(record)}>{text}</a>{record.anomaly_count > 0 && <Tag color="red" style={{ marginLeft: 6, fontSize: 11 }}>{record.anomaly_count}</Tag>}</span> },
+    { title: '全网昵称', dataIndex: 'nickname', key: 'nickname', width: 140, fixed: 'left',
+      render: (text, record) => <span className="daren-name-cell"><Tooltip title={text}><a className="data-link" onClick={() => onViewVideos(record)}>{text}</a></Tooltip>{record.anomaly_count > 0 && <span className="anomaly-count-badge" aria-label={`${record.anomaly_count} 个异常`}>{record.anomaly_count}</span>}</span> },
     { title: '机构名称', dataIndex: 'organization', key: 'organization', width: 120 },
     { title: '内容类型', dataIndex: 'content_type', key: 'content_type', width: 100 },
     { title: '达人分类', dataIndex: 'category', key: 'category', width: 130 },
@@ -465,7 +465,7 @@ function DarenList({ user, batch, onViewVideos }) {
   return (
     <div>
       {isAdmin && (
-        <div className="confirmation-summary-card" aria-label="达人确认状态统计">
+      <div className="confirmation-summary-card status-rail" aria-label="达人确认状态统计">
           <div className="confirmation-summary-item pending">
             <span>待确认</span>
             <strong>{statusCounts.pending}</strong>
@@ -482,13 +482,13 @@ function DarenList({ user, batch, onViewVideos }) {
       )}
       <div className="toolbar">
         <Input.Search placeholder="搜索昵称" value={searchInput} onChange={e => setSearchInput(e.target.value)} onSearch={() => { setPage(1); setSearch(searchInput); }} style={{ width: 200 }} allowClear />
-        {isAdmin && <Select placeholder="内容类型" value={contentType || undefined} onChange={v => { setPage(1); setContentType(v || ''); }} style={{ width: 150, marginLeft: 12 }} allowClear options={contentTypeOptions} />}
-        {isAdmin && <Select placeholder="达人分类" value={category || undefined} onChange={v => { setPage(1); setCategory(v || ''); }} style={{ width: 150, marginLeft: 12 }} allowClear options={categoryOptions} />}
+        {isAdmin && <Select placeholder="内容类型" value={contentType || undefined} onChange={v => { setPage(1); setContentType(v || ''); }} style={{ width: 150 }} allowClear options={contentTypeOptions} />}
+        {isAdmin && <Select placeholder="达人分类" value={category || undefined} onChange={v => { setPage(1); setCategory(v || ''); }} style={{ width: 150 }} allowClear options={categoryOptions} />}
         <div className="spacer" />
         {isAdmin && (
           <>
-            <Button type="primary" loading={exporting} disabled={!batch || isReadOnly} onClick={handleExport} style={{ marginLeft: 8 }}>导出当前批次</Button>
-            <Button danger loading={deleting} disabled={isReadOnly || !selectedRowKeys.length} onClick={() => handleDelete(selectedRows)} style={{ marginLeft: 8 }}>删除选中</Button>
+            <Button type="primary" loading={exporting} disabled={!batch || isReadOnly} onClick={handleExport}>导出当前批次</Button>
+            <Button danger loading={deleting} disabled={isReadOnly || !selectedRowKeys.length} onClick={() => handleDelete(selectedRows)}>删除选中</Button>
           </>
         )}
       </div>
@@ -497,6 +497,8 @@ function DarenList({ user, batch, onViewVideos }) {
         dataSource={data}
         rowKey="id"
         loading={loading}
+        locale={TABLE_LOCALE}
+        scroll={{x:1200}}
         pagination={{ total, current: page, pageSize, showSizeChanger: true, pageSizeOptions: PAGE_SIZE_OPTIONS, onChange: setPage, onShowSizeChange: handlePageSizeChange }}
         rowSelection={isAdmin && !isReadOnly ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined}
         bordered
@@ -720,7 +722,7 @@ function VideoDetail({ daren, user, batch, onBack }) {
     { title: '视频标题', dataIndex: 'title', width: 200, ellipsis: true, editable: true, render: textTooltip },
     { title: '作品标签', dataIndex: 'tags', width: 120, ellipsis: true, editable: true, render: textTooltip },
     { title: '内容链接', dataIndex: 'content_url', width: 70,
-      render: (v) => v ? <a href={v} target="_blank" rel="noreferrer" style={{color:'#5a6e8a'}}>查看</a> : '-' },
+      render: (v) => v ? <a className="data-link" href={v} target="_blank" rel="noreferrer">查看</a> : '-' },
     { title: '时长', dataIndex: 'duration', width: 65, editable: true },
     { title: '发布时间', dataIndex: 'publish_time', width: 105, editable: true },
     { title: 'DA播放', dataIndex: 'da_plays', width: 85,
@@ -795,7 +797,7 @@ function VideoDetail({ daren, user, batch, onBack }) {
           <div className="daren-detail-item"><span>主页链接</span><strong>{daren.homepage_url ? <a href={daren.homepage_url} target="_blank" rel="noreferrer">查看主页</a> : '-'}</strong></div>
         </div>
       </Card>
-      <div className="anomaly-summary-card" aria-label="视频异常统计">
+      <div className="anomaly-summary-card status-rail" aria-label="视频异常统计">
         <div className="anomaly-summary-item anomaly">
           <span>异常数量</span>
           <strong>{anomalySummary.anomalyCount}</strong>
@@ -816,7 +818,7 @@ function VideoDetail({ daren, user, batch, onBack }) {
       </div>
       <Form form={form} component={false}>
         <Table columns={mergedColumns} dataSource={data} rowKey="id"
-          loading={loading} scroll={{x:2600}} pagination={{total, current:page, pageSize, showSizeChanger: true, pageSizeOptions: PAGE_SIZE_OPTIONS, onChange:setPage, onShowSizeChange:handlePageSizeChange}}
+          loading={loading} locale={TABLE_LOCALE} scroll={{x:2600}} pagination={{total, current:page, pageSize, showSizeChanger: true, pageSizeOptions: PAGE_SIZE_OPTIONS, onChange:setPage, onShowSizeChange:handlePageSizeChange}}
           bordered size="small" components={{body:{cell:EditableCell}}} />
       </Form>
       <Drawer
@@ -872,6 +874,13 @@ const allColumns = [
   { key: 'appeal', label: '申诉' },
 ];
 
+const EDITABLE_COLUMN_GROUPS = [
+  { title: '基础内容', keys: ['title', 'tags', 'content_url', 'duration', 'publish_time'] },
+  { title: '数据指标', keys: ['da_plays', 'da_likes', 'da_7d_plays', 'da_7d_likes', 'comments', 'saves', 'shares'] },
+  { title: '截图凭证', keys: ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes'] },
+  { title: '合规与申诉', keys: ['violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot', 'appeal'] },
+];
+
 function SettingsPage({ onBack }) {
   const [checked, setChecked] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -893,16 +902,21 @@ function SettingsPage({ onBack }) {
         <Button onClick={onBack}>← 返回</Button>
         <h3>可编辑列权限设置</h3>
       </div>
-      <Card title="勾选普通用户可编辑的列" style={{ maxWidth: 500 }}>
-        <Checkbox.Group value={checked} onChange={setChecked}
-          style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {allColumns.map(c => (
-            <Checkbox key={c.key} value={c.key}>{c.label}</Checkbox>
+      <Card title="普通用户可编辑权限" className="settings-card">
+        <Checkbox.Group value={checked} onChange={setChecked} className="editable-column-groups">
+          {EDITABLE_COLUMN_GROUPS.map(group => (
+            <section className="editable-column-group" key={group.title}>
+              <h4>{group.title}</h4>
+              <div className="editable-column-options">
+                {group.keys.map(key => {
+                  const column = allColumns.find(item => item.key === key);
+                  return <Checkbox key={key} value={key}>{column.label}</Checkbox>;
+                })}
+              </div>
+            </section>
           ))}
         </Checkbox.Group>
-        <Button type="primary" onClick={save} loading={loading} style={{ marginTop: 16 }}>
-          保存设置
-        </Button>
+        <div className="settings-actions"><Button type="primary" onClick={save} loading={loading}>保存设置</Button></div>
       </Card>
     </>
   );
@@ -1095,8 +1109,6 @@ function App() {
     return <LoginPage onLogin={setUser} />;
   }
 
-  const roleMap = { admin: '管理员', editor: '编辑者', viewer: '查看者' };
-
   const renderPage = () => {
     switch (page) {
       case 'home':
@@ -1130,8 +1142,12 @@ function App() {
         {activeWorkspace === 'data' && <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="desktop" />}
         <div className="user-info">
           {user.role === 'admin' && <BatchPicker batches={batches} value={selectedBatch} onChange={chooseBatch} />}
-          <span>{user.display_name}（{roleMap[user.role] || user.role}）</span>
-          <Button type="text" size="small" onClick={handleLogout} style={{ color: 'var(--ink-secondary)' }}>退出</Button>
+          <Dropdown menu={{ items: [{ key: 'logout', label: '退出登录' }], onClick: handleLogout }} trigger={['click']} placement="bottomRight">
+            <button className="account-trigger" type="button" aria-label={`${user.display_name}，打开账户菜单`}>
+              <span className="account-name">{user.display_name}</span>
+              <span className="account-chevron" aria-hidden="true">›</span>
+            </button>
+          </Dropdown>
         </div>
       </div>
       <div className="app-content">
