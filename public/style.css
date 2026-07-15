@@ -402,6 +402,7 @@ body {
 /* ── Input & Select & DatePicker ── */
 
 .ant-input,
+.ant-input-affix-wrapper,
 .ant-select-selector,
 .ant-picker {
   background: var(--card) !important;
@@ -413,12 +414,14 @@ body {
 }
 
 .ant-input:hover,
+.ant-input-affix-wrapper:hover,
 .ant-select-selector:hover,
 .ant-picker:hover {
   border-color: var(--border-em) !important;
 }
 
 .ant-input:focus,
+.ant-input-affix-wrapper-focused,
 .ant-select-selector:focus,
 .ant-picker-focused {
   border-color: var(--accent) !important;
@@ -426,6 +429,23 @@ body {
 }
 
 .ant-input::placeholder { color: var(--ink-muted) !important; }
+
+.ant-input-affix-wrapper > input.ant-input {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ant-input-search .ant-input-affix-wrapper {
+  border-right: 0 !important;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
+}
+
+.ant-input-search-button {
+  border-left: 0 !important;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+}
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

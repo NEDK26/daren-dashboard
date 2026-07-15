@@ -48,6 +48,12 @@ test('browser autofill keeps login inputs white with black text', () => {
   assert.match(css, /input:-webkit-autofill[^}]*-webkit-text-fill-color:\s*var\(--ink\)[^}]*-webkit-box-shadow:\s*0 0 0 1000px var\(--paper\) inset/s);
 });
 
+test('password and search inputs render a single visible frame', () => {
+  assert.match(css, /\.ant-input-affix-wrapper\s*>\s*input\.ant-input\s*\{[^}]*border:\s*0\s*!important[^}]*background:\s*transparent\s*!important/s);
+  assert.match(css, /\.ant-input-search\s+\.ant-input-affix-wrapper\s*\{[^}]*border-right:\s*0\s*!important/s);
+  assert.match(css, /\.ant-input-search-button\s*\{[^}]*border-left:\s*0\s*!important/s);
+});
+
 test('fixed table action cells are opaque while scrolling', () => {
   assert.match(css, /\.ant-table-cell-fix-right[^}]*background:\s*var\(--card\)\s*!important/s);
   assert.match(css, /\.ant-table-tbody\s*>\s*tr:hover\s*>\s*td\.ant-table-cell-fix-right[^}]*background:\s*var\(--hover\)\s*!important/s);
