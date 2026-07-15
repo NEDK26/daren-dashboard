@@ -12,6 +12,7 @@ test('login page uses the provided logo in a centered panel', () => {
   assert.match(app, /login-panel/);
   assert.match(app, /src="\/logo\.png"/);
   assert.match(css, /\.login-panel\s*\{[^}]*display:\s*flex/s);
+  assert.match(css, /\.login-card\s+\.ant-card-head-title\s*\{[^}]*text-align:\s*center/s);
 });
 
 test('fee placeholder uses the paused label and white logo surface', () => {

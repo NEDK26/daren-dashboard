@@ -239,6 +239,8 @@ body {
   box-shadow: none !important;
 }
 
+.login-card .ant-card-head-title { text-align: center; }
+
 /* ── Workbench ── */
 
 .workbench-page { padding-top: 10px; }
