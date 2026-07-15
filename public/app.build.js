@@ -195,7 +195,15 @@ function LoginPage({
   }, [onLogin]);
   return /*#__PURE__*/React.createElement("div", {
     className: "login-page"
-  }, /*#__PURE__*/React.createElement(Card, {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "login-panel"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "login-logo-frame"
+  }, /*#__PURE__*/React.createElement("img", {
+    className: "login-logo",
+    src: "/logo.png",
+    alt: "达人数据管理平台"
+  })), /*#__PURE__*/React.createElement(Card, {
     title: "达人数据管理平台",
     className: "login-card"
   }, /*#__PURE__*/React.createElement(Form, {
@@ -222,7 +230,7 @@ function LoginPage({
     htmlType: "submit",
     loading: loading,
     block: true
-  }, "登录")))));
+  }, "登录"))))));
 }
 function HomePage({
   onDataCheck,

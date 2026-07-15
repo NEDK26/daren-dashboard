@@ -5,11 +5,11 @@
    ═══════════════════════════════════════════ */
 
 :root {
-  --paper:        #faf7f2;
-  --page:         #f5f1ea;
-  --card:         #faf7f2;
-  --hover:        #f0ebe0;
-  --active:       #ede7dd;
+  --paper:        #fff;
+  --page:         #fff;
+  --card:         #fff;
+  --hover:        #f7f7f7;
+  --active:       #f0f0f0;
   --ink:          #2c2416;
   --ink-secondary:#6b6356;
   --ink-muted:    #a09888;
@@ -200,12 +200,39 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
+  padding: 24px 16px;
   background: var(--paper);
 }
 
+.login-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(380px, 100%);
+}
+
+.login-logo-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  background: var(--ink);
+  border-radius: 14px;
+}
+
+.login-logo {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
 .login-card {
-  width: 380px;
+  width: 100%;
   border: 1px solid var(--border) !important;
   box-shadow: none !important;
 }
@@ -328,6 +355,16 @@ body {
 }
 
 .ant-table-tbody > tr:hover > td {
+  background: var(--hover) !important;
+}
+
+.ant-table-thead > tr > th.ant-table-cell-fix-right,
+.ant-table-tbody > tr > td.ant-table-cell-fix-right {
+  z-index: 2;
+  background: var(--card) !important;
+}
+
+.ant-table-tbody > tr:hover > td.ant-table-cell-fix-right {
   background: var(--hover) !important;
 }
 
