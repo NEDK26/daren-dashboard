@@ -608,7 +608,7 @@ input:-webkit-autofill:focus {
 
 /* ── Anomaly cells ── */
 .ant-table-tbody > tr > td.cell-anomaly {
-  background: #fff1f0 !important;
+  background: #ffccc7 !important;
 }
 
 .anomaly-marker-hint {
