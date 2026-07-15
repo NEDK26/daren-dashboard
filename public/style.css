@@ -451,6 +451,23 @@ body {
   background: var(--hover) !important;
 }
 
+.table-text-tooltip {
+  max-width: 220px !important;
+}
+
+.table-text-tooltip .ant-tooltip-inner {
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.table-ellipsis-trigger {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── Pagination ── */
 
 .ant-pagination-item {
@@ -565,13 +582,18 @@ input:-webkit-autofill:focus {
 
 .ant-tag {
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   border-radius: var(--radius-sm);
   line-height: 20px;
   color: var(--ink) !important;
-  background: var(--paper) !important;
-  border: 1px solid var(--border);
+  background: #eceff1 !important;
+  border: 0 !important;
 }
+
+.ant-tag-blue { background: #dceeff !important; }
+.ant-tag-orange { background: #f9e7c7 !important; }
+.ant-tag-red { background: #f5dfe2 !important; }
+.ant-tag-green { background: #dceee3 !important; }
 
 /* ── Card ── */
 

@@ -44,6 +44,15 @@ test('neutral theme removes warm surface and text colors', () => {
   assert.doesNotMatch(css, /#c47a23|#5a8a6a|#ff6b00|rgba\(139,94,60/i);
 });
 
+test('platform and status tags use muted solid fills without outlines', () => {
+  assert.match(css, /\.ant-tag\s*\{[^}]*border:\s*0\s*!important/s);
+  assert.match(css, /\.ant-tag-blue\s*\{[^}]*background:\s*#dceeff\s*!important/s);
+  assert.match(css, /\.ant-tag-orange\s*\{[^}]*background:\s*#f9e7c7\s*!important/s);
+  assert.match(css, /\.ant-tag-red\s*\{[^}]*background:\s*#f5dfe2\s*!important/s);
+  assert.match(css, /\.ant-tag-green\s*\{[^}]*background:\s*#dceee3\s*!important/s);
+  assert.doesNotMatch(css, /\.ant-tag\s*\{[^}]*background:\s*var\(--paper\)\s*!important/s);
+});
+
 test('browser autofill keeps login inputs white with black text', () => {
   assert.match(css, /input:-webkit-autofill[^}]*-webkit-text-fill-color:\s*var\(--ink\)[^}]*-webkit-box-shadow:\s*0 0 0 1000px var\(--paper\) inset/s);
 });

@@ -25,7 +25,7 @@ const SCREENSHOT_ANOMALY_FIELDS = [
   { key: 'screenshot_7d_plays', label: '7日播放截图' },
   { key: 'screenshot_7d_likes', label: '7日点赞截图' }
 ];
-const textTooltip = value => value ? <Tooltip title={value}><span>{value}</span></Tooltip> : '-';
+const textTooltip = value => value ? <Tooltip title={value} placement="topRight" overlayClassName="table-text-tooltip"><span className="table-ellipsis-trigger">{value}</span></Tooltip> : '-';
 
 function BatchPicker({ batches, value, onChange }) {
   const selectable = batches.filter(batch => batch.status !== 'draft');

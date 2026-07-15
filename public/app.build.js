@@ -87,8 +87,12 @@ const SCREENSHOT_ANOMALY_FIELDS = [{
   label: '7日点赞截图'
 }];
 const textTooltip = value => value ? /*#__PURE__*/React.createElement(Tooltip, {
-  title: value
-}, /*#__PURE__*/React.createElement("span", null, value)) : '-';
+  title: value,
+  placement: "topRight",
+  overlayClassName: "table-text-tooltip"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "table-ellipsis-trigger"
+}, value)) : '-';
 function BatchPicker({
   batches,
   value,
