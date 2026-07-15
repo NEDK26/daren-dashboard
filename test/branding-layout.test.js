@@ -26,6 +26,13 @@ test('dashboard base surfaces use white backgrounds', () => {
   assert.match(css, /--card:\s*#fff\s*;/);
 });
 
+test('global theme uses white surfaces with black text', () => {
+  assert.match(css, /--ink:\s*#000\s*;/);
+  assert.match(css, /--ink-secondary:\s*#333\s*;/);
+  assert.match(css, /\.app-header\s*\{[^}]*background:\s*var\(--paper\)[^}]*color:\s*var\(--ink\)/s);
+  assert.match(css, /\.ant-btn-primary\s*\{[^}]*background:\s*var\(--paper\)\s*!important[^}]*color:\s*var\(--ink\)\s*!important/s);
+});
+
 test('fixed table action cells are opaque while scrolling', () => {
   assert.match(css, /\.ant-table-cell-fix-right[^}]*background:\s*var\(--card\)\s*!important/s);
   assert.match(css, /\.ant-table-tbody\s*>\s*tr:hover\s*>\s*td\.ant-table-cell-fix-right[^}]*background:\s*var\(--hover\)\s*!important/s);
