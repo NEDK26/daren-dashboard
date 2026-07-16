@@ -5,7 +5,7 @@ const path = require('node:path');
 
 test('video list returns anomaly and submitted anomaly summary counts', () => {
   const route = fs.readFileSync(path.join(__dirname, '../routes/videos.js'), 'utf8');
-  assert.match(route, /SELECT anomaly_data, appeal FROM videos WHERE daren_id = \?/);
+  assert.match(route, /EXISTS \(SELECT 1 FROM video_appeals/);
   assert.match(route, /submittedAnomalyCount/);
   assert.match(route, /anomalyCount/);
 });

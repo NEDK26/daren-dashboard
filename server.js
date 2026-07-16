@@ -28,6 +28,7 @@ async function main() {
   app.use('/api', require('./routes/darens'));
   app.use('/api', require('./routes/videos'));
   app.use('/api', require('./routes/upload'));
+  app.use('/api', require('./routes/appeals'));
   app.use('/api', require('./routes/import'));
   app.use('/api', require('./routes/export'));
   app.use('/api', require('./routes/settings'));

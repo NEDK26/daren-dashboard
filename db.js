@@ -152,6 +152,23 @@ function createVideosTable(db, tableName = 'videos') {
   )`);
 }
 
+function createVideoAppealsTable(db = _db) {
+  db.run(`CREATE TABLE IF NOT EXISTS video_appeals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id INTEGER NOT NULL,
+    group_no INTEGER NOT NULL CHECK (group_no BETWEEN 1 AND 3),
+    appeal_text TEXT,
+    image_path TEXT,
+    submitted_by TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE,
+    UNIQUE(video_id, group_no)
+  )`);
+  db.run(`INSERT OR IGNORE INTO video_appeals (video_id, group_no, appeal_text)
+    SELECT id, 1, appeal FROM videos WHERE TRIM(COALESCE(appeal, '')) <> ''`);
+}
+
 function tableColumns(db, tableName) {
   const stmt = db.prepare(`PRAGMA table_info(${tableName})`);
   const columns = [];
@@ -244,6 +261,7 @@ function initSchema() {
   if (!tableExists(_db, 'videos')) createVideosTable(_db);
   else if (tableColumns(_db, 'darens').some(column => column.name === 'batch_id') && tableColumns(_db, 'videos').some(column => column.name === 'batch_id')) migrateVideosTable(_db);
   else migrateBatchSchema(_db);
+  createVideoAppealsTable(_db);
 
   _db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -300,6 +318,7 @@ function initSchema() {
   _db.run('CREATE INDEX IF NOT EXISTS idx_darens_batch_id ON darens(batch_id)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_batch_id ON videos(batch_id)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_videos_platform ON videos(platform)');
+  _db.run('CREATE INDEX IF NOT EXISTS idx_video_appeals_video_id ON video_appeals(video_id)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_audit_table_record ON audit_logs(table_name, record_id)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_created ON operation_logs(created_at DESC)');
   _db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_subject ON operation_logs(subject_nickname, created_at DESC)');
@@ -342,4 +361,4 @@ function escapeColumn(col) {
   return col;
 }
 
-module.exports = { initDb, getDb, saveDb, prepare, escapeColumn, migrateVideosTable, migrateBatchSchema, withTransaction };
+module.exports = { initDb, getDb, saveDb, prepare, escapeColumn, migrateVideosTable, migrateBatchSchema, createVideoAppealsTable, withTransaction };
