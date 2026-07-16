@@ -10,6 +10,9 @@ const FIELD_LABELS = {
   is_node: '是否节点', node_name: '节点名称', is_hot: '是否爆款', appeal: '申诉说明',
   confirmation_status: '确认状态', screenshot_plays: '播放截图', screenshot_likes: '点赞截图',
   screenshot_7d_plays: '7日播放截图', screenshot_7d_likes: '7日点赞截图',
+  appeal_text_1: '申诉文字1', appeal_image_1: '申诉图片1',
+  appeal_text_2: '申诉文字2', appeal_image_2: '申诉图片2',
+  appeal_text_3: '申诉文字3', appeal_image_3: '申诉图片3',
   editable_columns: '可编辑列'
 };
 

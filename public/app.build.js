@@ -54,7 +54,7 @@ const api = {
   }).then(r => r.json()),
   upload: (url, file, fields = {}) => {
     const fd = new FormData();
-    fd.append('file', file);
+    if (file) fd.append('file', file);
     Object.entries(fields).forEach(([key, value]) => fd.append(key, value));
     return fetch(url, {
       method: 'POST',
@@ -210,7 +210,7 @@ function LoginPage({
   }, /*#__PURE__*/React.createElement("img", {
     className: "login-logo",
     src: "/logo.png",
-    alt: "达人数据管理平台"
+    alt: "甚杰文化"
   })), /*#__PURE__*/React.createElement(Card, {
     title: "达人数据管理平台",
     className: "login-card"
@@ -355,7 +355,7 @@ function BatchManagerPage({
   const revokePublished = async batch => {
     Modal.confirm({
       title: '撤销当前批次发布？',
-      content: '撤销后用户将恢复查看上一个已发布批次。',
+      content: '撤销后不会自动发布其他批次，需要时请手动发布。',
       okText: '撤销发布',
       cancelText: '取消',
       onOk: async () => {
@@ -880,6 +880,7 @@ function VideoDetail({
   const [titleInput, setTitleInput] = useState('');
   const [titleSearch, setTitleSearch] = useState('');
   const [editingKey, setEditingKey] = useState('');
+  const [pendingScreenshots, setPendingScreenshots] = useState({});
   const [editableCols, setEditableCols] = useState([]);
   const [anomalySummary, setAnomalySummary] = useState({
     anomalyCount: 0,
@@ -888,9 +889,14 @@ function VideoDetail({
   const [anomalyTarget, setAnomalyTarget] = useState(null);
   const [anomalyFields, setAnomalyFields] = useState([]);
   const [anomalySaving, setAnomalySaving] = useState(false);
+  const [appealTarget, setAppealTarget] = useState(null);
+  const [appealSlots, setAppealSlots] = useState([]);
+  const [appealLoading, setAppealLoading] = useState(false);
+  const [appealSaving, setAppealSaving] = useState(false);
   const [form] = Form.useForm();
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const requestRef = useRef(null);
+  const pendingScreenshotsRef = useRef({});
   const isAdmin = user.role === 'admin';
   const isReadOnly = batch?.status === 'history';
   const detailItems = [['全网昵称', daren.nickname], ['机构名称', daren.organization], ['内容类型', daren.content_type], ['达人分类', daren.category], ['平台', daren.platform], ['平台昵称', daren.platform_nickname], ['账号', daren.account], ['粉丝数', (daren.followers || 0).toLocaleString()], ['总播放量', (daren.total_plays || 0).toLocaleString()], ['确认状态', confirmationStatus]];
@@ -951,6 +957,11 @@ function VideoDetail({
       if (res.columns) setEditableCols(res.columns);
     }).catch(() => {});
   }, []);
+  useEffect(() => () => {
+    Object.values(pendingScreenshotsRef.current).forEach(({
+      previewUrl
+    }) => URL.revokeObjectURL(previewUrl));
+  }, []);
   const submitConfirmation = async status => {
     try {
       const res = await api.put('/api/darens/' + daren.id + '/confirmation', {
@@ -977,10 +988,37 @@ function VideoDetail({
       onOk: () => submitConfirmation('已提交申诉')
     });
   };
-  const handleUploadSuccess = async () => {
-    message.success('已上传');
-    await fetchData();
-    confirmModification();
+  const clearPendingScreenshots = () => {
+    Object.values(pendingScreenshotsRef.current).forEach(({
+      previewUrl
+    }) => URL.revokeObjectURL(previewUrl));
+    pendingScreenshotsRef.current = {};
+    setPendingScreenshots({});
+  };
+  const stageScreenshot = (key, file) => {
+    setPendingScreenshots(current => {
+      if (current[key]) URL.revokeObjectURL(current[key].previewUrl);
+      const next = {
+        ...current,
+        [key]: {
+          file,
+          previewUrl: URL.createObjectURL(file)
+        }
+      };
+      pendingScreenshotsRef.current = next;
+      return next;
+    });
+    return false;
+  };
+  const beginEditing = record => {
+    clearPendingScreenshots();
+    setEditingKey(record.id);
+    form.setFieldsValue(record);
+  };
+  const cancelEditing = () => {
+    clearPendingScreenshots();
+    form.resetFields();
+    setEditingKey('');
   };
   const openAnomalyMarker = record => {
     let anomalies = {};
@@ -1011,43 +1049,139 @@ function VideoDetail({
       setAnomalySaving(false);
     }
   };
+  const clearAppealPreviews = (slots = appealSlots) => {
+    slots.forEach(slot => {
+      if (slot.previewUrl) URL.revokeObjectURL(slot.previewUrl);
+    });
+  };
+  const closeAppeal = () => {
+    clearAppealPreviews();
+    setAppealTarget(null);
+    setAppealSlots([]);
+  };
+  const openAppeal = async record => {
+    clearAppealPreviews();
+    setAppealTarget(record);
+    setAppealLoading(true);
+    try {
+      const res = await api.get('/api/videos/' + record.id + '/appeals');
+      if (res.error) throw new Error(res.error);
+      const existing = new Map((res.appeals || []).map(item => [Number(item.group_no), item]));
+      setAppealSlots(Array.from({
+        length: 3
+      }, (_, index) => ({
+        group_no: index + 1,
+        appeal_text: existing.get(index + 1)?.appeal_text || '',
+        image_path: existing.get(index + 1)?.image_path || null,
+        file: null,
+        previewUrl: null,
+        removeImage: false
+      })));
+    } catch (error) {
+      message.error(error.message || '申诉加载失败');
+      setAppealTarget(null);
+    } finally {
+      setAppealLoading(false);
+    }
+  };
+  const updateAppealSlot = (groupNo, patch) => {
+    setAppealSlots(slots => slots.map(slot => slot.group_no === groupNo ? {
+      ...slot,
+      ...patch
+    } : slot));
+  };
+  const stageAppealImage = (groupNo, file) => {
+    const current = appealSlots.find(slot => slot.group_no === groupNo);
+    if (current?.previewUrl) URL.revokeObjectURL(current.previewUrl);
+    updateAppealSlot(groupNo, {
+      file,
+      previewUrl: URL.createObjectURL(file),
+      removeImage: false
+    });
+    return false;
+  };
+  const removeAppealImage = slot => {
+    if (slot.previewUrl) URL.revokeObjectURL(slot.previewUrl);
+    updateAppealSlot(slot.group_no, {
+      file: null,
+      previewUrl: null,
+      removeImage: true
+    });
+  };
+  const saveAppeals = async () => {
+    if (!appealTarget) return;
+    setAppealSaving(true);
+    try {
+      const fields = {};
+      appealSlots.forEach(slot => {
+        fields[`appeal_text_${slot.group_no}`] = slot.appeal_text || '';
+        if (slot.file) fields[`appeal_image_${slot.group_no}`] = slot.file;
+        if (slot.removeImage) fields[`remove_image_${slot.group_no}`] = '1';
+      });
+      const res = await api.upload('/api/videos/' + appealTarget.id + '/appeals', null, fields);
+      if (!res.ok) throw new Error(res.error || '申诉保存失败');
+      const changed = res.changed;
+      closeAppeal();
+      await fetchData();
+      message.success('申诉已保存');
+      if (!isAdmin && changed) confirmModification();
+    } catch (error) {
+      message.error(error.message || '申诉保存失败');
+    } finally {
+      setAppealSaving(false);
+    }
+  };
   const save = async videoId => {
     try {
       const row = await form.validateFields();
       const original = data.find(d => d.id === videoId);
       const changes = {};
+      const pendingUploads = Object.entries(pendingScreenshots);
       Object.keys(row).forEach(key => {
         if (row[key] !== undefined && row[key] !== original[key]) {
           changes[key] = row[key];
         }
       });
-      if (Object.keys(changes).length === 0) {
-        setEditingKey('');
+      if (Object.keys(changes).length === 0 && pendingUploads.length === 0) {
+        cancelEditing();
         return;
       }
-      const res = await api.put('/api/videos/' + videoId, changes);
-      if (res.ok) {
-        message.success('保存成功');
-        setEditingKey('');
-        await fetchData();
-        if (!isAdmin && res.changes && res.changes.length > 0) confirmModification();
-      } else {
-        message.error(res.error || '保存失败');
+      let savedFieldChanges = 0;
+      if (Object.keys(changes).length > 0) {
+        const res = await api.put('/api/videos/' + videoId, changes);
+        if (!res.ok) return message.error(res.error || '保存失败');
+        savedFieldChanges = res.changes?.length || 0;
       }
+      for (const [key, pending] of pendingUploads) {
+        const res = await api.upload('/api/upload/' + videoId + '/' + key, pending.file);
+        if (!res.ok) throw new Error(res.error || '截图上传失败');
+      }
+      message.success('保存成功');
+      clearPendingScreenshots();
+      setEditingKey('');
+      await fetchData();
+      if (!isAdmin && (savedFieldChanges > 0 || pendingUploads.length > 0)) confirmModification();
     } catch (e) {
-      message.error('保存失败');
+      message.error(e.message || '保存失败');
     }
   };
   const renderScreenshot = (record, key, label) => {
-    const canUpload = !isReadOnly && (isAdmin || editingKey === record.id && editableCols.includes(key));
-    const content = record[key] ? /*#__PURE__*/React.createElement(Image, {
-      src: record[key],
+    const canUpload = !isReadOnly && editingKey === record.id && (isAdmin || editableCols.includes(key));
+    const pending = canUpload ? pendingScreenshots[key] : null;
+    const screenshotUrl = pending?.previewUrl || record[key];
+    const content = screenshotUrl ? /*#__PURE__*/React.createElement("div", {
+      className: "screenshot-preview"
+    }, /*#__PURE__*/React.createElement(Image, {
+      src: screenshotUrl,
       width: 60,
       height: 60,
+      preview: !canUpload,
       style: {
         objectFit: 'cover'
       }
-    }) : /*#__PURE__*/React.createElement("div", {
+    }), pending && /*#__PURE__*/React.createElement("span", {
+      className: "screenshot-pending-label"
+    }, "待保存")) : /*#__PURE__*/React.createElement("div", {
       style: {
         width: 60,
         height: 60,
@@ -1062,13 +1196,11 @@ function VideoDetail({
       }
     }, label);
     return /*#__PURE__*/React.createElement(Tooltip, {
-      title: label
+      title: pending ? `${label}（待保存）` : label
     }, canUpload ? /*#__PURE__*/React.createElement(Upload, {
-      beforeUpload: file => {
-        api.upload('/api/upload/' + record.id + '/' + key, file).then(r => r.ok ? handleUploadSuccess() : message.error(r.error));
-        return false;
-      },
-      showUploadList: false
+      beforeUpload: file => stageScreenshot(key, file),
+      showUploadList: false,
+      accept: "image/*"
     }, content) : record[key] ? content : '-');
   };
   const statusOptions = {
@@ -1283,16 +1415,9 @@ function VideoDetail({
     width: 60,
     editable: true
   }, {
-    title: '申诉',
-    dataIndex: 'appeal',
-    width: 100,
-    editable: true,
-    ellipsis: true,
-    render: textTooltip
-  }, {
     title: '操作',
     key: 'actions',
-    width: 150,
+    width: 200,
     fixed: 'right',
     render: (_, record) => {
       if (editingKey === record.id) {
@@ -1302,19 +1427,19 @@ function VideoDetail({
           onClick: () => save(record.id)
         }, "保存"), /*#__PURE__*/React.createElement(Button, {
           size: "small",
-          onClick: () => setEditingKey('')
+          onClick: cancelEditing
         }, "取消"));
       }
       const canEdit = !isReadOnly && (isAdmin || editableCols.length > 0);
-      return canEdit || isAdmin && !isReadOnly ? /*#__PURE__*/React.createElement(Space, {
+      return !isReadOnly ? /*#__PURE__*/React.createElement(Space, {
         size: 4
       }, canEdit && /*#__PURE__*/React.createElement(Button, {
         size: "small",
-        onClick: () => {
-          setEditingKey(record.id);
-          form.setFieldsValue(record);
-        }
-      }, "编辑"), isAdmin && !isReadOnly && /*#__PURE__*/React.createElement(Button, {
+        onClick: () => beginEditing(record)
+      }, "编辑"), /*#__PURE__*/React.createElement(Button, {
+        size: "small",
+        onClick: () => openAppeal(record)
+      }, "申诉"), isAdmin && /*#__PURE__*/React.createElement(Button, {
         size: "small",
         onClick: () => openAnomalyMarker(record)
       }, "异常")) : null;
@@ -1514,6 +1639,75 @@ function VideoDetail({
         objectFit: 'cover'
       }
     }) : /*#__PURE__*/React.createElement(Tag, null, "未上传"));
+  })), /*#__PURE__*/React.createElement(Drawer, {
+    className: "appeal-drawer",
+    title: "视频申诉",
+    open: Boolean(appealTarget),
+    onClose: closeAppeal,
+    width: "min(520px, 100vw)",
+    destroyOnClose: true,
+    footer: /*#__PURE__*/React.createElement(Space, null, /*#__PURE__*/React.createElement(Button, {
+      onClick: closeAppeal
+    }, "取消"), /*#__PURE__*/React.createElement(Button, {
+      type: "primary",
+      loading: appealSaving,
+      disabled: appealLoading,
+      onClick: saveAppeals
+    }, "保存申诉"))
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "appeal-drawer-hint"
+  }, "每条视频最多提交三组申诉文字和图片，保存后统一提交。"), appealLoading ? /*#__PURE__*/React.createElement("div", {
+    className: "appeal-loading"
+  }, "正在加载…") : Array.from({
+    length: 3
+  }, (_, index) => {
+    const slot = appealSlots[index] || {
+      group_no: index + 1,
+      appeal_text: ''
+    };
+    const imageUrl = slot.previewUrl || !slot.removeImage && slot.image_path;
+    return /*#__PURE__*/React.createElement("section", {
+      className: "appeal-slot",
+      key: slot.group_no
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "appeal-slot-heading"
+    }, /*#__PURE__*/React.createElement("strong", null, "申诉 ", slot.group_no), /*#__PURE__*/React.createElement("span", null, "文字 + 1 张图片")), /*#__PURE__*/React.createElement(Input.TextArea, {
+      value: slot.appeal_text,
+      onChange: event => updateAppealSlot(slot.group_no, {
+        appeal_text: event.target.value
+      }),
+      placeholder: "填写申诉说明",
+      rows: 3,
+      maxLength: 1000,
+      showCount: true
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "appeal-image-row"
+    }, imageUrl ? /*#__PURE__*/React.createElement(Image, {
+      src: imageUrl,
+      width: 88,
+      height: 88,
+      style: {
+        objectFit: 'cover'
+      }
+    }) : /*#__PURE__*/React.createElement("div", {
+      className: "appeal-image-empty"
+    }, "暂无图片"), /*#__PURE__*/React.createElement(Space, {
+      direction: "vertical",
+      size: 6
+    }, /*#__PURE__*/React.createElement(Upload, {
+      beforeUpload: file => stageAppealImage(slot.group_no, file),
+      showUploadList: false,
+      accept: "image/*"
+    }, /*#__PURE__*/React.createElement(Button, {
+      size: "small"
+    }, imageUrl ? '替换图片' : '选择图片')), imageUrl && /*#__PURE__*/React.createElement(Button, {
+      size: "small",
+      type: "text",
+      danger: true,
+      onClick: () => removeAppealImage(slot)
+    }, "移除图片"), slot.file && /*#__PURE__*/React.createElement("span", {
+      className: "appeal-pending-label"
+    }, "待保存"))));
   })));
 }
 const allColumns = [{
@@ -1585,9 +1779,6 @@ const allColumns = [{
 }, {
   key: 'is_hot',
   label: '是否是爆款'
-}, {
-  key: 'appeal',
-  label: '申诉'
 }];
 const EDITABLE_COLUMN_GROUPS = [{
   title: '基础内容',
@@ -1600,7 +1791,7 @@ const EDITABLE_COLUMN_GROUPS = [{
   keys: ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes']
 }, {
   title: '合规与申诉',
-  keys: ['violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot', 'appeal']
+  keys: ['violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot']
 }];
 function SettingsPage({
   onBack
@@ -1689,6 +1880,12 @@ function AuditPage({
     dataIndex: 'operator_name',
     width: 120
   }, {
+    title: '达人',
+    dataIndex: 'subject_nickname',
+    width: 140,
+    ellipsis: true,
+    render: textTooltip
+  }, {
     title: '操作类型',
     dataIndex: 'action_type',
     width: 120
@@ -1724,7 +1921,7 @@ function AuditPage({
     rowKey: "id",
     loading: loading,
     scroll: {
-      x: 1000
+      x: 1140
     },
     pagination: {
       total,
@@ -1750,7 +1947,7 @@ function AuditPage({
     onClick: () => setSelectedLog(log)
   }, /*#__PURE__*/React.createElement("span", {
     className: "audit-mobile-meta"
-  }, log.created_at, " · ", log.operator_name), /*#__PURE__*/React.createElement("strong", null, log.action_type, " · ", log.subject_type, "：", log.subject_name), /*#__PURE__*/React.createElement("span", null, changeSummary(log)))), !loading && !logs.length && /*#__PURE__*/React.createElement("div", {
+  }, log.created_at, " · ", log.operator_name), /*#__PURE__*/React.createElement("strong", null, log.subject_nickname ? `达人：${log.subject_nickname} · ` : '', log.action_type, " · ", log.subject_type, "：", log.subject_name), /*#__PURE__*/React.createElement("span", null, changeSummary(log)))), !loading && !logs.length && /*#__PURE__*/React.createElement("div", {
     className: "audit-mobile-empty"
   }, "暂无操作记录")), total > pageSize && /*#__PURE__*/React.createElement(Pagination, {
     className: "audit-mobile-pagination",
@@ -1771,7 +1968,7 @@ function AuditPage({
     width: 480
   }, selectedLog && /*#__PURE__*/React.createElement("div", {
     className: "audit-detail"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "时间"), /*#__PURE__*/React.createElement("strong", null, selectedLog.created_at)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "操作人"), /*#__PURE__*/React.createElement("strong", null, selectedLog.operator_name)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "操作类型"), /*#__PURE__*/React.createElement("strong", null, selectedLog.action_type)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "操作对象"), /*#__PURE__*/React.createElement("strong", null, selectedLog.subject_type, "：", selectedLog.subject_name)), selectedLog.batch_name && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "所属批次"), /*#__PURE__*/React.createElement("strong", null, selectedLog.batch_name)), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("span", null, "变更详情"), getChanges(selectedLog).map((change, index) => /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "时间"), /*#__PURE__*/React.createElement("strong", null, selectedLog.created_at)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "操作人"), /*#__PURE__*/React.createElement("strong", null, selectedLog.operator_name)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "达人"), /*#__PURE__*/React.createElement("strong", null, selectedLog.subject_nickname || '-')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "操作类型"), /*#__PURE__*/React.createElement("strong", null, selectedLog.action_type)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "操作对象"), /*#__PURE__*/React.createElement("strong", null, selectedLog.subject_type, "：", selectedLog.subject_name)), selectedLog.batch_name && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "所属批次"), /*#__PURE__*/React.createElement("strong", null, selectedLog.batch_name)), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("span", null, "变更详情"), getChanges(selectedLog).map((change, index) => /*#__PURE__*/React.createElement("div", {
     className: "audit-change",
     key: index
   }, /*#__PURE__*/React.createElement("strong", null, change.field), /*#__PURE__*/React.createElement("p", null, change.old || '未填写', " ", /*#__PURE__*/React.createElement("b", null, "→"), " ", change.new || '未填写')))))));
@@ -1925,11 +2122,20 @@ function App() {
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "app-header"
-  }, /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据'), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(Button, {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "app-brand"
+  }, /*#__PURE__*/React.createElement("img", {
+    className: "header-logo",
+    src: "/logo.png",
+    alt: "",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据')), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(Button, {
     className: "workspace-back",
     type: "text",
-    onClick: goHome
-  }, "返回选择"), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(AppNavigation, {
+    onClick: goHome,
+    "aria-label": "返回选择",
+    title: "返回选择"
+  }, "←"), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(AppNavigation, {
     user: user,
     page: page,
     onNavigate: navigatePrimary,

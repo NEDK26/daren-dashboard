@@ -15,6 +15,20 @@ test('login page uses the provided logo in a centered panel', () => {
   assert.match(css, /\.login-card\s+\.ant-card-head-title\s*\{[^}]*text-align:\s*center/s);
 });
 
+test('header uses the same logo in an aligned brand group', () => {
+  assert.equal((app.match(/src="\/logo\.png"/g) || []).length, 2);
+  assert.match(app, /className="app-brand"/);
+  assert.match(app, /className="header-logo"/);
+  assert.match(css, /\.app-brand\s*\{[^}]*display:\s*flex[^}]*align-items:\s*center/s);
+  assert.match(css, /\.header-logo\s*\{[^}]*object-fit:\s*contain/s);
+});
+
+test('workspace return action is an accessible arrow button', () => {
+  assert.match(app, /className="workspace-back"[^>]*aria-label="返回选择"[^>]*title="返回选择"[^>]*>←<\/Button>/);
+  assert.doesNotMatch(app, /className="workspace-back"[^>]*>返回选择<\/Button>/);
+  assert.match(css, /\.workspace-back\s*\{[^}]*width:\s*32px[^}]*font-size:\s*20px/s);
+});
+
 test('fee placeholder uses the paused label and white logo surface', () => {
   assert.match(app, /暂未开启/);
   assert.doesNotMatch(app, /功能正在开发中/);
@@ -63,7 +77,9 @@ test('password and search inputs render a single visible frame', () => {
   assert.match(css, /\.ant-input-search-button\s*\{[^}]*border-left:\s*0\s*!important/s);
 });
 
-test('fixed table action cells are opaque while scrolling', () => {
+test('fixed table cells are opaque while scrolling', () => {
+  assert.match(css, /\.ant-table-cell-fix-left[^}]*background:\s*var\(--card\)\s*!important/s);
+  assert.match(css, /\.ant-table-tbody\s*>\s*tr:hover\s*>\s*td\.ant-table-cell-fix-left[^}]*background:\s*var\(--hover\)\s*!important/s);
   assert.match(css, /\.ant-table-cell-fix-right[^}]*background:\s*var\(--card\)\s*!important/s);
   assert.match(css, /\.ant-table-tbody\s*>\s*tr:hover\s*>\s*td\.ant-table-cell-fix-right[^}]*background:\s*var\(--hover\)\s*!important/s);
 });

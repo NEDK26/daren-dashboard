@@ -8,7 +8,7 @@ const api = {
   post: (url, data) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
   put: (url, data) => fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
   delete: (url, data) => fetch(url, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-  upload: (url, file, fields = {}) => { const fd = new FormData(); fd.append('file', file); Object.entries(fields).forEach(([key, value]) => fd.append(key, value)); return fetch(url, { method: 'POST', body: fd }).then(r => r.json()); }
+  upload: (url, file, fields = {}) => { const fd = new FormData(); if (file) fd.append('file', file); Object.entries(fields).forEach(([key, value]) => fd.append(key, value)); return fetch(url, { method: 'POST', body: fd }).then(r => r.json()); }
 };
 
 const confirmationStatusTag = (status) => {
@@ -89,7 +89,7 @@ function LoginPage({ onLogin }) {
   return (
     <div className="login-page">
       <div className="login-panel">
-        <div className="login-logo-frame"><img className="login-logo" src="/logo.png" alt="达人数据管理平台" /></div>
+        <div className="login-logo-frame"><img className="login-logo" src="/logo.png" alt="甚杰文化" /></div>
         <Card title="达人数据管理平台" className="login-card">
           <Form onFinish={handleSubmit} layout="vertical">
             <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
@@ -203,7 +203,7 @@ function BatchManagerPage({ batches, onRefresh, onSelectBatch, onBack }) {
   const revokePublished = async (batch) => {
     Modal.confirm({
       title: '撤销当前批次发布？',
-      content: '撤销后用户将恢复查看上一个已发布批次。',
+      content: '撤销后不会自动发布其他批次，需要时请手动发布。',
       okText: '撤销发布', cancelText: '取消',
       onOk: async () => {
         const res = await api.post('/api/batches/' + batch.id + '/revoke', {});
@@ -521,14 +521,20 @@ function VideoDetail({ daren, user, batch, onBack }) {
   const [titleInput, setTitleInput] = useState('');
   const [titleSearch, setTitleSearch] = useState('');
   const [editingKey, setEditingKey] = useState('');
+  const [pendingScreenshots, setPendingScreenshots] = useState({});
   const [editableCols, setEditableCols] = useState([]);
   const [anomalySummary, setAnomalySummary] = useState({ anomalyCount: 0, submittedAnomalyCount: 0 });
   const [anomalyTarget, setAnomalyTarget] = useState(null);
   const [anomalyFields, setAnomalyFields] = useState([]);
   const [anomalySaving, setAnomalySaving] = useState(false);
+  const [appealTarget, setAppealTarget] = useState(null);
+  const [appealSlots, setAppealSlots] = useState([]);
+  const [appealLoading, setAppealLoading] = useState(false);
+  const [appealSaving, setAppealSaving] = useState(false);
   const [form] = Form.useForm();
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const requestRef = useRef(null);
+  const pendingScreenshotsRef = useRef({});
   const isAdmin = user.role === 'admin';
   const isReadOnly = batch?.status === 'history';
   const detailItems = [
@@ -586,6 +592,10 @@ function VideoDetail({ daren, user, batch, onBack }) {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => () => {
+    Object.values(pendingScreenshotsRef.current).forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+  }, []);
+
   const submitConfirmation = async (status) => {
     try {
       const res = await api.put('/api/darens/' + daren.id + '/confirmation', { status });
@@ -612,10 +622,32 @@ function VideoDetail({ daren, user, batch, onBack }) {
     });
   };
 
-  const handleUploadSuccess = async () => {
-    message.success('已上传');
-    await fetchData();
-    confirmModification();
+  const clearPendingScreenshots = () => {
+    Object.values(pendingScreenshotsRef.current).forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+    pendingScreenshotsRef.current = {};
+    setPendingScreenshots({});
+  };
+
+  const stageScreenshot = (key, file) => {
+    setPendingScreenshots(current => {
+      if (current[key]) URL.revokeObjectURL(current[key].previewUrl);
+      const next = { ...current, [key]: { file, previewUrl: URL.createObjectURL(file) } };
+      pendingScreenshotsRef.current = next;
+      return next;
+    });
+    return false;
+  };
+
+  const beginEditing = (record) => {
+    clearPendingScreenshots();
+    setEditingKey(record.id);
+    form.setFieldsValue(record);
+  };
+
+  const cancelEditing = () => {
+    clearPendingScreenshots();
+    form.resetFields();
+    setEditingKey('');
   };
 
   const openAnomalyMarker = (record) => {
@@ -641,49 +673,136 @@ function VideoDetail({ daren, user, batch, onBack }) {
     }
   };
 
+  const clearAppealPreviews = (slots = appealSlots) => {
+    slots.forEach(slot => { if (slot.previewUrl) URL.revokeObjectURL(slot.previewUrl); });
+  };
+
+  const closeAppeal = () => {
+    clearAppealPreviews();
+    setAppealTarget(null);
+    setAppealSlots([]);
+  };
+
+  const openAppeal = async (record) => {
+    clearAppealPreviews();
+    setAppealTarget(record);
+    setAppealLoading(true);
+    try {
+      const res = await api.get('/api/videos/' + record.id + '/appeals');
+      if (res.error) throw new Error(res.error);
+      const existing = new Map((res.appeals || []).map(item => [Number(item.group_no), item]));
+      setAppealSlots(Array.from({ length: 3 }, (_, index) => ({
+        group_no: index + 1,
+        appeal_text: existing.get(index + 1)?.appeal_text || '',
+        image_path: existing.get(index + 1)?.image_path || null,
+        file: null,
+        previewUrl: null,
+        removeImage: false
+      })));
+    } catch (error) {
+      message.error(error.message || '申诉加载失败');
+      setAppealTarget(null);
+    } finally {
+      setAppealLoading(false);
+    }
+  };
+
+  const updateAppealSlot = (groupNo, patch) => {
+    setAppealSlots(slots => slots.map(slot => slot.group_no === groupNo ? { ...slot, ...patch } : slot));
+  };
+
+  const stageAppealImage = (groupNo, file) => {
+    const current = appealSlots.find(slot => slot.group_no === groupNo);
+    if (current?.previewUrl) URL.revokeObjectURL(current.previewUrl);
+    updateAppealSlot(groupNo, { file, previewUrl: URL.createObjectURL(file), removeImage: false });
+    return false;
+  };
+
+  const removeAppealImage = (slot) => {
+    if (slot.previewUrl) URL.revokeObjectURL(slot.previewUrl);
+    updateAppealSlot(slot.group_no, { file: null, previewUrl: null, removeImage: true });
+  };
+
+  const saveAppeals = async () => {
+    if (!appealTarget) return;
+    setAppealSaving(true);
+    try {
+      const fields = {};
+      appealSlots.forEach(slot => {
+        fields[`appeal_text_${slot.group_no}`] = slot.appeal_text || '';
+        if (slot.file) fields[`appeal_image_${slot.group_no}`] = slot.file;
+        if (slot.removeImage) fields[`remove_image_${slot.group_no}`] = '1';
+      });
+      const res = await api.upload('/api/videos/' + appealTarget.id + '/appeals', null, fields);
+      if (!res.ok) throw new Error(res.error || '申诉保存失败');
+      const changed = res.changed;
+      closeAppeal();
+      await fetchData();
+      message.success('申诉已保存');
+      if (!isAdmin && changed) confirmModification();
+    } catch (error) {
+      message.error(error.message || '申诉保存失败');
+    } finally {
+      setAppealSaving(false);
+    }
+  };
+
   const save = async (videoId) => {
     try {
       const row = await form.validateFields();
       const original = data.find(d => d.id === videoId);
       const changes = {};
+      const pendingUploads = Object.entries(pendingScreenshots);
       Object.keys(row).forEach(key => {
         if (row[key] !== undefined && row[key] !== original[key]) {
           changes[key] = row[key];
         }
       });
-      if (Object.keys(changes).length === 0) {
-        setEditingKey('');
+      if (Object.keys(changes).length === 0 && pendingUploads.length === 0) {
+        cancelEditing();
         return;
       }
-      const res = await api.put('/api/videos/' + videoId, changes);
-      if (res.ok) {
-        message.success('保存成功');
-        setEditingKey('');
-        await fetchData();
-        if (!isAdmin && res.changes && res.changes.length > 0) confirmModification();
-      } else {
-        message.error(res.error || '保存失败');
+      let savedFieldChanges = 0;
+      if (Object.keys(changes).length > 0) {
+        const res = await api.put('/api/videos/' + videoId, changes);
+        if (!res.ok) return message.error(res.error || '保存失败');
+        savedFieldChanges = res.changes?.length || 0;
       }
+      for (const [key, pending] of pendingUploads) {
+        const res = await api.upload('/api/upload/' + videoId + '/' + key, pending.file);
+        if (!res.ok) throw new Error(res.error || '截图上传失败');
+      }
+      message.success('保存成功');
+      clearPendingScreenshots();
+      setEditingKey('');
+      await fetchData();
+      if (!isAdmin && (savedFieldChanges > 0 || pendingUploads.length > 0)) confirmModification();
     } catch (e) {
-      message.error('保存失败');
+      message.error(e.message || '保存失败');
     }
   };
 
   const renderScreenshot = (record, key, label) => {
-    const canUpload = !isReadOnly && (isAdmin || (editingKey === record.id && editableCols.includes(key)));
-    const content = record[key] ? (
-      <Image src={record[key]} width={60} height={60} style={{objectFit:'cover'}} />
+    const canUpload = !isReadOnly && editingKey === record.id && (isAdmin || editableCols.includes(key));
+    const pending = canUpload ? pendingScreenshots[key] : null;
+    const screenshotUrl = pending?.previewUrl || record[key];
+    const content = screenshotUrl ? (
+      <div className="screenshot-preview">
+        <Image src={screenshotUrl} width={60} height={60} preview={!canUpload} style={{objectFit:'cover'}} />
+        {pending && <span className="screenshot-pending-label">待保存</span>}
+      </div>
     ) : (
       <div style={{width:60, height:60, border:'1px dashed var(--border-em)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:11, color:'var(--ink-muted)', borderRadius:4}}>
         {label}
       </div>
     );
     return (
-      <Tooltip title={label}>
+      <Tooltip title={pending ? `${label}（待保存）` : label}>
         {canUpload ? (
           <Upload
-            beforeUpload={file => { api.upload('/api/upload/'+record.id+'/'+key, file).then(r => r.ok ? handleUploadSuccess() : message.error(r.error)); return false; }}
+            beforeUpload={file => stageScreenshot(key, file)}
             showUploadList={false}
+            accept="image/*"
           >
             {content}
           </Upload>
@@ -753,16 +872,16 @@ function VideoDetail({ daren, user, batch, onBack }) {
     { title: '节点', dataIndex: 'is_node', width: 60, editable: true },
     { title: '节点名称', dataIndex: 'node_name', width: 110, ellipsis: true, editable: true, render: textTooltip },
     { title: '爆款', dataIndex: 'is_hot', width: 60, editable: true },
-    { title: '申诉', dataIndex: 'appeal', width: 100, editable: true, ellipsis: true, render: textTooltip },
-    { title: '操作', key: 'actions', width: 150, fixed: 'right',
+    { title: '操作', key: 'actions', width: 200, fixed: 'right',
       render: (_, record) => {
         if (editingKey === record.id) {
-          return <Space><Button size="small" type="primary" onClick={() => save(record.id)}>保存</Button><Button size="small" onClick={() => setEditingKey('')}>取消</Button></Space>;
+          return <Space><Button size="small" type="primary" onClick={() => save(record.id)}>保存</Button><Button size="small" onClick={cancelEditing}>取消</Button></Space>;
         }
         const canEdit = !isReadOnly && (isAdmin || editableCols.length > 0);
-        return (canEdit || (isAdmin && !isReadOnly)) ? <Space size={4}>
-          {canEdit && <Button size="small" onClick={() => { setEditingKey(record.id); form.setFieldsValue(record); }}>编辑</Button>}
-          {isAdmin && !isReadOnly && <Button size="small" onClick={() => openAnomalyMarker(record)}>异常</Button>}
+        return !isReadOnly ? <Space size={4}>
+          {canEdit && <Button size="small" onClick={() => beginEditing(record)}>编辑</Button>}
+          <Button size="small" onClick={() => openAppeal(record)}>申诉</Button>
+          {isAdmin && <Button size="small" onClick={() => openAnomalyMarker(record)}>异常</Button>}
         </Space> : null;
       }
     },
@@ -843,6 +962,42 @@ function VideoDetail({ daren, user, batch, onBack }) {
           </div>;
         })}
       </Drawer>
+      <Drawer
+        className="appeal-drawer"
+        title="视频申诉"
+        open={Boolean(appealTarget)}
+        onClose={closeAppeal}
+        width="min(520px, 100vw)"
+        destroyOnClose
+        footer={<Space><Button onClick={closeAppeal}>取消</Button><Button type="primary" loading={appealSaving} disabled={appealLoading} onClick={saveAppeals}>保存申诉</Button></Space>}
+      >
+        <p className="appeal-drawer-hint">每条视频最多提交三组申诉文字和图片，保存后统一提交。</p>
+        {appealLoading ? <div className="appeal-loading">正在加载…</div> : Array.from({ length: 3 }, (_, index) => {
+          const slot = appealSlots[index] || { group_no: index + 1, appeal_text: '' };
+          const imageUrl = slot.previewUrl || (!slot.removeImage && slot.image_path);
+          return <section className="appeal-slot" key={slot.group_no}>
+            <div className="appeal-slot-heading"><strong>申诉 {slot.group_no}</strong><span>文字 + 1 张图片</span></div>
+            <Input.TextArea
+              value={slot.appeal_text}
+              onChange={event => updateAppealSlot(slot.group_no, { appeal_text: event.target.value })}
+              placeholder="填写申诉说明"
+              rows={3}
+              maxLength={1000}
+              showCount
+            />
+            <div className="appeal-image-row">
+              {imageUrl ? <Image src={imageUrl} width={88} height={88} style={{ objectFit: 'cover' }} /> : <div className="appeal-image-empty">暂无图片</div>}
+              <Space direction="vertical" size={6}>
+                <Upload beforeUpload={file => stageAppealImage(slot.group_no, file)} showUploadList={false} accept="image/*">
+                  <Button size="small">{imageUrl ? '替换图片' : '选择图片'}</Button>
+                </Upload>
+                {imageUrl && <Button size="small" type="text" danger onClick={() => removeAppealImage(slot)}>移除图片</Button>}
+                {slot.file && <span className="appeal-pending-label">待保存</span>}
+              </Space>
+            </div>
+          </section>;
+        })}
+      </Drawer>
     </>
   );
 }
@@ -871,14 +1026,13 @@ const allColumns = [
   { key: 'is_node', label: '是否是节点' },
   { key: 'node_name', label: '参与节点名称' },
   { key: 'is_hot', label: '是否是爆款' },
-  { key: 'appeal', label: '申诉' },
 ];
 
 const EDITABLE_COLUMN_GROUPS = [
   { title: '基础内容', keys: ['title', 'tags', 'content_url', 'duration', 'publish_time'] },
   { title: '数据指标', keys: ['da_plays', 'da_likes', 'da_7d_plays', 'da_7d_likes', 'comments', 'saves', 'shares'] },
   { title: '截图凭证', keys: ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes'] },
-  { title: '合规与申诉', keys: ['violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot', 'appeal'] },
+  { title: '合规与申诉', keys: ['violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot'] },
 ];
 
 function SettingsPage({ onBack }) {
@@ -957,6 +1111,7 @@ function AuditPage({ onBack }) {
   const columns = [
     { title: '时间', dataIndex: 'created_at', width: 170 },
     { title: '操作人', dataIndex: 'operator_name', width: 120 },
+    { title: '达人', dataIndex: 'subject_nickname', width: 140, ellipsis: true, render: textTooltip },
     { title: '操作类型', dataIndex: 'action_type', width: 120 },
     { title: '操作对象', width: 220, ellipsis: true, render: (_, log) => textTooltip(`${log.subject_type}：${log.subject_name}`) },
     { title: '变更详情', width: 360, ellipsis: true, render: (_, log) => textTooltip(changeSummary(log)) },
@@ -971,14 +1126,14 @@ function AuditPage({ onBack }) {
         <h3>操作日志</h3>
       </div>
       <Table className="audit-table" columns={columns} dataSource={logs} rowKey="id"
-        loading={loading} scroll={{x:1000}}
+        loading={loading} scroll={{x:1140}}
         pagination={{ total, pageSize, current: page, showSizeChanger: true, pageSizeOptions: PAGE_SIZE_OPTIONS, onChange: setPage, onShowSizeChange: handlePageSizeChange }}
         onRow={log => ({ onClick: () => setSelectedLog(log), className: 'audit-table-row' })}
         bordered size="small" />
       <div className="audit-mobile-list">
         {logs.map(log => <button type="button" key={log.id} className="audit-mobile-row" onClick={() => setSelectedLog(log)}>
           <span className="audit-mobile-meta">{log.created_at} · {log.operator_name}</span>
-          <strong>{log.action_type} · {log.subject_type}：{log.subject_name}</strong>
+          <strong>{log.subject_nickname ? `达人：${log.subject_nickname} · ` : ''}{log.action_type} · {log.subject_type}：{log.subject_name}</strong>
           <span>{changeSummary(log)}</span>
         </button>)}
         {!loading && !logs.length && <div className="audit-mobile-empty">暂无操作记录</div>}
@@ -990,6 +1145,7 @@ function AuditPage({ onBack }) {
         {selectedLog && <div className="audit-detail">
           <div><span>时间</span><strong>{selectedLog.created_at}</strong></div>
           <div><span>操作人</span><strong>{selectedLog.operator_name}</strong></div>
+          <div><span>达人</span><strong>{selectedLog.subject_nickname || '-'}</strong></div>
           <div><span>操作类型</span><strong>{selectedLog.action_type}</strong></div>
           <div><span>操作对象</span><strong>{selectedLog.subject_type}：{selectedLog.subject_name}</strong></div>
           {selectedLog.batch_name && <div><span>所属批次</span><strong>{selectedLog.batch_name}</strong></div>}
@@ -1137,8 +1293,11 @@ function App() {
   return (
     <Layout style={{ minHeight: '100vh', background: 'var(--paper)' }}>
       <div className="app-header">
-        <h2>{user.role === 'admin' ? '达人数据管理' : '达人数据'}</h2>
-        {activeWorkspace === 'data' && <Button className="workspace-back" type="text" onClick={goHome}>返回选择</Button>}
+        <div className="app-brand">
+          <img className="header-logo" src="/logo.png" alt="" aria-hidden="true" />
+          <h2>{user.role === 'admin' ? '达人数据管理' : '达人数据'}</h2>
+        </div>
+        {activeWorkspace === 'data' && <Button className="workspace-back" type="text" onClick={goHome} aria-label="返回选择" title="返回选择">←</Button>}
         {activeWorkspace === 'data' && <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="desktop" />}
         <div className="user-info">
           {user.role === 'admin' && <BatchPicker batches={batches} value={selectedBatch} onChange={chooseBatch} />}

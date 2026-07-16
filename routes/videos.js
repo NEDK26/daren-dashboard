@@ -77,7 +77,7 @@ router.put('/videos/:id', requireLogin, (req, res) => {
   const videoCols = ['title', 'tags', 'content_url', 'duration', 'publish_time',
     'da_plays', 'da_likes', 'da_7d_plays', 'da_7d_likes', 'comments', 'saves', 'shares',
     'violation_status', 'violation_desc', 'compliance_status', 'compliance_desc',
-    'is_node', 'node_name', 'is_hot', 'appeal'];
+    'is_node', 'node_name', 'is_hot'];
 
   const changes = {};
   for (const col of allowedCols) {
@@ -131,7 +131,10 @@ function getEditableColumns() {
 
 function getAnomalySummary(darenId, batchId) {
   const daren = prepare('SELECT confirmation_status FROM darens WHERE id = ? AND batch_id = ?').get(darenId, batchId);
-  const rows = prepare('SELECT anomaly_data, appeal FROM videos WHERE daren_id = ? AND batch_id = ?').all(darenId, batchId);
+  const rows = prepare(`SELECT v.anomaly_data,
+    EXISTS (SELECT 1 FROM video_appeals a
+      WHERE a.video_id = v.id AND (TRIM(COALESCE(a.appeal_text, '')) <> '' OR a.image_path IS NOT NULL)) AS has_appeal
+    FROM videos v WHERE v.daren_id = ? AND v.batch_id = ?`).all(darenId, batchId);
   const submittedForDaren = daren?.confirmation_status === '已提交申诉';
   let anomalyCount = 0;
   let submittedAnomalyCount = 0;
@@ -141,7 +144,7 @@ function getAnomalySummary(darenId, batchId) {
     let count = 0;
     try { count = Object.keys(JSON.parse(row.anomaly_data)).length; } catch {}
     anomalyCount += count;
-    if (submittedForDaren || String(row.appeal ?? '').trim()) submittedAnomalyCount += count;
+    if (submittedForDaren || row.has_appeal) submittedAnomalyCount += count;
   }
 
   return { anomalyCount, submittedAnomalyCount };
