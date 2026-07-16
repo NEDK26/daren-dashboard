@@ -210,7 +210,7 @@ function LoginPage({
   }, /*#__PURE__*/React.createElement("img", {
     className: "login-logo",
     src: "/logo.png",
-    alt: "达人数据管理平台"
+    alt: "甚杰文化"
   })), /*#__PURE__*/React.createElement(Card, {
     title: "达人数据管理平台",
     className: "login-card"
@@ -2122,7 +2122,14 @@ function App() {
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "app-header"
-  }, /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据'), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(Button, {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "app-brand"
+  }, /*#__PURE__*/React.createElement("img", {
+    className: "header-logo",
+    src: "/logo.png",
+    alt: "",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据')), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(Button, {
     className: "workspace-back",
     type: "text",
     onClick: goHome

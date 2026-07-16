@@ -89,7 +89,7 @@ function LoginPage({ onLogin }) {
   return (
     <div className="login-page">
       <div className="login-panel">
-        <div className="login-logo-frame"><img className="login-logo" src="/logo.png" alt="达人数据管理平台" /></div>
+        <div className="login-logo-frame"><img className="login-logo" src="/logo.png" alt="甚杰文化" /></div>
         <Card title="达人数据管理平台" className="login-card">
           <Form onFinish={handleSubmit} layout="vertical">
             <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
@@ -1293,7 +1293,10 @@ function App() {
   return (
     <Layout style={{ minHeight: '100vh', background: 'var(--paper)' }}>
       <div className="app-header">
-        <h2>{user.role === 'admin' ? '达人数据管理' : '达人数据'}</h2>
+        <div className="app-brand">
+          <img className="header-logo" src="/logo.png" alt="" aria-hidden="true" />
+          <h2>{user.role === 'admin' ? '达人数据管理' : '达人数据'}</h2>
+        </div>
         {activeWorkspace === 'data' && <Button className="workspace-back" type="text" onClick={goHome}>返回选择</Button>}
         {activeWorkspace === 'data' && <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="desktop" />}
         <div className="user-info">

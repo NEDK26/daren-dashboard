@@ -74,6 +74,21 @@ body {
   white-space: nowrap;
 }
 
+.app-brand {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-logo {
+  display: block;
+  width: 42px;
+  height: 38px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
 .desktop-nav {
   display: flex;
   align-self: stretch;
@@ -364,19 +379,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 88px;
-  height: 88px;
-  margin-bottom: 16px;
+  width: 190px;
+  height: 168px;
+  margin-bottom: 8px;
   overflow: hidden;
   background: var(--paper);
-  border: 1px solid var(--border);
-  border-radius: 14px;
 }
 
 .login-logo {
   display: block;
-  width: 72px;
-  height: 72px;
+  width: 190px;
+  height: 168px;
   object-fit: contain;
 }
 
@@ -1051,6 +1064,8 @@ input:-webkit-autofill:focus {
 }
 
 @media (max-width: 480px) {
+  .header-logo { width: 36px; height: 34px; }
+  .app-brand { gap: 2px; }
   .app-header h2 { font-size: 14px; }
   .user-label { display: none; }
   .confirmation-summary-item,

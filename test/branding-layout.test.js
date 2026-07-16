@@ -15,6 +15,14 @@ test('login page uses the provided logo in a centered panel', () => {
   assert.match(css, /\.login-card\s+\.ant-card-head-title\s*\{[^}]*text-align:\s*center/s);
 });
 
+test('header uses the same logo in an aligned brand group', () => {
+  assert.equal((app.match(/src="\/logo\.png"/g) || []).length, 2);
+  assert.match(app, /className="app-brand"/);
+  assert.match(app, /className="header-logo"/);
+  assert.match(css, /\.app-brand\s*\{[^}]*display:\s*flex[^}]*align-items:\s*center/s);
+  assert.match(css, /\.header-logo\s*\{[^}]*object-fit:\s*contain/s);
+});
+
 test('fee placeholder uses the paused label and white logo surface', () => {
   assert.match(app, /暂未开启/);
   assert.doesNotMatch(app, /功能正在开发中/);
