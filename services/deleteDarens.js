@@ -33,10 +33,10 @@ function resolveUploadPath(value, uploadsDir) {
   return target === root || !target.startsWith(root + path.sep) ? null : target;
 }
 
-function deleteUploadFiles(rows, uploadsDir) {
+function deleteUploadFiles(rows, uploadsDir, columns = SCREENSHOT_COLUMNS) {
   const files = new Set();
   for (const row of rows) {
-    for (const col of SCREENSHOT_COLUMNS) {
+    for (const col of columns) {
       const file = resolveUploadPath(row[col], uploadsDir);
       if (file) files.add(file);
     }
@@ -67,9 +67,14 @@ function deleteDarensByIds({ db, ids, batchId, actor, uploadsDir, saveDb }) {
 
   const videos = queryAll(
     db,
-    `SELECT work_id, ${SCREENSHOT_COLUMNS.join(', ')} FROM videos WHERE daren_id IN (${sqlIds})${batchFilter}`,
+    `SELECT rowid AS video_id, work_id, ${SCREENSHOT_COLUMNS.join(', ')} FROM videos WHERE daren_id IN (${sqlIds})${batchFilter}`,
     scopedParams
   );
+  const videoIds = videos.map(video => Number(video.video_id));
+  const hasAppealTable = queryAll(db, "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'video_appeals'").length > 0;
+  const appealImages = hasAppealTable && videoIds.length
+    ? queryAll(db, `SELECT image_path FROM video_appeals WHERE video_id IN (${placeholders(videoIds)})`, videoIds)
+    : [];
   const userNames = [...new Set(darens.map(row => row.nickname))];
   let deletedUsers = 0;
 
@@ -101,7 +106,9 @@ function deleteDarensByIds({ db, ids, batchId, actor, uploadsDir, saveDb }) {
     throw err;
   }
 
-  const fileWarnings = uploadsDir ? deleteUploadFiles(videos, uploadsDir) : [];
+  const fileWarnings = uploadsDir
+    ? [...deleteUploadFiles(videos, uploadsDir), ...deleteUploadFiles(appealImages, uploadsDir, ['image_path'])]
+    : [];
   return {
     deletedDarens: darens.length,
     deletedVideos: videos.length,

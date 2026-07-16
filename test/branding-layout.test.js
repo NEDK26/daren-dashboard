@@ -63,7 +63,9 @@ test('password and search inputs render a single visible frame', () => {
   assert.match(css, /\.ant-input-search-button\s*\{[^}]*border-left:\s*0\s*!important/s);
 });
 
-test('fixed table action cells are opaque while scrolling', () => {
+test('fixed table cells are opaque while scrolling', () => {
+  assert.match(css, /\.ant-table-cell-fix-left[^}]*background:\s*var\(--card\)\s*!important/s);
+  assert.match(css, /\.ant-table-tbody\s*>\s*tr:hover\s*>\s*td\.ant-table-cell-fix-left[^}]*background:\s*var\(--hover\)\s*!important/s);
   assert.match(css, /\.ant-table-cell-fix-right[^}]*background:\s*var\(--card\)\s*!important/s);
   assert.match(css, /\.ant-table-tbody\s*>\s*tr:hover\s*>\s*td\.ant-table-cell-fix-right[^}]*background:\s*var\(--hover\)\s*!important/s);
 });

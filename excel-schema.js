@@ -34,7 +34,12 @@ const excelFields = [
   { header: '是否是节点', key: 'is_node' },
   { header: '参与节点名称', key: 'node_name' },
   { header: '是否是爆款', key: 'is_hot' },
-  { header: '申诉', key: 'appeal' },
+  { header: '申诉文字1', key: 'appeal_text_1', aliases: ['申诉'] },
+  { header: '申诉图片1', key: 'appeal_image_1' },
+  { header: '申诉文字2', key: 'appeal_text_2' },
+  { header: '申诉图片2', key: 'appeal_image_2' },
+  { header: '申诉文字3', key: 'appeal_text_3' },
+  { header: '申诉图片3', key: 'appeal_image_3' },
 ];
 
 const exportColumns = excelFields.map(({ header, key }) => ({ header, key }));

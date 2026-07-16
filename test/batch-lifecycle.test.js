@@ -41,7 +41,7 @@ async function createDb() {
   return db;
 }
 
-test('publishing a draft moves the old current to history and records it for revoke', async () => {
+test('publishing a draft moves the old current to history and records its predecessor', async () => {
   assert.equal(typeof lifecycle.publishBatch, 'function');
   const db = await createDb();
   const prepare = createPrepare(db);
@@ -50,24 +50,26 @@ test('publishing a draft moves the old current to history and records it for rev
   assert.deepEqual(prepare('SELECT status, previous_batch_id FROM batches WHERE id = ?').get(2), { status: 'current', previous_batch_id: 1 });
 });
 
-test('revoking the current batch restores the previous current batch', async () => {
+test('revoking the current batch leaves previous batches as history', async () => {
   assert.equal(typeof lifecycle.revokeBatch, 'function');
   const db = await createDb();
   const prepare = createPrepare(db);
   lifecycle.publishBatch({ prepare, withTransaction: createTransaction(db), batchId: 2 });
-  lifecycle.revokeBatch({ prepare, withTransaction: createTransaction(db), batchId: 2 });
-  assert.equal(prepare('SELECT status FROM batches WHERE id = ?').get(1).status, 'current');
+  const revoked = lifecycle.revokeBatch({ prepare, withTransaction: createTransaction(db), batchId: 2 });
+  assert.equal(prepare('SELECT status FROM batches WHERE id = ?').get(1).status, 'history');
   assert.deepEqual(prepare('SELECT status, previous_batch_id FROM batches WHERE id = ?').get(2), { status: 'draft', previous_batch_id: null });
+  assert.equal(prepare("SELECT COUNT(*) AS count FROM batches WHERE status = 'current'").get().count, 0);
+  assert.equal(revoked.status, 'draft');
 });
 
-test('revoking a legacy current batch restores the latest history when no link was recorded', async () => {
+test('revoking works when there is no previous batch', async () => {
   const db = await createDb();
   const prepare = createPrepare(db);
-  db.run("UPDATE batches SET status = 'history' WHERE id = 1");
+  db.run('DELETE FROM batches WHERE id = 1');
   db.run("UPDATE batches SET status = 'current' WHERE id = 2");
   lifecycle.revokeBatch({ prepare, withTransaction: createTransaction(db), batchId: 2 });
-  assert.equal(prepare('SELECT status FROM batches WHERE id = ?').get(1).status, 'current');
   assert.equal(prepare('SELECT status FROM batches WHERE id = ?').get(2).status, 'draft');
+  assert.equal(prepare("SELECT COUNT(*) AS count FROM batches WHERE status = 'current'").get().count, 0);
 });
 
 test('batch route exposes publish and revoke actions', () => {

@@ -13,7 +13,7 @@ const anomalyFields = [
   'title', 'tags', 'content_url', 'duration', 'publish_time',
   'da_plays', 'da_likes', 'da_7d_plays', 'da_7d_likes',
   'comments', 'saves', 'shares', 'violation_status', 'violation_desc',
-  'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot', 'appeal'
+  'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot'
 ];
 
 function isRedFill(cell) {
@@ -114,9 +114,24 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
           getNum('da_plays'), getNum('da_likes'), getNum('da_7d_plays'), getNum('da_7d_likes'),
           getNum('comments'), getNum('saves'), getNum('shares'),
           getVal('violation_status'), getVal('violation_desc'), getVal('compliance_status'), getVal('compliance_desc'),
-          getVal('is_node'), getVal('node_name'), getVal('is_hot'), getVal('appeal'),
+          getVal('is_node'), getVal('node_name'), getVal('is_hot'), getVal('appeal_text_1'),
           getVal('screenshot_plays'), getVal('screenshot_likes'), getVal('screenshot_7d_plays'), getVal('screenshot_7d_likes'), JSON.stringify(anomalies)
         );
+        const video = prepare(`SELECT id FROM videos
+          WHERE batch_id = ? AND daren_id = ? AND platform = ? AND work_id = ?`).get(batchId, darenId, platform, workId);
+        for (let groupNo = 1; groupNo <= 3; groupNo++) {
+          const appealText = getVal(`appeal_text_${groupNo}`);
+          if (!appealText) {
+            prepare('DELETE FROM video_appeals WHERE video_id = ? AND group_no = ?').run(video.id, groupNo);
+            continue;
+          }
+          prepare(`INSERT INTO video_appeals (video_id, group_no, appeal_text, submitted_by)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(video_id, group_no) DO UPDATE SET
+              appeal_text = excluded.appeal_text, submitted_by = excluded.submitted_by,
+              updated_at = datetime('now','localtime')`
+          ).run(video.id, groupNo, appealText, req.session.user.display_name);
+        }
         imported++;
       });
 
