@@ -108,7 +108,14 @@ body {
 .desktop-nav .ant-btn span:first-child { display: none; }
 .desktop-nav .ant-btn.active { color: var(--ink) !important; border-bottom: 2px solid var(--ink); }
 
-.workspace-back { color: var(--ink-secondary) !important; }
+.workspace-back {
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  color: var(--ink-secondary) !important;
+  font-size: 20px;
+  line-height: 1;
+}
 
 .mobile-nav { display: none; }
 
@@ -1004,7 +1011,7 @@ input:-webkit-autofill:focus {
   .app-header .user-info { gap: 8px; font-size: 12px; }
   .account-name { max-width: 80px; }
   .desktop-nav { display: none; }
-  .workspace-back { padding: 0 6px; font-size: 12px; }
+  .workspace-back { flex: 0 0 32px; }
   .batch-picker { display: none; }
   .app-content { padding: 16px 14px 84px; }
   .mobile-nav {

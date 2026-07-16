@@ -1297,7 +1297,7 @@ function App() {
           <img className="header-logo" src="/logo.png" alt="" aria-hidden="true" />
           <h2>{user.role === 'admin' ? '达人数据管理' : '达人数据'}</h2>
         </div>
-        {activeWorkspace === 'data' && <Button className="workspace-back" type="text" onClick={goHome}>返回选择</Button>}
+        {activeWorkspace === 'data' && <Button className="workspace-back" type="text" onClick={goHome} aria-label="返回选择" title="返回选择">←</Button>}
         {activeWorkspace === 'data' && <AppNavigation user={user} page={page} onNavigate={navigatePrimary} placement="desktop" />}
         <div className="user-info">
           {user.role === 'admin' && <BatchPicker batches={batches} value={selectedBatch} onChange={chooseBatch} />}

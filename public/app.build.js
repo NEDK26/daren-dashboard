@@ -2132,8 +2132,10 @@ function App() {
   }), /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据')), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(Button, {
     className: "workspace-back",
     type: "text",
-    onClick: goHome
-  }, "返回选择"), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(AppNavigation, {
+    onClick: goHome,
+    "aria-label": "返回选择",
+    title: "返回选择"
+  }, "←"), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(AppNavigation, {
     user: user,
     page: page,
     onNavigate: navigatePrimary,

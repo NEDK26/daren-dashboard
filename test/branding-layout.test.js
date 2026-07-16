@@ -23,6 +23,12 @@ test('header uses the same logo in an aligned brand group', () => {
   assert.match(css, /\.header-logo\s*\{[^}]*object-fit:\s*contain/s);
 });
 
+test('workspace return action is an accessible arrow button', () => {
+  assert.match(app, /className="workspace-back"[^>]*aria-label="返回选择"[^>]*title="返回选择"[^>]*>←<\/Button>/);
+  assert.doesNotMatch(app, /className="workspace-back"[^>]*>返回选择<\/Button>/);
+  assert.match(css, /\.workspace-back\s*\{[^}]*width:\s*32px[^}]*font-size:\s*20px/s);
+});
+
 test('fee placeholder uses the paused label and white logo surface', () => {
   assert.match(app, /暂未开启/);
   assert.doesNotMatch(app, /功能正在开发中/);
