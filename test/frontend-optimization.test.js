@@ -25,7 +25,7 @@ test('frontend debounces filters and cancels stale requests', () => {
   assert.match(app, /pageSize/);
 });
 
-test('admin list keeps batch deletion without rendering a per-row delete button', () => {
-  assert.match(app, /删除选中/);
+test('admin list does not render deletion controls', () => {
+  assert.doesNotMatch(app, /删除选中/);
   assert.doesNotMatch(app, /render: \(_, record\) => <Button danger size="small" onClick=\{\(\) => handleDelete\(\[record\]\)\}>删除<\/Button>/);
 });

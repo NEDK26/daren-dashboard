@@ -267,8 +267,16 @@ function initSchema() {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     display_name TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user'))
+    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user')),
+    must_change_password INTEGER NOT NULL DEFAULT 0,
+    credential_version INTEGER NOT NULL DEFAULT 1,
+    initial_password_issued_at TEXT,
+    password_changed_at TEXT
   )`);
+  try { _db.run('ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0'); } catch {}
+  try { _db.run('ALTER TABLE users ADD COLUMN credential_version INTEGER NOT NULL DEFAULT 1'); } catch {}
+  try { _db.run('ALTER TABLE users ADD COLUMN initial_password_issued_at TEXT'); } catch {}
+  try { _db.run('ALTER TABLE users ADD COLUMN password_changed_at TEXT'); } catch {}
 
   _db.run(`CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,

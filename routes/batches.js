@@ -4,11 +4,17 @@ const { prepare, withTransaction } = require('../db');
 const { requireLogin, requireAdmin, operationLog } = require('../middleware');
 const { buildBatchName, getCurrentBatch } = require('../services/batches');
 const { publishBatch, revokeBatch } = require('../services/batchLifecycle');
+const { initializeBatchAccounts } = require('../services/userAccounts');
+const { createAccountWorkbook, sendAccountWorkbook } = require('../services/accountWorkbook');
 
 router.get('/batches', requireLogin, (req, res) => {
   const isAdmin = req.session.user.role === 'admin';
   const batches = isAdmin
-    ? prepare(`SELECT * FROM batches ORDER BY CASE status WHEN 'current' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END, imported_at DESC, id DESC`).all()
+    ? prepare(`SELECT b.*,
+        (SELECT COUNT(*) FROM darens d LEFT JOIN users u ON u.display_name = d.nickname
+          WHERE d.batch_id = b.id AND u.id IS NULL) AS pending_accounts
+        FROM batches b
+        ORDER BY CASE status WHEN 'current' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END, imported_at DESC, id DESC`).all()
     : prepare(`
         SELECT DISTINCT b.* FROM batches b
         LEFT JOIN darens d ON d.batch_id = b.id AND d.nickname = ?
@@ -16,6 +22,24 @@ router.get('/batches', requireLogin, (req, res) => {
         ORDER BY CASE b.status WHEN 'current' THEN 0 ELSE 1 END, b.imported_at DESC, b.id DESC
       `).all(req.session.user.display_name);
   res.json({ batches, current: getCurrentBatch() || null });
+});
+
+router.post('/batches/:id/initialize-accounts', requireAdmin, async (req, res) => {
+  const batch = prepare('SELECT * FROM batches WHERE id = ?').get(req.params.id);
+  if (!batch) return res.status(404).json({ error: '批次不存在' });
+  try {
+    const accounts = initializeBatchAccounts({ prepare, withTransaction, batchId: batch.id });
+    operationLog(req, {
+      actionType: '初始化达人账号', subjectType: '批次', subjectId: batch.id, subjectName: batch.name,
+      batchId: batch.id, batchName: batch.name,
+      changes: [{ field: '初始化账号', old: '未完成', new: `新增 ${accounts.length} 个账号` }]
+    });
+    if (!accounts.length) return res.json({ ok: true, created: 0 });
+    const buffer = await createAccountWorkbook(accounts);
+    sendAccountWorkbook(res, 'daren-accounts.xlsx', buffer);
+  } catch (error) {
+    res.status(400).json({ error: error.message || '初始化账号失败' });
+  }
 });
 
 router.post('/batches', requireAdmin, (req, res) => {
