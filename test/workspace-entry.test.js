@@ -5,18 +5,20 @@ const path = require('node:path');
 
 const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
 
-test('users choose a work area before data navigation is shown', () => {
+test('persistent workspace navigation routes directly into data', () => {
   assert.match(app, /const \[activeWorkspace, setActiveWorkspace\] = useState\(null\)/);
-  assert.match(app, /function FeePlaceholderPage/);
+  assert.doesNotMatch(app, /function FeePlaceholderPage/);
   assert.match(app, /onFeeCheck/);
   assert.match(app, /setActiveWorkspace\('data'\)/);
-  assert.match(app, /setPage\('fees'\)/);
-  assert.match(app, /activeWorkspace === 'data' && <AppNavigation/);
-  assert.match(app, /返回选择/);
+  assert.doesNotMatch(app, /setPage\('fees'\)/);
+  assert.match(app, /message\.info\('费用核对暂未开启'\)/);
+  assert.match(app, /function WorkspaceSidebar/);
+  assert.match(app, /activeWorkspace=\{activeWorkspace\}/);
+  assert.match(app, /onDataCheck=\{enterDataCheck\}/);
+  assert.doesNotMatch(app, /请选择要核对的内容/);
 });
 
-test('the active workbench card can be opened with a keyboard', () => {
-  assert.match(app, /role="button"/);
-  assert.match(app, /tabIndex=\{0\}/);
-  assert.match(app, /event\.key === 'Enter'/);
+test('workspace destinations use native buttons', () => {
+  assert.match(app, /<nav className="workspace-navigation"/);
+  assert.match(app, /<button key=\{key\} type="button" className=\{'workspace-nav-item '/);
 });

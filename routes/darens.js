@@ -24,8 +24,17 @@ router.get('/daren-content-types', requireAdmin, (req, res) => {
   res.json({ contentTypes });
 });
 
+router.get('/daren-platforms', requireAdmin, (req, res) => {
+  const resolved = getVisibleBatch(req, req.query.batchId);
+  if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
+  const platforms = prepare("SELECT platform FROM darens WHERE batch_id = ? AND TRIM(platform) != '' GROUP BY platform ORDER BY MIN(id)")
+    .all(resolved.batch.id)
+    .map(row => row.platform);
+  res.json({ platforms });
+});
+
 router.get('/darens', requireLogin, (req, res) => {
-  const { search, category, contentType, batchId } = req.query;
+  const { search, category, contentType, confirmationStatus, hasAnomaly, platform, batchId } = req.query;
   const resolved = getVisibleBatch(req, batchId);
   if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
   const batch = resolved.batch;
@@ -50,6 +59,14 @@ router.get('/darens', requireLogin, (req, res) => {
   if (search) { conditions.push('d.nickname LIKE ?'); params.push(`%${search}%`); }
   if (category) { conditions.push('d.category = ?'); params.push(category); }
   if (contentType) { conditions.push('d.content_type = ?'); params.push(contentType); }
+  if (confirmationStatus) { conditions.push('d.confirmation_status = ?'); params.push(confirmationStatus); }
+  if (platform) { conditions.push('d.platform = ?'); params.push(platform); }
+  if (hasAnomaly === 'yes') {
+    conditions.push("EXISTS (SELECT 1 FROM videos av WHERE av.daren_id = d.id AND av.batch_id = d.batch_id AND av.anomaly_data != '' AND av.anomaly_data != '{}')");
+  }
+  if (hasAnomaly === 'no') {
+    conditions.push("NOT EXISTS (SELECT 1 FROM videos av WHERE av.daren_id = d.id AND av.batch_id = d.batch_id AND av.anomaly_data != '' AND av.anomaly_data != '{}')");
+  }
 
   const whereSql = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
   if (paged) {

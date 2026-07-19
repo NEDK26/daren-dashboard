@@ -21,9 +21,9 @@ test('audit page uses readable event rows and an expandable detail drawer', () =
   assert.match(app, /Drawer/);
   assert.match(app, /操作类型/);
   assert.match(app, /操作对象/);
-  assert.match(app, /title: '达人', dataIndex: 'subject_nickname'/);
+  assert.match(app, /title:\s*'达人',\s*dataIndex:\s*'subject_nickname'/);
   assert.match(app, /达人：\$\{log\.subject_nickname\}/);
-  assert.match(app, /<span>达人<\/span><strong>\{selectedLog\.subject_nickname \|\| '-'\}<\/strong>/);
+  assert.match(app, /<span>达人<\/span>\s*<strong>\{selectedLog\.subject_nickname \|\| '-'\}<\/strong>/);
   assert.match(app, /变更详情/);
   assert.match(app, /audit-mobile-list/);
 });

@@ -16,14 +16,34 @@ const FIELD_LABELS = {
   editable_columns: '可编辑列'
 };
 
+function getSessionUser(req) {
+  if (!req.session.user) return null;
+  const user = prepare(`SELECT id, display_name, role, must_change_password, credential_version
+    FROM users WHERE id = ?`).get(req.session.user.id);
+  if (!user || Number(user.credential_version) !== Number(req.session.user.credential_version || 1)) {
+    req.session.destroy(() => {});
+    return null;
+  }
+  req.session.user = user;
+  return user;
+}
+
 function requireLogin(req, res, next) {
-  if (!req.session.user) return res.status(401).json({ error: '未登录' });
+  const user = getSessionUser(req);
+  if (!user) return res.status(401).json({ error: '未登录' });
+  if (Number(user.must_change_password) && req.path !== '/account/password') {
+    return res.status(403).json({ error: '请先修改初始化密码', mustChangePassword: true });
+  }
   next();
 }
 
 function requireAdmin(req, res, next) {
-  if (!req.session.user) return res.status(401).json({ error: '未登录' });
-  if (req.session.user.role !== 'admin') return res.status(403).json({ error: '需要管理员权限' });
+  const user = getSessionUser(req);
+  if (!user) return res.status(401).json({ error: '未登录' });
+  if (user.role !== 'admin') return res.status(403).json({ error: '需要管理员权限' });
+  if (Number(user.must_change_password) && req.path !== '/account/password') {
+    return res.status(403).json({ error: '请先修改初始化密码', mustChangePassword: true });
+  }
   next();
 }
 
@@ -74,4 +94,4 @@ function auditLog(req, tableName, recordId, fieldChanges, actionType = '修改�
   });
 }
 
-module.exports = { requireLogin, requireAdmin, auditLog, operationLog, FIELD_LABELS };
+module.exports = { requireLogin, requireAdmin, getSessionUser, auditLog, operationLog, FIELD_LABELS };

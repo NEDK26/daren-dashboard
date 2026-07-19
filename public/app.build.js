@@ -62,6 +62,23 @@ const api = {
     }).then(r => r.json());
   }
 };
+async function downloadAccountFile(url, options, fallbackName) {
+  const response = await fetch(url, options);
+  const contentType = response.headers.get('content-type') || '';
+  if (!response.ok || !contentType.includes('spreadsheet')) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || '账号清单下载失败');
+  }
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fallbackName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}
 const confirmationStatusTag = status => {
   const value = status || '待确认';
   const color = value === '已确认' ? 'green' : value === '已提交申诉' ? 'orange' : 'default';
@@ -178,6 +195,116 @@ function AppNavigation({
     onClick: () => onNavigate(item.key)
   }, /*#__PURE__*/React.createElement("span", null, item.icon), item.label)));
 }
+function WorkspaceSidebar({
+  user,
+  page,
+  activeWorkspace,
+  onDataCheck,
+  onFeeCheck,
+  onAccounts,
+  onNavigate,
+  onPassword,
+  onLogout
+}) {
+  const isAdmin = user.role === 'admin';
+  const dataActive = activeWorkspace === 'data' || ['darens', 'videos', 'empty', 'batch-switch', 'batches', 'settings'].includes(page);
+  const accountMenu = {
+    items: [{
+      key: 'password',
+      label: '修改密码'
+    }, {
+      key: 'logout',
+      label: '退出登录'
+    }],
+    onClick: ({
+      key
+    }) => key === 'password' ? onPassword() : onLogout()
+  };
+  const navButton = (key, label, onClick, muted = false) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    type: "button",
+    className: 'workspace-nav-item ' + (key === 'data' && dataActive || page === key ? 'active' : '') + (muted ? ' muted' : ''),
+    onClick: onClick
+  }, /*#__PURE__*/React.createElement("span", null, label));
+  return /*#__PURE__*/React.createElement("aside", {
+    className: "workspace-sidebar"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "workspace-brand",
+    onClick: onDataCheck
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "/logo.png",
+    alt: "",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("span", null, "达人数据管理")), /*#__PURE__*/React.createElement("nav", {
+    className: "workspace-navigation",
+    "aria-label": "工作区导航"
+  }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    className: "workspace-nav-label"
+  }, isAdmin ? '本期工作台' : '我的工作台'), navButton('data', isAdmin ? '数据核对' : '本期数据', onDataCheck), isAdmin && navButton('fees', '费用核对', onFeeCheck, true)), isAdmin && /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    className: "workspace-nav-label"
+  }, "基础工作台"), navButton('accounts', '达人账号管理', onAccounts), navButton('audit', isAdmin ? '操作记录' : '我的记录', () => onNavigate('audit'))), !isAdmin && /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    className: "workspace-nav-label"
+  }, "更多"), !isAdmin && navButton('batch-switch', '切换批次', () => onNavigate('batch-switch')), navButton('audit', isAdmin ? '操作记录' : '我的记录', () => onNavigate('audit')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "workspace-nav-item",
+    onClick: onPassword
+  }, /*#__PURE__*/React.createElement("span", null, "账户设置")))), /*#__PURE__*/React.createElement("div", {
+    className: "workspace-sidebar-footer"
+  }, /*#__PURE__*/React.createElement(Dropdown, {
+    menu: accountMenu,
+    trigger: ['click'],
+    placement: "topLeft"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "workspace-account",
+    type: "button",
+    "aria-label": `${user.display_name}，打开账户菜单`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "workspace-avatar",
+    "aria-hidden": "true"
+  }, isAdmin ? '管' : '达'), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("strong", null, user.display_name), /*#__PURE__*/React.createElement("small", null, isAdmin ? '管理员' : '达人账号')), /*#__PURE__*/React.createElement("span", {
+    className: "account-chevron",
+    "aria-hidden": "true"
+  }, "⌄")))));
+}
+function MobileWorkspaceHeader({
+  user,
+  onPassword,
+  onLogout
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mobile-workspace-header"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "app-brand"
+  }, /*#__PURE__*/React.createElement("img", {
+    className: "header-logo",
+    src: "/logo.png",
+    alt: "",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("h2", null, "达人数据管理")), /*#__PURE__*/React.createElement(Dropdown, {
+    menu: {
+      items: [{
+        key: 'password',
+        label: '修改密码'
+      }, {
+        key: 'logout',
+        label: '退出登录'
+      }],
+      onClick: ({
+        key
+      }) => key === 'password' ? onPassword() : onLogout()
+    },
+    trigger: ['click'],
+    placement: "bottomRight"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "account-trigger",
+    type: "button"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "account-name"
+  }, user.display_name), /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "⌄"))));
+}
 
 // ── LoginPage ──
 
@@ -240,55 +367,98 @@ function LoginPage({
     block: true
   }, "登录"))))));
 }
-function HomePage({
-  onDataCheck,
-  onFeeCheck
+function PasswordChangeForm({
+  user,
+  required,
+  onChanged
 }) {
-  return /*#__PURE__*/React.createElement("div", {
-    className: "workbench-page"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "workbench-heading"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "workbench-eyebrow"
-  }, "本期工作台"), /*#__PURE__*/React.createElement("h3", null, "请选择要核对的内容"))), /*#__PURE__*/React.createElement("div", {
-    className: "workbench-cards"
-  }, /*#__PURE__*/React.createElement(Card, {
-    className: "workbench-card workbench-card-primary",
-    hoverable: true,
-    role: "button",
-    tabIndex: 0,
-    onClick: onDataCheck,
-    onKeyDown: event => event.key === 'Enter' && onDataCheck()
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "workbench-card-title"
-  }, "本期数据核对"), /*#__PURE__*/React.createElement("div", {
-    className: "workbench-card-desc"
-  }, "查看和核对本期达人视频数据"), /*#__PURE__*/React.createElement("div", {
-    className: "workbench-card-action"
-  }, "进入核对 →")), /*#__PURE__*/React.createElement(Card, {
-    className: "workbench-card workbench-card-disabled",
-    hoverable: true,
-    onClick: onFeeCheck
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "workbench-card-title"
-  }, "本期费用核对"), /*#__PURE__*/React.createElement("div", {
-    className: "workbench-card-desc"
-  }, "核对本期达人合作费用"), /*#__PURE__*/React.createElement("div", {
-    className: "workbench-card-action"
-  }, "暂未开启"))));
+  const [saving, setSaving] = useState(false);
+  const [form] = Form.useForm();
+  const submit = async values => {
+    if (values.newPassword !== values.confirmPassword) return message.error('两次输入的新密码不一致');
+    setSaving(true);
+    try {
+      const res = await api.post('/api/account/password', values);
+      if (!res.ok) return message.error(res.error || '密码修改失败');
+      form.resetFields();
+      message.success('密码已修改');
+      onChanged(res.user);
+    } catch (error) {
+      message.error(error.message || '密码修改失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement(Form, {
+    form: form,
+    layout: "vertical",
+    onFinish: submit
+  }, /*#__PURE__*/React.createElement(Form.Item, {
+    label: "当前密码",
+    name: "currentPassword",
+    rules: [{
+      required: true,
+      message: '请输入当前密码'
+    }]
+  }, /*#__PURE__*/React.createElement(Input.Password, {
+    autoComplete: "current-password"
+  })), /*#__PURE__*/React.createElement(Form.Item, {
+    label: "新密码",
+    name: "newPassword",
+    rules: [{
+      required: true,
+      min: 8,
+      message: '密码至少需要 8 位'
+    }]
+  }, /*#__PURE__*/React.createElement(Input.Password, {
+    autoComplete: "new-password"
+  })), /*#__PURE__*/React.createElement(Form.Item, {
+    label: "确认新密码",
+    name: "confirmPassword",
+    rules: [{
+      required: true,
+      message: '请再次输入新密码'
+    }]
+  }, /*#__PURE__*/React.createElement(Input.Password, {
+    autoComplete: "new-password"
+  })), /*#__PURE__*/React.createElement(Button, {
+    type: "primary",
+    htmlType: "submit",
+    loading: saving,
+    block: true
+  }, required ? '完成初始化' : '保存新密码'));
 }
-function FeePlaceholderPage({
-  onBack
+function PasswordChangePage({
+  user,
+  onChanged
 }) {
   return /*#__PURE__*/React.createElement("div", {
-    className: "workbench-page"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "video-detail-header"
-  }, /*#__PURE__*/React.createElement(Button, {
-    onClick: onBack
-  }, "← 返回选择"), /*#__PURE__*/React.createElement("h3", null, "本期费用核对")), /*#__PURE__*/React.createElement(Card, {
-    className: "fee-placeholder-card"
-  }, /*#__PURE__*/React.createElement("h3", null, "暂未开启"), /*#__PURE__*/React.createElement("p", null, "本期费用核对功能暂未开启。")));
+    className: "workbench-page password-required-page"
+  }, /*#__PURE__*/React.createElement(Card, {
+    title: "首次登录请修改密码",
+    className: "password-change-card"
+  }, /*#__PURE__*/React.createElement("p", null, "初始化密码仅用于首次登录，请设置新的登录密码后继续使用系统。"), /*#__PURE__*/React.createElement(PasswordChangeForm, {
+    user: user,
+    required: true,
+    onChanged: onChanged
+  })));
+}
+function PasswordChangeModal({
+  open,
+  user,
+  onClose,
+  onChanged
+}) {
+  return /*#__PURE__*/React.createElement(Modal, {
+    title: "修改密码",
+    open: open,
+    onCancel: onClose,
+    footer: null,
+    destroyOnClose: true
+  }, /*#__PURE__*/React.createElement(PasswordChangeForm, {
+    user: user,
+    onChanged: onChanged
+  }));
 }
 function BatchManagerPage({
   batches,
@@ -331,14 +501,45 @@ function BatchManagerPage({
         batchId: draft.id
       });
       if (!res.ok) return message.error(res.error || '导入失败');
-      message.success(`导入完成：${res.imported} 条数据，新建用户 ${res.newUsers} 人，请发布批次后让用户查看`);
+      message.success(`导入完成：${res.imported} 条数据，待初始化账号 ${res.pendingAccounts || 0} 个`);
       await onRefresh();
+      if (res.pendingAccounts > 0) {
+        Modal.confirm({
+          title: '是否为本批次达人创建初始化账号？',
+          content: `将为 ${res.pendingAccounts} 个尚无账号的达人生成随机初始化密码并下载账号清单。`,
+          okText: '现在初始化',
+          cancelText: '稍后处理',
+          onOk: async () => {
+            try {
+              await downloadAccountFile('/api/batches/' + draft.id + '/initialize-accounts', {
+                method: 'POST'
+              }, 'daren-accounts.xlsx');
+              message.success('初始化账号已完成，账号清单已下载');
+              await onRefresh();
+            } catch (e) {
+              message.error(e.message || '初始化账号失败');
+            }
+          }
+        });
+      }
     } catch (e) {
       message.error('导入失败，请稍后重试');
     } finally {
       setImporting(false);
     }
     return false;
+  };
+  const initializeAccounts = async batch => {
+    if (!batch?.pending_accounts) return message.info('该批次没有待初始化账号');
+    try {
+      await downloadAccountFile('/api/batches/' + batch.id + '/initialize-accounts', {
+        method: 'POST'
+      }, 'daren-accounts.xlsx');
+      message.success('初始化账号已完成，账号清单已下载');
+      await onRefresh();
+    } catch (e) {
+      message.error(e.message || '初始化账号失败');
+    }
   };
   const publishDraft = async () => {
     if (!draft || !draft.imported_at) return;
@@ -458,6 +659,9 @@ function BatchManagerPage({
     type: "primary",
     loading: importing
   }, "导入 Excel")), /*#__PURE__*/React.createElement(Button, {
+    disabled: !draft.imported_at || importing || !draft.pending_accounts,
+    onClick: () => initializeAccounts(draft)
+  }, "初始化账号（", draft.pending_accounts || 0, "）"), /*#__PURE__*/React.createElement(Button, {
     type: "primary",
     disabled: !draft.imported_at || importing,
     onClick: publishDraft
@@ -486,13 +690,22 @@ function BatchManagerPage({
       width: 180,
       render: value => value || '-'
     }, {
+      title: '待初始化账号',
+      dataIndex: 'pending_accounts',
+      width: 130,
+      render: value => value || 0
+    }, {
       title: '操作',
       key: 'actions',
       width: 120,
-      render: (_, record) => record.status === 'current' ? /*#__PURE__*/React.createElement(Button, {
+      render: (_, record) => record.status === 'current' ? /*#__PURE__*/React.createElement(Space, null, /*#__PURE__*/React.createElement(Button, {
+        size: "small",
+        disabled: !record.pending_accounts,
+        onClick: () => initializeAccounts(record)
+      }, "初始化账号"), /*#__PURE__*/React.createElement(Button, {
         size: "small",
         onClick: () => revokePublished(record)
-      }, "撤销发布") : null
+      }, "撤销发布")) : null
     }]
   }), /*#__PURE__*/React.createElement(Modal, {
     open: importing,
@@ -517,13 +730,160 @@ function BatchManagerPage({
     "aria-hidden": "true"
   }, /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("span", null))))));
 }
+function AccountManagementPage({
+  batches,
+  onBack
+}) {
+  const [batchId, setBatchId] = useState(() => batches.find(batch => batch.status === 'current')?.id);
+  const [search, setSearch] = useState('');
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!batchId) setBatchId(batches.find(batch => batch.status === 'current')?.id);
+  }, [batches, batchId]);
+  const fetchAccounts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (batchId) params.set('batchId', batchId);
+      if (search) params.set('search', search);
+      const res = await api.get('/api/user-accounts?' + params.toString());
+      setRows(res.rows || []);
+    } catch (e) {
+      message.error('账号列表加载失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [batchId, search]);
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
+  const resetOne = record => Modal.confirm({
+    title: `重置 ${record.display_name} 的密码？`,
+    content: '旧密码和已有登录会话会立即失效，新的随机码将下载到本地。',
+    okText: '重置并下载',
+    cancelText: '取消',
+    onOk: async () => {
+      await downloadAccountFile('/api/user-accounts/' + record.id + '/reset-password', {
+        method: 'POST'
+      }, 'daren-account-reset.xlsx');
+      message.success('密码已重置，账号清单已下载');
+      fetchAccounts();
+    }
+  });
+  const resetBatch = all => Modal.confirm({
+    title: all ? '重置全部普通账号？' : '重置当前批次账号？',
+    content: all ? '所有达人旧密码和已有会话都会失效，请确认影响范围。' : '当前批次达人旧密码和已有会话都会失效。',
+    okText: '重置并下载',
+    okButtonProps: {
+      danger: true
+    },
+    cancelText: '取消',
+    onOk: async () => {
+      const body = all ? {
+        all: true
+      } : {
+        batchId
+      };
+      await downloadAccountFile('/api/user-accounts/reset-passwords', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      }, 'daren-account-reset.xlsx');
+      message.success('密码已批量重置，账号清单已下载');
+      fetchAccounts();
+    }
+  });
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "video-detail-header"
+  }, /*#__PURE__*/React.createElement(Button, {
+    onClick: onBack
+  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, "达人账号管理")), /*#__PURE__*/React.createElement(Card, {
+    className: "account-management-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "toolbar"
+  }, /*#__PURE__*/React.createElement(Select, {
+    style: {
+      width: 230
+    },
+    value: batchId,
+    allowClear: true,
+    placeholder: "全部批次",
+    onChange: setBatchId,
+    options: batches.map(batch => ({
+      value: batch.id,
+      label: batch.name
+    }))
+  }), /*#__PURE__*/React.createElement(Input.Search, {
+    style: {
+      width: 200
+    },
+    placeholder: "搜索达人昵称",
+    allowClear: true,
+    value: search,
+    onChange: event => setSearch(event.target.value),
+    onSearch: setSearch
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "spacer"
+  }), /*#__PURE__*/React.createElement(Button, {
+    onClick: () => resetBatch(false),
+    disabled: !batchId
+  }, "批量重置当前批次"), /*#__PURE__*/React.createElement(Button, {
+    danger: true,
+    onClick: () => resetBatch(true)
+  }, "批量重置全部账号")), /*#__PURE__*/React.createElement(Table, {
+    rowKey: "id",
+    loading: loading,
+    dataSource: rows,
+    pagination: {
+      pageSize: 20
+    },
+    columns: [{
+      title: '达人昵称',
+      dataIndex: 'display_name'
+    }, {
+      title: '账号状态',
+      dataIndex: 'status',
+      render: status => /*#__PURE__*/React.createElement(Tag, {
+        color: status === '正常' ? 'green' : status === '待首次改密' ? 'orange' : 'default'
+      }, status)
+    }, {
+      title: '关联批次',
+      dataIndex: 'batch_names',
+      ellipsis: true,
+      render: value => value || '-'
+    }, {
+      title: '密码更新时间',
+      dataIndex: 'password_changed_at',
+      render: value => value || '-'
+    }, {
+      title: '操作',
+      key: 'actions',
+      render: (_, record) => /*#__PURE__*/React.createElement(Button, {
+        size: "small",
+        onClick: () => resetOne(record)
+      }, "重置并下载")
+    }],
+    locale: TABLE_LOCALE,
+    scroll: {
+      x: 900
+    }
+  })));
+}
 
 // ── DarenList ──
 
 function DarenList({
   user,
   batch,
-  onViewVideos
+  batches,
+  onSelectBatch,
+  onViewVideos,
+  onOpenAudit,
+  onOpenBatches,
+  onOpenSettings
 }) {
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -536,6 +896,11 @@ function DarenList({
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [contentType, setContentType] = useState('');
   const [contentTypeOptions, setContentTypeOptions] = useState([]);
+  const [confirmationStatus, setConfirmationStatus] = useState('');
+  const [hasAnomaly, setHasAnomaly] = useState('');
+  const [platform, setPlatform] = useState('');
+  const [platformOptions, setPlatformOptions] = useState([]);
+  const [recentLogs, setRecentLogs] = useState([]);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
@@ -557,12 +922,16 @@ function DarenList({
   useEffect(() => {
     setCategory('');
     setContentType('');
+    setConfirmationStatus('');
+    setHasAnomaly('');
+    setPlatform('');
     if (!isAdmin || !batch) {
       setCategoryOptions([]);
-      return setContentTypeOptions([]);
+      setContentTypeOptions([]);
+      return setPlatformOptions([]);
     }
     let cancelled = false;
-    Promise.all([api.get('/api/daren-categories?batchId=' + batch.id), api.get('/api/daren-content-types?batchId=' + batch.id)]).then(([categories, contentTypes]) => {
+    Promise.all([api.get('/api/daren-categories?batchId=' + batch.id), api.get('/api/daren-content-types?batchId=' + batch.id), api.get('/api/daren-platforms?batchId=' + batch.id)]).then(([categories, contentTypes, platforms]) => {
       if (cancelled) return;
       setCategoryOptions((categories.categories || []).map(value => ({
         value,
@@ -572,10 +941,27 @@ function DarenList({
         value,
         label: value
       })));
+      setPlatformOptions((platforms.platforms || []).map(value => ({
+        value,
+        label: value
+      })));
     }).catch(() => {
       if (cancelled) return;
       setCategoryOptions([]);
       setContentTypeOptions([]);
+      setPlatformOptions([]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, batch?.id]);
+  useEffect(() => {
+    if (!isAdmin || !batch) return setRecentLogs([]);
+    let cancelled = false;
+    api.get('/api/audit-logs?limit=5&offset=0&batchId=' + batch.id).then(res => {
+      if (!cancelled) setRecentLogs(res.rows || []);
+    }).catch(() => {
+      if (!cancelled) setRecentLogs([]);
     });
     return () => {
       cancelled = true;
@@ -604,6 +990,9 @@ function DarenList({
       if (search) params.set('search', search);
       if (category) params.set('category', category);
       if (contentType) params.set('contentType', contentType);
+      if (confirmationStatus) params.set('confirmationStatus', confirmationStatus);
+      if (hasAnomaly) params.set('hasAnomaly', hasAnomaly);
+      if (platform) params.set('platform', platform);
       const res = await api.get('/api/darens?' + params.toString(), {
         signal: controller.signal
       });
@@ -624,7 +1013,7 @@ function DarenList({
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category, contentType, page, pageSize, batch?.id]);
+  }, [search, category, contentType, confirmationStatus, hasAnomaly, platform, page, pageSize, batch?.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -691,10 +1080,10 @@ function DarenList({
     });
   };
   const columns = [{
-    title: '全网昵称',
+    title: '达人昵称',
     dataIndex: 'nickname',
     key: 'nickname',
-    width: 140,
+    width: 180,
     fixed: 'left',
     render: (text, record) => /*#__PURE__*/React.createElement("span", {
       className: "daren-name-cell"
@@ -703,46 +1092,35 @@ function DarenList({
     }, /*#__PURE__*/React.createElement("a", {
       className: "data-link",
       onClick: () => onViewVideos(record)
-    }, text)), record.anomaly_count > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "anomaly-count-badge",
-      "aria-label": `${record.anomaly_count} 个异常`
-    }, record.anomaly_count))
+    }, text)))
   }, {
-    title: '机构名称',
-    dataIndex: 'organization',
-    key: 'organization',
-    width: 120
+    title: '平台',
+    dataIndex: 'platform',
+    key: 'platform',
+    width: 90,
+    render: value => value || '-'
   }, {
     title: '内容类型',
     dataIndex: 'content_type',
     key: 'content_type',
-    width: 100
+    width: 120,
+    ellipsis: true
   }, {
-    title: '达人分类',
-    dataIndex: 'category',
-    key: 'category',
-    width: 130
-  }, {
-    title: '平台昵称',
-    dataIndex: 'platform_nickname',
-    key: 'platform_nickname',
-    width: 120
-  }, {
-    title: '主页链接',
-    dataIndex: 'homepage_url',
-    key: 'homepage_url',
+    title: '异常情况',
+    dataIndex: 'anomaly_count',
+    key: 'anomaly_count',
     width: 100,
-    ellipsis: true,
-    render: v => v ? /*#__PURE__*/React.createElement("a", {
-      href: v,
-      target: "_blank",
-      rel: "noreferrer"
-    }, "查看") : '-'
+    render: value => value > 0 ? /*#__PURE__*/React.createElement("span", {
+      className: "anomaly-text"
+    }, value, " 项异常") : /*#__PURE__*/React.createElement("span", {
+      className: "normal-text"
+    }, "无异常")
   }, {
-    title: '账号',
-    dataIndex: 'account',
-    key: 'account',
-    width: 110
+    title: '核对状态',
+    dataIndex: 'confirmation_status',
+    key: 'confirmation_status',
+    width: 120,
+    render: confirmationStatusTag
   }, {
     title: '粉丝数',
     dataIndex: 'followers',
@@ -759,109 +1137,267 @@ function DarenList({
         fontVariantNumeric: 'tabular-nums'
       }
     }, (v || 0).toLocaleString())
+  }, {
+    title: '操作',
+    key: 'actions',
+    width: 100,
+    fixed: 'right',
+    render: (_, record) => /*#__PURE__*/React.createElement(Button, {
+      type: "link",
+      className: "table-action",
+      onClick: () => onViewVideos(record)
+    }, "查看核对")
   }];
-  if (isAdmin) {
-    columns.push({
-      title: '状态',
-      dataIndex: 'confirmation_status',
-      key: 'confirmation_status',
-      width: 105,
-      render: confirmationStatusTag
-    });
-  }
   const selectedKeySet = new Set(selectedRowKeys.map(String));
   const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
   const handlePageSizeChange = (_, nextPageSize) => {
     setPage(1);
     setPageSize(nextPageSize);
   };
-  return /*#__PURE__*/React.createElement("div", null, isAdmin && /*#__PURE__*/React.createElement("div", {
+  const batchTotal = statusCounts.pending + statusCounts.confirmed + statusCounts.appealed;
+  const resetFilters = () => {
+    setSearchInput('');
+    setSearch('');
+    setCategory('');
+    setContentType('');
+    setConfirmationStatus('');
+    setHasAnomaly('');
+    setPlatform('');
+    setPage(1);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "admin-review-page"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "admin-review-layout"
+  }, /*#__PURE__*/React.createElement("section", {
+    className: "admin-review-main"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "admin-review-header"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", null, "数据核对"))), /*#__PURE__*/React.createElement("div", {
+    className: "admin-review-batch-picker"
+  }, /*#__PURE__*/React.createElement(BatchPicker, {
+    batches: batches || [],
+    value: batch,
+    onChange: onSelectBatch
+  }), /*#__PURE__*/React.createElement(Button, {
+    type: "text",
+    onClick: fetchData,
+    loading: loading,
+    icon: /*#__PURE__*/React.createElement("span", {
+      className: "toolbar-action-icon refresh-icon",
+      "aria-hidden": "true"
+    }, /*#__PURE__*/React.createElement("svg", {
+      viewBox: "0 0 20 20",
+      focusable: "false"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M15.5 6.5A6 6 0 1 0 16 12"
+    }), /*#__PURE__*/React.createElement("path", {
+      d: "M15.5 2.5v4h-4"
+    })))
+  }, "刷新数据"), /*#__PURE__*/React.createElement(Button, {
+    type: "text",
+    onClick: onOpenBatches,
+    icon: /*#__PURE__*/React.createElement("span", {
+      className: "toolbar-action-icon batch-icon",
+      "aria-hidden": "true"
+    }, /*#__PURE__*/React.createElement("svg", {
+      viewBox: "0 0 20 20",
+      focusable: "false"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M3 5.5h5l1.5 2H17v9H3z"
+    })))
+  }, "批次管理"), /*#__PURE__*/React.createElement(Button, {
+    type: "text",
+    onClick: onOpenSettings,
+    icon: /*#__PURE__*/React.createElement("span", {
+      className: "toolbar-action-icon settings-icon",
+      "aria-hidden": "true"
+    }, /*#__PURE__*/React.createElement("svg", {
+      viewBox: "0 0 20 20",
+      focusable: "false"
+    }, /*#__PURE__*/React.createElement("path", {
+      d: "M4 5h2m3 0h7M4 10h7m3 0h2M4 15h4m3 0h5"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: "7.5",
+      cy: "5",
+      r: "1.5"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: "12.5",
+      cy: "10",
+      r: "1.5"
+    }), /*#__PURE__*/React.createElement("circle", {
+      cx: "9.5",
+      cy: "15",
+      r: "1.5"
+    })))
+  }, "核对设置"), /*#__PURE__*/React.createElement("div", {
+    className: "spacer"
+  }), /*#__PURE__*/React.createElement(Button, {
+    loading: exporting,
+    disabled: !batch || isReadOnly,
+    onClick: handleExport
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "export-icon",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 20 20",
+    focusable: "false"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M10 2v10m0 0 4-4m-4 4L6 8M3 13v4h14v-4"
+  }))), "导出当前批次")), /*#__PURE__*/React.createElement("div", {
     className: "confirmation-summary-card status-rail",
     "aria-label": "达人确认状态统计"
   }, /*#__PURE__*/React.createElement("div", {
     className: "confirmation-summary-item pending"
-  }, /*#__PURE__*/React.createElement("span", null, "待确认"), /*#__PURE__*/React.createElement("strong", null, statusCounts.pending)), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "confirmation-summary-label"
+  }, "待确认"), /*#__PURE__*/React.createElement("strong", null, statusCounts.pending)), /*#__PURE__*/React.createElement("div", {
     className: "confirmation-summary-item confirmed"
-  }, /*#__PURE__*/React.createElement("span", null, "已确认"), /*#__PURE__*/React.createElement("strong", null, statusCounts.confirmed)), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "confirmation-summary-label"
+  }, "已确认"), /*#__PURE__*/React.createElement("strong", null, statusCounts.confirmed)), /*#__PURE__*/React.createElement("div", {
     className: "confirmation-summary-item appealed"
-  }, /*#__PURE__*/React.createElement("span", null, "已申诉"), /*#__PURE__*/React.createElement("strong", null, statusCounts.appealed))), /*#__PURE__*/React.createElement("div", {
-    className: "toolbar"
-  }, /*#__PURE__*/React.createElement(Input.Search, {
-    placeholder: "搜索昵称",
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "confirmation-summary-label"
+  }, "已申诉"), /*#__PURE__*/React.createElement("strong", null, statusCounts.appealed))), /*#__PURE__*/React.createElement("div", {
+    className: "admin-review-data-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "toolbar admin-review-filters"
+  }, /*#__PURE__*/React.createElement(Select, {
+    placeholder: "全部状态",
+    value: confirmationStatus || undefined,
+    onChange: v => {
+      setPage(1);
+      setConfirmationStatus(v || '');
+    },
+    allowClear: true,
+    options: [{
+      value: '待确认',
+      label: '待确认'
+    }, {
+      value: '已确认',
+      label: '已确认'
+    }, {
+      value: '已提交申诉',
+      label: '已提交申诉'
+    }]
+  }), /*#__PURE__*/React.createElement(Select, {
+    placeholder: "全部异常",
+    value: hasAnomaly || undefined,
+    onChange: v => {
+      setPage(1);
+      setHasAnomaly(v || '');
+    },
+    allowClear: true,
+    options: [{
+      value: 'yes',
+      label: '存在异常'
+    }, {
+      value: 'no',
+      label: '无异常'
+    }]
+  }), /*#__PURE__*/React.createElement(Select, {
+    placeholder: "全部平台",
+    value: platform || undefined,
+    onChange: v => {
+      setPage(1);
+      setPlatform(v || '');
+    },
+    allowClear: true,
+    options: platformOptions
+  }), /*#__PURE__*/React.createElement(Input.Search, {
+    placeholder: "搜索达人昵称",
     value: searchInput,
     onChange: e => setSearchInput(e.target.value),
     onSearch: () => {
       setPage(1);
       setSearch(searchInput);
     },
-    style: {
-      width: 200
-    },
     allowClear: true
-  }), isAdmin && /*#__PURE__*/React.createElement(Select, {
+  }), /*#__PURE__*/React.createElement(Select, {
     placeholder: "内容类型",
     value: contentType || undefined,
     onChange: v => {
       setPage(1);
       setContentType(v || '');
     },
-    style: {
-      width: 150
-    },
     allowClear: true,
     options: contentTypeOptions
-  }), isAdmin && /*#__PURE__*/React.createElement(Select, {
+  }), /*#__PURE__*/React.createElement(Select, {
     placeholder: "达人分类",
     value: category || undefined,
     onChange: v => {
       setPage(1);
       setCategory(v || '');
     },
-    style: {
-      width: 150
-    },
     allowClear: true,
     options: categoryOptions
-  }), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement(Button, {
+    onClick: resetFilters
+  }, "重置"), /*#__PURE__*/React.createElement("div", {
     className: "spacer"
-  }), isAdmin && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
-    type: "primary",
-    loading: exporting,
-    disabled: !batch || isReadOnly,
-    onClick: handleExport
-  }, "导出当前批次"), /*#__PURE__*/React.createElement(Button, {
+  }), /*#__PURE__*/React.createElement(Button, {
     danger: true,
     loading: deleting,
     disabled: isReadOnly || !selectedRowKeys.length,
     onClick: () => handleDelete(selectedRows)
-  }, "删除选中"))), /*#__PURE__*/React.createElement(Table, {
+  }, "删除选中")), /*#__PURE__*/React.createElement(Table, {
+    className: "admin-review-table",
     columns: columns,
     dataSource: data,
     rowKey: "id",
     loading: loading,
     locale: TABLE_LOCALE,
     scroll: {
-      x: 1200
+      x: 920
     },
-    pagination: {
-      total,
-      current: page,
-      pageSize,
-      showSizeChanger: true,
-      pageSizeOptions: PAGE_SIZE_OPTIONS,
-      onChange: setPage,
-      onShowSizeChange: handlePageSizeChange
-    },
-    rowSelection: isAdmin && !isReadOnly ? {
+    pagination: false,
+    rowSelection: !isReadOnly ? {
       selectedRowKeys,
       onChange: setSelectedRowKeys
     } : undefined,
-    bordered: true,
-    size: "middle",
-    style: {
-      marginTop: 16
-    }
-  }));
+    size: "middle"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "admin-review-table-footer"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "admin-review-total"
+  }, /*#__PURE__*/React.createElement("strong", null, "共 ", total.toLocaleString(), " 位达人"), isReadOnly && /*#__PURE__*/React.createElement(Tag, null, "历史批次只读")), /*#__PURE__*/React.createElement(Pagination, {
+    total: total,
+    current: page,
+    pageSize: pageSize,
+    pageSizeOptions: PAGE_SIZE_OPTIONS,
+    showSizeChanger: true,
+    showLessItems: true,
+    responsive: true,
+    onChange: setPage,
+    onShowSizeChange: handlePageSizeChange
+  })))), /*#__PURE__*/React.createElement("aside", {
+    className: "admin-review-rail",
+    "aria-label": "批次与操作摘要"
+  }, /*#__PURE__*/React.createElement("section", {
+    className: "review-rail-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "review-rail-heading"
+  }, /*#__PURE__*/React.createElement("h2", null, "当前批次概览")), /*#__PURE__*/React.createElement("strong", {
+    className: "current-batch-name"
+  }, batch?.name || '暂无批次'), /*#__PURE__*/React.createElement("div", {
+    className: "batch-overview-total"
+  }, /*#__PURE__*/React.createElement("span", null, "达人总数"), /*#__PURE__*/React.createElement("strong", null, batchTotal.toLocaleString())), /*#__PURE__*/React.createElement("dl", {
+    className: "batch-overview-statuses"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "待确认"), /*#__PURE__*/React.createElement("dd", null, statusCounts.pending)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "已确认"), /*#__PURE__*/React.createElement("dd", null, statusCounts.confirmed)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "已申诉"), /*#__PURE__*/React.createElement("dd", null, statusCounts.appealed)))), /*#__PURE__*/React.createElement("section", {
+    className: "review-rail-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "review-rail-heading"
+  }, /*#__PURE__*/React.createElement("h2", null, "最近操作"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onOpenAudit
+  }, "查看全部操作")), /*#__PURE__*/React.createElement("div", {
+    className: "recent-operation-list"
+  }, recentLogs.map(log => /*#__PURE__*/React.createElement("div", {
+    key: log.id
+  }, /*#__PURE__*/React.createElement("strong", null, log.action_type), /*#__PURE__*/React.createElement("span", null, log.subject_nickname || log.subject_name || '系统', " · ", log.created_at))), !recentLogs.length && /*#__PURE__*/React.createElement("p", {
+    className: "rail-empty"
+  }, "当前批次暂无操作记录"))))));
 }
 function VideoDetail({
   daren,
@@ -897,6 +1433,7 @@ function VideoDetail({
   const [confirmationStatus, setConfirmationStatus] = useState(daren.confirmation_status || '待确认');
   const requestRef = useRef(null);
   const pendingScreenshotsRef = useRef({});
+  const videoSectionRef = useRef(null);
   const isAdmin = user.role === 'admin';
   const isReadOnly = batch?.status === 'history';
   const detailItems = [['全网昵称', daren.nickname], ['机构名称', daren.organization], ['内容类型', daren.content_type], ['达人分类', daren.category], ['平台', daren.platform], ['平台昵称', daren.platform_nickname], ['账号', daren.account], ['粉丝数', (daren.followers || 0).toLocaleString()], ['总播放量', (daren.total_plays || 0).toLocaleString()], ['确认状态', confirmationStatus]];
@@ -1469,21 +2006,22 @@ function VideoDetail({
     setPage(1);
     setPageSize(nextPageSize);
   };
+  const creatorStatusHint = confirmationStatus === '已确认' ? '本期数据已确认，无需继续操作。' : confirmationStatus === '已提交申诉' ? '申诉已经提交，可在我的记录中查看处理进度。' : '请核对达人信息和视频数据，确认无误后完成本期核对。';
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "video-detail-header"
+    className: isAdmin ? 'video-detail-header' : 'creator-page-header'
   }, isAdmin && /*#__PURE__*/React.createElement(Button, {
     onClick: onBack
-  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'), !isAdmin && /*#__PURE__*/React.createElement(Space, null, "当前状态：", confirmationStatusTag(confirmationStatus), !isReadOnly && confirmationStatus === '待确认' && /*#__PURE__*/React.createElement(Button, {
-    size: "small",
-    type: "primary",
-    onClick: () => submitConfirmation('已确认')
-  }, "确认数据无误"))), /*#__PURE__*/React.createElement(Card, {
-    title: "达人详情",
-    className: "daren-detail-card",
+  }, "← 返回"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", null, isAdmin ? `${daren.nickname} — 视频明细` : '达人数据'), !isAdmin && /*#__PURE__*/React.createElement("p", null, "请核对本期达人资料与视频数据；如发现问题，请在对应视频中提交申诉。"))), /*#__PURE__*/React.createElement("div", {
+    className: isAdmin ? 'admin-video-layout' : 'creator-review-layout'
+  }, /*#__PURE__*/React.createElement("main", {
+    className: "creator-data-main"
+  }, /*#__PURE__*/React.createElement(Card, {
+    title: isAdmin ? '达人详情' : '达人信息',
+    className: "daren-detail-card creator-profile-card",
     size: "small"
   }, /*#__PURE__*/React.createElement("div", {
     className: "daren-detail-grid"
-  }, detailItems.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+  }, detailItems.filter(([label]) => isAdmin || label !== '确认状态').map(([label, value]) => /*#__PURE__*/React.createElement("div", {
     className: "daren-detail-item",
     key: label
   }, /*#__PURE__*/React.createElement("span", null, label), /*#__PURE__*/React.createElement("strong", null, value || '-'))), /*#__PURE__*/React.createElement("div", {
@@ -1492,14 +2030,19 @@ function VideoDetail({
     href: daren.homepage_url,
     target: "_blank",
     rel: "noreferrer"
-  }, "查看主页") : '-')))), /*#__PURE__*/React.createElement("div", {
+  }, "查看主页") : '-')))), isAdmin && /*#__PURE__*/React.createElement("div", {
     className: "anomaly-summary-card status-rail",
     "aria-label": "视频异常统计"
   }, /*#__PURE__*/React.createElement("div", {
     className: "anomaly-summary-item anomaly"
   }, /*#__PURE__*/React.createElement("span", null, "异常数量"), /*#__PURE__*/React.createElement("strong", null, anomalySummary.anomalyCount)), /*#__PURE__*/React.createElement("div", {
     className: "anomaly-summary-item submitted"
-  }, /*#__PURE__*/React.createElement("span", null, "已提交异常数量"), /*#__PURE__*/React.createElement("strong", null, anomalySummary.submittedAnomalyCount))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, "已提交异常数量"), /*#__PURE__*/React.createElement("strong", null, anomalySummary.submittedAnomalyCount))), !isAdmin && /*#__PURE__*/React.createElement("div", {
+    className: "creator-video-heading",
+    ref: videoSectionRef
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "视频明细"), /*#__PURE__*/React.createElement("small", null, "共 ", total, " 条记录")), /*#__PURE__*/React.createElement("div", {
+    className: "creator-anomaly-inline"
+  }, /*#__PURE__*/React.createElement("span", null, "异常 ", anomalySummary.anomalyCount), /*#__PURE__*/React.createElement("span", null, "已申诉 ", anomalySummary.submittedAnomalyCount))), /*#__PURE__*/React.createElement("div", {
     className: "toolbar"
   }, /*#__PURE__*/React.createElement(Select, {
     placeholder: "平台",
@@ -1604,7 +2147,29 @@ function VideoDetail({
         cell: EditableCell
       }
     }
-  })), /*#__PURE__*/React.createElement(Drawer, {
+  }))), !isAdmin && /*#__PURE__*/React.createElement("aside", {
+    className: "creator-review-rail",
+    "aria-label": "本期核对任务"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "creator-review-label"
+  }, "本期核对任务"), /*#__PURE__*/React.createElement("div", {
+    className: "creator-review-current"
+  }, /*#__PURE__*/React.createElement("span", null, "当前状态"), confirmationStatusTag(confirmationStatus)), /*#__PURE__*/React.createElement("p", null, creatorStatusHint), /*#__PURE__*/React.createElement("div", {
+    className: "creator-review-actions"
+  }, /*#__PURE__*/React.createElement(Button, {
+    type: "primary",
+    block: true,
+    disabled: isReadOnly || confirmationStatus !== '待确认',
+    onClick: () => submitConfirmation('已确认')
+  }, "确认数据无误"), /*#__PURE__*/React.createElement(Button, {
+    block: true,
+    disabled: isReadOnly,
+    onClick: () => videoSectionRef.current?.scrollIntoView({
+      block: 'start'
+    })
+  }, "查看异常并申诉")), /*#__PURE__*/React.createElement("div", {
+    className: "creator-review-summary"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "异常视频"), /*#__PURE__*/React.createElement("strong", null, anomalySummary.anomalyCount)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "已提交申诉"), /*#__PURE__*/React.createElement("strong", null, anomalySummary.submittedAnomalyCount))))), /*#__PURE__*/React.createElement(Drawer, {
     className: "anomaly-marker-drawer",
     title: "标记截图异常",
     open: Boolean(anomalyTarget),
@@ -1971,7 +2536,7 @@ function AuditPage({
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "时间"), /*#__PURE__*/React.createElement("strong", null, selectedLog.created_at)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "操作人"), /*#__PURE__*/React.createElement("strong", null, selectedLog.operator_name)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "达人"), /*#__PURE__*/React.createElement("strong", null, selectedLog.subject_nickname || '-')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "操作类型"), /*#__PURE__*/React.createElement("strong", null, selectedLog.action_type)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "操作对象"), /*#__PURE__*/React.createElement("strong", null, selectedLog.subject_type, "：", selectedLog.subject_name)), selectedLog.batch_name && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "所属批次"), /*#__PURE__*/React.createElement("strong", null, selectedLog.batch_name)), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("span", null, "变更详情"), getChanges(selectedLog).map((change, index) => /*#__PURE__*/React.createElement("div", {
     className: "audit-change",
     key: index
-  }, /*#__PURE__*/React.createElement("strong", null, change.field), /*#__PURE__*/React.createElement("p", null, change.old || '未填写', " ", /*#__PURE__*/React.createElement("b", null, "→"), " ", change.new || '未填写')))))));
+  }, /*#__PURE__*/React.createElement("strong", null, change.field), /*#__PURE__*/React.createElement("p", null, change.old || '未填写', /*#__PURE__*/React.createElement("b", null, "→"), change.new || '未填写')))))));
 }
 
 // ── App ──
@@ -1982,7 +2547,9 @@ function App() {
   const [selectedDaren, setSelectedDaren] = useState(null);
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
+  const [batchesLoaded, setBatchesLoaded] = useState(false);
   const [activeWorkspace, setActiveWorkspace] = useState(null);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [checking, setChecking] = useState(true);
   useEffect(() => {
     api.get('/api/me').then(res => {
@@ -1994,14 +2561,17 @@ function App() {
     const list = res.batches || [];
     setBatches(list);
     setSelectedBatch(current => list.find(batch => batch.id === current?.id) || res.current || list.find(batch => batch.status === 'current') || null);
+    setBatchesLoaded(true);
     return res;
   }, []);
   useEffect(() => {
-    if (!user) {
+    if (!user || Number(user.must_change_password)) {
       setBatches([]);
       setSelectedBatch(null);
+      setBatchesLoaded(false);
       return;
     }
+    setBatchesLoaded(false);
     loadBatches().catch(() => message.error('加载批次失败'));
   }, [user, loadBatches]);
   const enterDataCheck = useCallback(async () => {
@@ -2024,9 +2594,18 @@ function App() {
       message.error('加载数据失败');
     }
   }, [user, selectedBatch]);
+  useEffect(() => {
+    if (page !== 'home' || !batchesLoaded) return;
+    if (selectedBatch) return void enterDataCheck();
+    setActiveWorkspace('data');
+    setPage(user.role === 'admin' ? 'batches' : 'empty');
+  }, [page, batchesLoaded, selectedBatch, user, enterDataCheck]);
   const enterFeeCheck = useCallback(() => {
-    setActiveWorkspace(null);
-    setPage('fees');
+    message.info('费用核对暂未开启');
+  }, []);
+  const enterAccountManagement = useCallback(() => {
+    setActiveWorkspace('basic');
+    setPage('accounts');
   }, []);
   const navigateToVideos = useCallback(daren => {
     setSelectedDaren(daren);
@@ -2065,17 +2644,16 @@ function App() {
       onLogin: setUser
     });
   }
+  if (Number(user.must_change_password)) {
+    return /*#__PURE__*/React.createElement(PasswordChangePage, {
+      user: user,
+      onChanged: setUser
+    });
+  }
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return /*#__PURE__*/React.createElement(HomePage, {
-          onDataCheck: enterDataCheck,
-          onFeeCheck: enterFeeCheck
-        });
-      case 'fees':
-        return /*#__PURE__*/React.createElement(FeePlaceholderPage, {
-          onBack: goHome
-        });
+        return null;
       case 'videos':
         return selectedDaren ? /*#__PURE__*/React.createElement(VideoDetail, {
           daren: selectedDaren,
@@ -2090,6 +2668,11 @@ function App() {
       case 'audit':
         return /*#__PURE__*/React.createElement(AuditPage, {
           onBack: goBack
+        });
+      case 'accounts':
+        return /*#__PURE__*/React.createElement(AccountManagementPage, {
+          batches: batches,
+          onBack: goHome
         });
       case 'batches':
         return /*#__PURE__*/React.createElement(BatchManagerPage, {
@@ -2111,7 +2694,18 @@ function App() {
         return /*#__PURE__*/React.createElement(DarenList, {
           user: user,
           batch: selectedBatch,
-          onViewVideos: navigateToVideos
+          batches: batches,
+          onSelectBatch: chooseBatch,
+          onViewVideos: navigateToVideos,
+          onOpenAudit: () => setPage('audit'),
+          onOpenBatches: () => {
+            setActiveWorkspace('data');
+            setPage('batches');
+          },
+          onOpenSettings: () => {
+            setActiveWorkspace('data');
+            setPage('settings');
+          }
         });
     }
   };
@@ -2121,57 +2715,33 @@ function App() {
       background: 'var(--paper)'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "app-header"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "app-brand"
-  }, /*#__PURE__*/React.createElement("img", {
-    className: "header-logo",
-    src: "/logo.png",
-    alt: "",
-    "aria-hidden": "true"
-  }), /*#__PURE__*/React.createElement("h2", null, user.role === 'admin' ? '达人数据管理' : '达人数据')), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(Button, {
-    className: "workspace-back",
-    type: "text",
-    onClick: goHome,
-    "aria-label": "返回选择",
-    title: "返回选择"
-  }, "←"), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(AppNavigation, {
+    className: "workspace-shell"
+  }, /*#__PURE__*/React.createElement(WorkspaceSidebar, {
     user: user,
     page: page,
+    activeWorkspace: activeWorkspace,
+    onDataCheck: enterDataCheck,
+    onFeeCheck: enterFeeCheck,
+    onAccounts: enterAccountManagement,
     onNavigate: navigatePrimary,
-    placement: "desktop"
+    onPassword: () => setPasswordModalOpen(true),
+    onLogout: handleLogout
+  }), /*#__PURE__*/React.createElement("main", {
+    className: "workspace-main"
+  }, /*#__PURE__*/React.createElement(MobileWorkspaceHeader, {
+    user: user,
+    onPassword: () => setPasswordModalOpen(true),
+    onLogout: handleLogout
   }), /*#__PURE__*/React.createElement("div", {
-    className: "user-info"
-  }, user.role === 'admin' && /*#__PURE__*/React.createElement(BatchPicker, {
-    batches: batches,
-    value: selectedBatch,
-    onChange: chooseBatch
-  }), /*#__PURE__*/React.createElement(Dropdown, {
-    menu: {
-      items: [{
-        key: 'logout',
-        label: '退出登录'
-      }],
-      onClick: handleLogout
-    },
-    trigger: ['click'],
-    placement: "bottomRight"
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "account-trigger",
-    type: "button",
-    "aria-label": `${user.display_name}，打开账户菜单`
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "account-name"
-  }, user.display_name), /*#__PURE__*/React.createElement("span", {
-    className: "account-chevron",
-    "aria-hidden": "true"
-  }, "›"))))), /*#__PURE__*/React.createElement("div", {
     className: "app-content"
-  }, renderPage()), activeWorkspace === 'data' && /*#__PURE__*/React.createElement(AppNavigation, {
+  }, renderPage()))), /*#__PURE__*/React.createElement(PasswordChangeModal, {
+    open: passwordModalOpen,
     user: user,
-    page: page,
-    onNavigate: navigatePrimary,
-    placement: "mobile"
+    onClose: () => setPasswordModalOpen(false),
+    onChanged: nextUser => {
+      setUser(nextUser);
+      setPasswordModalOpen(false);
+    }
   }));
 }
 

@@ -20,7 +20,7 @@ test('tables reveal truncated text and let users choose page size', () => {
 });
 
 test('wide data tables scroll inside the page and use a Chinese empty state', () => {
-  assert.match(app, /const TABLE_LOCALE = \{ emptyText: '当前批次暂无数据' \}/);
-  assert.match(app, /scroll=\{\{x:1200\}\}/);
+  assert.match(app, /const TABLE_LOCALE = \{\s*emptyText:\s*'当前批次暂无数据'\s*\}/);
+  assert.match(app, /scroll=\{\{\s*x:\s*920\s*\}\}/);
   assert.match(app, /locale=\{TABLE_LOCALE\}/);
 });
