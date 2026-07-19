@@ -15,22 +15,24 @@ test('login page uses the provided logo in a centered panel', () => {
   assert.match(css, /\.login-card\s+\.ant-card-head-title\s*\{[^}]*text-align:\s*center/s);
 });
 
-test('header uses the same logo in an aligned brand group', () => {
-  assert.equal((app.match(/src="\/logo\.png"/g) || []).length, 2);
+test('workspace shell reuses the logo in aligned brand groups', () => {
+  assert.ok((app.match(/src="\/logo\.png"/g) || []).length >= 3);
+  assert.match(app, /className="workspace-brand"/);
   assert.match(app, /className="app-brand"/);
   assert.match(app, /className="header-logo"/);
   assert.match(css, /\.app-brand\s*\{[^}]*display:\s*flex[^}]*align-items:\s*center/s);
   assert.match(css, /\.header-logo\s*\{[^}]*object-fit:\s*contain/s);
 });
 
-test('workspace return action is an accessible arrow button', () => {
-  assert.match(app, /className="workspace-back"[^>]*aria-label="返回选择"[^>]*title="返回选择"[^>]*>←<\/Button>/);
-  assert.doesNotMatch(app, /className="workspace-back"[^>]*>返回选择<\/Button>/);
-  assert.match(css, /\.workspace-back\s*\{[^}]*width:\s*32px[^}]*font-size:\s*20px/s);
+test('workspace navigation stays visible instead of relying on a return arrow', () => {
+  assert.match(app, /function WorkspaceSidebar/);
+  assert.match(app, /aria-label="工作区导航"/);
+  assert.match(css, /\.workspace-sidebar\s*\{[^}]*position:\s*sticky/s);
 });
 
-test('fee placeholder uses the paused label and white logo surface', () => {
-  assert.match(app, /暂未开启/);
+test('fee entry uses a paused prompt and white logo surface', () => {
+  assert.match(app, /message\.info\('费用核对暂未开启'\)/);
+  assert.doesNotMatch(app, /<small>暂未开启<\/small>/);
   assert.doesNotMatch(app, /功能正在开发中/);
   assert.match(css, /\.login-logo-frame\s*\{[^}]*background:\s*var\(--paper\)/s);
 });
@@ -44,8 +46,8 @@ test('dashboard base surfaces use white backgrounds', () => {
 test('global theme uses white surfaces with black text', () => {
   assert.match(css, /--ink:\s*#000\s*;/);
   assert.match(css, /--ink-secondary:\s*#333\s*;/);
-  assert.match(css, /\.app-header\s*\{[^}]*background:\s*var\(--paper\)[^}]*color:\s*var\(--ink\)/s);
-  assert.match(css, /\.ant-btn-primary\s*\{[^}]*background:\s*var\(--paper\)\s*!important[^}]*color:\s*var\(--ink\)\s*!important/s);
+  assert.match(css, /--accent:\s*#000\s*;/);
+  assert.match(css, /\.workspace-nav-item\.active\s*\{[^}]*color:\s*var\(--ink\)[^}]*background:\s*var\(--active\)/s);
 });
 
 test('neutral theme removes warm surface and text colors', () => {
@@ -94,7 +96,7 @@ test('header account opens logout from the username menu', () => {
   assert.match(app, /className="account-trigger"/);
   assert.match(app, /className="account-name"/);
   assert.match(app, /className="account-chevron"/);
-  assert.match(app, /key: 'logout', label: '退出登录'/);
+  assert.match(app, /key:\s*'logout',\s*label:\s*'退出登录'/);
   assert.match(app, /trigger=\{\['click'\]\}/);
   assert.doesNotMatch(app, /className="account-role"|className="logout-button"/);
   assert.match(css, /\.account-trigger\s*\{[^}]*display:\s*flex[^}]*background:\s*transparent[^}]*border:\s*0/s);

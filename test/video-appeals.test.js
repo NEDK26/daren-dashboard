@@ -73,7 +73,7 @@ test('video row opens an appeal drawer and only uploads when the drawer is saved
 
   assert.match(app, />申诉<\/Button>/);
   assert.match(app, /title="视频申诉"/);
-  assert.match(app, /Array\.from\(\{ length: 3 \}/);
+  assert.match(app, /Array\.from\(\{\s*length:\s*3\s*\}/);
   assert.match(app, /api\.upload\('\/api\/videos\/' \+ appealTarget\.id \+ '\/appeals'/);
   assert.doesNotMatch(app, /beforeUpload=\{file => api\.upload\([^\n]*appeals/);
   assert.match(app, /return !isReadOnly \? <Space[^;]*>申诉<\/Button>/s);

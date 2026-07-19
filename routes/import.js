@@ -4,7 +4,6 @@ const multer = require('multer');
 const ExcelJS = require('exceljs');
 const { prepare, withTransaction } = require('../db');
 const { requireAdmin, operationLog } = require('../middleware');
-const { hashPassword } = require('../auth');
 const { buildHeaderMap } = require('../excel-schema');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -43,9 +42,8 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
     if (!ws) return res.status(400).json({ error: '空文件' });
     const columns = buildHeaderMap(ws.getRow(1));
 
-    let imported = 0, skipped = 0, skippedNoName = 0, skippedNoWorkId = 0, newUsers = 0;
+    let imported = 0, skipped = 0, skippedNoName = 0, skippedNoWorkId = 0;
     let totalRows = 0;
-    const defaultHash = hashPassword('123456');
 
     withTransaction(() => {
       const darenCache = new Map();
@@ -79,8 +77,6 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
           darenId = info.lastInsertRowid;
           darenCache.set(nickname, darenId);
 
-          const user = prepare('INSERT OR IGNORE INTO users (display_name, password_hash, role) VALUES (?, ?, ?)').run(nickname, defaultHash, 'user');
-          if (user.changes > 0) newUsers++;
         }
 
         const platform = getVal('v_platform') || getVal('platform');
@@ -138,13 +134,17 @@ router.post('/import', requireAdmin, upload.single('file'), async (req, res) => 
       prepare("UPDATE batches SET source_filename = ?, imported_at = datetime('now','localtime') WHERE id = ?").run(req.file.originalname, batchId);
     });
 
+    const pendingAccounts = prepare(`SELECT COUNT(*) AS count
+      FROM darens d LEFT JOIN users u ON u.display_name = d.nickname
+      WHERE d.batch_id = ? AND u.id IS NULL`).get(batchId).count;
+
     operationLog(req, {
       actionType: '导入数据', subjectType: '批次', subjectId: batch.id, subjectName: batch.name,
       batchId: batch.id, batchName: batch.name,
-      changes: [{ field: '导入结果', old: '未导入', new: `成功导入 ${imported} 条，跳过 ${skipped} 条，新增用户 ${newUsers} 人` }]
+      changes: [{ field: '导入结果', old: '未导入', new: `成功导入 ${imported} 条，跳过 ${skipped} 条，待初始化账号 ${pendingAccounts} 个` }]
     });
 
-    res.json({ ok: true, imported, skipped, newUsers, totalRows });
+    res.json({ ok: true, imported, skipped, pendingAccounts, totalRows });
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
