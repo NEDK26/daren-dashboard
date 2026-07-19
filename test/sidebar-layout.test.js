@@ -43,8 +43,9 @@ test('workspace navigation uses labels without decorative character icons', () =
 test('sidebar keeps only primary work areas while contextual tools stay out of navigation', () => {
   assert.doesNotMatch(app, /navButton\('batches', '批次管理'/);
   assert.doesNotMatch(app, /navButton\('settings', '核对设置'/);
-  assert.match(app, /navButton\('audit', isAdmin \? '操作记录' : '我的记录'/);
-  assert.match(app, /!isAdmin && navButton\('batch-switch', '切换批次'/);
+  assert.doesNotMatch(app, /navButton\('audit', isAdmin \? '操作记录' : '我的记录'/);
+  assert.match(app, /navButton\('audit', '我的记录'/);
+  assert.match(app, /navButton\('batch-switch', '切换批次'/);
 });
 
 test('batch management and reconciliation settings are actions inside data reconciliation', () => {
@@ -55,5 +56,5 @@ test('login routes directly into role data instead of a workbench card chooser',
   assert.doesNotMatch(app, /function HomePage/);
   assert.doesNotMatch(app, /请选择要核对的内容/);
   assert.match(app, /const \[batchesLoaded, setBatchesLoaded\] = useState\(false\)/);
-  assert.match(app, /if \(page !== 'home' \|\| !batchesLoaded\) return/);
+  assert.match(app, /if \(!user \|\| page !== 'home' \|\| !batchesLoaded\) return/);
 });

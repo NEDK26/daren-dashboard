@@ -15,6 +15,6 @@ test('page toolbars keep local actions and remove duplicated primary navigation'
   assert.doesNotMatch(darens, /功能首页|onBatchManagement|onSettings|onAudit/);
   assert.doesNotMatch(videos, /功能首页/);
   assert.match(darens, /导出/);
-  assert.match(darens, /删除选中/);
+  assert.doesNotMatch(darens, /删除选中/);
   assert.match(videos, /← 返回/);
 });

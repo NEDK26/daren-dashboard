@@ -188,7 +188,7 @@ function WorkspaceSidebar({
     }) => key === 'password' ? onPassword() : onLogout()
   };
   const navButton = (key, label, onClick, muted = false) => <button key={key} type="button" className={'workspace-nav-item ' + (key === 'data' && dataActive || page === key ? 'active' : '') + (muted ? ' muted' : '')} onClick={onClick}><span>{label}</span></button>;
-  return <aside className="workspace-sidebar"><button type="button" className="workspace-brand" onClick={onDataCheck}><img src="/logo.png" alt="" aria-hidden="true" /><span>达人数据管理</span></button><nav className="workspace-navigation" aria-label="工作区导航"><section><div className="workspace-nav-label">{isAdmin ? '本期工作台' : '我的工作台'}</div>{navButton('data', isAdmin ? '数据核对' : '本期数据', onDataCheck)}{isAdmin && navButton('fees', '费用核对', onFeeCheck, true)}</section>{isAdmin && <section><div className="workspace-nav-label">基础工作台</div>{navButton('accounts', '达人账号管理', onAccounts)}{navButton('audit', isAdmin ? '操作记录' : '我的记录', () => onNavigate('audit'))}</section>}{!isAdmin && <section><div className="workspace-nav-label">更多</div>{!isAdmin && navButton('batch-switch', '切换批次', () => onNavigate('batch-switch'))}{navButton('audit', isAdmin ? '操作记录' : '我的记录', () => onNavigate('audit'))}<button type="button" className="workspace-nav-item" onClick={onPassword}><span>账户设置</span></button></section>}</nav><div className="workspace-sidebar-footer"><Dropdown menu={accountMenu} trigger={['click']} placement="topLeft"><button className="workspace-account" type="button" aria-label={`${user.display_name}，打开账户菜单`}><span className="workspace-avatar" aria-hidden="true">{isAdmin ? '管' : '达'}</span><span><strong>{user.display_name}</strong><small>{isAdmin ? '管理员' : '达人账号'}</small></span><span className="account-chevron" aria-hidden="true">⌄</span></button></Dropdown></div></aside>;
+  return <aside className="workspace-sidebar"><button type="button" className="workspace-brand" onClick={onDataCheck}><img src="/logo.png" alt="" aria-hidden="true" /><span>达人数据管理</span></button><nav className="workspace-navigation" aria-label="工作区导航"><section><div className="workspace-nav-label">{isAdmin ? '本期工作台' : '我的工作台'}</div>{navButton('data', isAdmin ? '数据核对' : '本期数据', onDataCheck)}{isAdmin && navButton('fees', '费用核对', onFeeCheck, true)}</section>{isAdmin && <section><div className="workspace-nav-label">基础工作台</div>{navButton('accounts', '达人账号管理', onAccounts)}</section>}{!isAdmin && <section><div className="workspace-nav-label">更多</div>{navButton('batch-switch', '切换批次', () => onNavigate('batch-switch'))}{navButton('audit', '我的记录', () => onNavigate('audit'))}<button type="button" className="workspace-nav-item" onClick={onPassword}><span>账户设置</span></button></section>}</nav><div className="workspace-sidebar-footer"><Dropdown menu={accountMenu} trigger={['click']} placement="topLeft"><button className="workspace-account" type="button" aria-label={`${user.display_name}，打开账户菜单`}><span className="workspace-avatar" aria-hidden="true">{isAdmin ? '管' : '达'}</span><span><strong>{user.display_name}</strong><small>{isAdmin ? '管理员' : '达人账号'}</small></span><span className="account-chevron" aria-hidden="true">⌄</span></button></Dropdown></div></aside>;
 }
 function MobileWorkspaceHeader({
   user,
@@ -584,12 +584,8 @@ function DarenList({
   const [contentTypeOptions, setContentTypeOptions] = useState([]);
   const [confirmationStatus, setConfirmationStatus] = useState('');
   const [hasAnomaly, setHasAnomaly] = useState('');
-  const [platform, setPlatform] = useState('');
-  const [platformOptions, setPlatformOptions] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
-  const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({
     pending: 0,
     confirmed: 0,
@@ -610,15 +606,16 @@ function DarenList({
     setContentType('');
     setConfirmationStatus('');
     setHasAnomaly('');
-    setPlatform('');
     if (!isAdmin || !batch) {
       setCategoryOptions([]);
       setContentTypeOptions([]);
-      return setPlatformOptions([]);
+      return;
     }
     let cancelled = false;
-    Promise.all([api.get('/api/daren-categories?batchId=' + batch.id), api.get('/api/daren-content-types?batchId=' + batch.id), api.get('/api/daren-platforms?batchId=' + batch.id)]).then(([categories, contentTypes, platforms]) => {
+    Promise.allSettled([api.get('/api/daren-categories?batchId=' + batch.id), api.get('/api/daren-content-types?batchId=' + batch.id)]).then(([categoryResult, contentTypeResult]) => {
       if (cancelled) return;
+      const categories = categoryResult.status === 'fulfilled' ? categoryResult.value : {};
+      const contentTypes = contentTypeResult.status === 'fulfilled' ? contentTypeResult.value : {};
       setCategoryOptions((categories.categories || []).map(value => ({
         value,
         label: value
@@ -627,15 +624,10 @@ function DarenList({
         value,
         label: value
       })));
-      setPlatformOptions((platforms.platforms || []).map(value => ({
-        value,
-        label: value
-      })));
     }).catch(() => {
       if (cancelled) return;
       setCategoryOptions([]);
       setContentTypeOptions([]);
-      setPlatformOptions([]);
     });
     return () => {
       cancelled = true;
@@ -678,7 +670,6 @@ function DarenList({
       if (contentType) params.set('contentType', contentType);
       if (confirmationStatus) params.set('confirmationStatus', confirmationStatus);
       if (hasAnomaly) params.set('hasAnomaly', hasAnomaly);
-      if (platform) params.set('platform', platform);
       const res = await api.get('/api/darens?' + params.toString(), {
         signal: controller.signal
       });
@@ -693,13 +684,12 @@ function DarenList({
         confirmed: 0,
         appealed: 0
       });
-      setSelectedRowKeys([]);
     } catch (e) {
       if (e.name !== 'AbortError') message.error('加载失败');
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category, contentType, confirmationStatus, hasAnomaly, platform, page, pageSize, batch?.id]);
+  }, [search, category, contentType, confirmationStatus, hasAnomaly, page, pageSize, batch?.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -732,39 +722,6 @@ function DarenList({
       setExporting(false);
     }
   };
-  const handleDelete = records => {
-    if (!records.length) return;
-    const names = records.slice(0, 5).map(r => r.nickname).join('、');
-    const more = records.length > 5 ? ` 等 ${records.length} 个达人` : '';
-    Modal.confirm({
-      title: `确认删除 ${records.length} 个达人？`,
-      content: `将删除 ${names}${more} 在当前批次内的视频和本地截图；仅当用户没有其他批次数据时才删除其账号。`,
-      okText: '删除',
-      okButtonProps: {
-        danger: true
-      },
-      cancelText: '取消',
-      onOk: async () => {
-        setDeleting(true);
-        try {
-          const res = await api.delete('/api/darens', {
-            ids: records.map(r => r.id),
-            batchId: batch?.id
-          });
-          if (res.ok) {
-            message.success(`已删除 ${res.deletedDarens} 个达人`);
-            fetchData();
-          } else {
-            message.error(res.error || '删除失败');
-          }
-        } catch (e) {
-          message.error('删除失败');
-        } finally {
-          setDeleting(false);
-        }
-      }
-    });
-  };
   const columns = [{
     title: '达人昵称',
     dataIndex: 'nickname',
@@ -773,10 +730,10 @@ function DarenList({
     fixed: 'left',
     render: (text, record) => <span className="daren-name-cell"><Tooltip title={text}><a className="data-link" onClick={() => onViewVideos(record)}>{text}</a></Tooltip></span>
   }, {
-    title: '平台',
-    dataIndex: 'platform',
-    key: 'platform',
-    width: 90,
+    title: '达人分类',
+    dataIndex: 'category',
+    key: 'category',
+    width: 120,
     render: value => value || '-'
   }, {
     title: '内容类型',
@@ -817,8 +774,6 @@ function DarenList({
     fixed: 'right',
     render: (_, record) => <Button type="link" className="table-action" onClick={() => onViewVideos(record)}>查看核对</Button>
   }];
-  const selectedKeySet = new Set(selectedRowKeys.map(String));
-  const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
   const handlePageSizeChange = (_, nextPageSize) => {
     setPage(1);
     setPageSize(nextPageSize);
@@ -831,10 +786,9 @@ function DarenList({
     setContentType('');
     setConfirmationStatus('');
     setHasAnomaly('');
-    setPlatform('');
     setPage(1);
   };
-  return <div className="admin-review-page"><div className="admin-review-layout"><section className="admin-review-main"><header className="admin-review-header"><div><h1>数据核对</h1></div></header><div className="admin-review-batch-picker"><BatchPicker batches={batches || []} value={batch} onChange={onSelectBatch} /><Button type="text" onClick={fetchData} loading={loading} icon={<span className="toolbar-action-icon refresh-icon" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M15.5 6.5A6 6 0 1 0 16 12" /><path d="M15.5 2.5v4h-4" /></svg></span>}>刷新数据</Button><Button type="text" onClick={onOpenBatches} icon={<span className="toolbar-action-icon batch-icon" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M3 5.5h5l1.5 2H17v9H3z" /></svg></span>}>批次管理</Button><Button type="text" onClick={onOpenSettings} icon={<span className="toolbar-action-icon settings-icon" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M4 5h2m3 0h7M4 10h7m3 0h2M4 15h4m3 0h5" /><circle cx="7.5" cy="5" r="1.5" /><circle cx="12.5" cy="10" r="1.5" /><circle cx="9.5" cy="15" r="1.5" /></svg></span>}>核对设置</Button><div className="spacer" /><Button loading={exporting} disabled={!batch || isReadOnly} onClick={handleExport}><span className="export-icon" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M10 2v10m0 0 4-4m-4 4L6 8M3 13v4h14v-4" /></svg></span>导出当前批次</Button></div><div className="confirmation-summary-card status-rail" aria-label="达人确认状态统计"><div className="confirmation-summary-item pending"><div className="confirmation-summary-label">待确认</div><strong>{statusCounts.pending}</strong></div><div className="confirmation-summary-item confirmed"><div className="confirmation-summary-label">已确认</div><strong>{statusCounts.confirmed}</strong></div><div className="confirmation-summary-item appealed"><div className="confirmation-summary-label">已申诉</div><strong>{statusCounts.appealed}</strong></div></div><div className="admin-review-data-card"><div className="toolbar admin-review-filters"><Select placeholder="全部状态" value={confirmationStatus || undefined} onChange={v => {
+  return <div className="admin-review-page"><div className="admin-review-layout"><section className="admin-review-main"><header className="admin-review-header"><div><h1>数据核对</h1></div></header><div className="admin-review-batch-picker"><BatchPicker batches={batches || []} value={batch} onChange={onSelectBatch} /><Button type="text" onClick={fetchData} loading={loading} icon={<span className="toolbar-action-icon refresh-icon" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M15.5 6.5A6 6 0 1 0 16 12" /><path d="M15.5 2.5v4h-4" /></svg></span>}>刷新数据</Button><Button type="text" onClick={onOpenBatches} icon={<span className="toolbar-action-icon batch-icon" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M3 5.5h5l1.5 2H17v9H3z" /></svg></span>}>批次管理</Button><Button type="text" onClick={onOpenSettings} icon={<span className="toolbar-action-icon settings-icon" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M4 5h2m3 0h7M4 10h7m3 0h2M4 15h4m3 0h5" /><circle cx="7.5" cy="5" r="1.5" /><circle cx="12.5" cy="10" r="1.5" /><circle cx="9.5" cy="15" r="1.5" /></svg></span>}>核对设置</Button><div className="spacer" /><Button loading={exporting} disabled={!batch || isReadOnly} onClick={handleExport}><span className="export-icon" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M10 2v10m0 0 4-4m-4 4L6 8M3 13v4h14v-4" /></svg></span>导出当前批次</Button></div><div className="confirmation-summary-card status-rail" aria-label="达人确认状态统计"><div className="confirmation-summary-item pending"><div className="confirmation-summary-label">待确认</div><strong>{statusCounts.pending}</strong></div><div className="confirmation-summary-item confirmed"><div className="confirmation-summary-label">已确认</div><strong>{statusCounts.confirmed}</strong></div><div className="confirmation-summary-item appealed"><div className="confirmation-summary-label">已申诉</div><strong>{statusCounts.appealed}</strong></div></div><div className="admin-review-data-card"><div className="toolbar admin-review-filters"><Select placeholder="状态" value={confirmationStatus || undefined} onChange={v => {
               setPage(1);
               setConfirmationStatus(v || '');
             }} allowClear options={[{
@@ -846,7 +800,7 @@ function DarenList({
             }, {
               value: '已提交申诉',
               label: '已提交申诉'
-            }]} /><Select placeholder="全部异常" value={hasAnomaly || undefined} onChange={v => {
+            }]} /><Select placeholder="异常" value={hasAnomaly || undefined} onChange={v => {
               setPage(1);
               setHasAnomaly(v || '');
             }} allowClear options={[{
@@ -855,10 +809,7 @@ function DarenList({
             }, {
               value: 'no',
               label: '无异常'
-            }]} /><Select placeholder="全部平台" value={platform || undefined} onChange={v => {
-              setPage(1);
-              setPlatform(v || '');
-            }} allowClear options={platformOptions} /><Input.Search placeholder="搜索达人昵称" value={searchInput} onChange={e => setSearchInput(e.target.value)} onSearch={() => {
+            }]} /><Input.Search placeholder="搜索达人昵称" value={searchInput} onChange={e => setSearchInput(e.target.value)} onSearch={() => {
               setPage(1);
               setSearch(searchInput);
             }} allowClear /><Select placeholder="内容类型" value={contentType || undefined} onChange={v => {
@@ -867,12 +818,9 @@ function DarenList({
             }} allowClear options={contentTypeOptions} /><Select placeholder="达人分类" value={category || undefined} onChange={v => {
               setPage(1);
               setCategory(v || '');
-            }} allowClear options={categoryOptions} /><Button onClick={resetFilters}>重置</Button><div className="spacer" /><Button danger loading={deleting} disabled={isReadOnly || !selectedRowKeys.length} onClick={() => handleDelete(selectedRows)}>删除选中</Button></div><Table className="admin-review-table" columns={columns} dataSource={data} rowKey="id" loading={loading} locale={TABLE_LOCALE} scroll={{
+            }} allowClear options={categoryOptions} /><Button onClick={resetFilters}>重置</Button></div><Table className="admin-review-table" columns={columns} dataSource={data} rowKey="id" loading={loading} locale={TABLE_LOCALE} scroll={{
             x: 920
-          }} pagination={false} rowSelection={!isReadOnly ? {
-            selectedRowKeys,
-            onChange: setSelectedRowKeys
-          } : undefined} size="middle" /><div className="admin-review-table-footer"><div className="admin-review-total"><strong>共 {total.toLocaleString()} 位达人</strong>{isReadOnly && <Tag>历史批次只读</Tag>}</div><Pagination total={total} current={page} pageSize={pageSize} pageSizeOptions={PAGE_SIZE_OPTIONS} showSizeChanger showLessItems responsive onChange={setPage} onShowSizeChange={handlePageSizeChange} /></div></div></section><aside className="admin-review-rail" aria-label="批次与操作摘要"><section className="review-rail-card"><div className="review-rail-heading"><h2>当前批次概览</h2></div><strong className="current-batch-name">{batch?.name || '暂无批次'}</strong><div className="batch-overview-total"><span>达人总数</span><strong>{batchTotal.toLocaleString()}</strong></div><dl className="batch-overview-statuses"><div><dt>待确认</dt><dd>{statusCounts.pending}</dd></div><div><dt>已确认</dt><dd>{statusCounts.confirmed}</dd></div><div><dt>已申诉</dt><dd>{statusCounts.appealed}</dd></div></dl></section><section className="review-rail-card"><div className="review-rail-heading"><h2>最近操作</h2><button type="button" onClick={onOpenAudit}>查看全部操作</button></div><div className="recent-operation-list">{recentLogs.map(log => <div key={log.id}><strong>{log.action_type}</strong><span>{log.subject_nickname || log.subject_name || '系统'} · {log.created_at}</span></div>)}{!recentLogs.length && <p className="rail-empty">当前批次暂无操作记录</p>}</div></section></aside></div></div>;
+          }} pagination={false} size="middle" /><div className="admin-review-table-footer"><div className="admin-review-total"><strong>共 {total.toLocaleString()} 位达人</strong>{isReadOnly && <Tag>历史批次只读</Tag>}</div><Pagination total={total} current={page} pageSize={pageSize} pageSizeOptions={PAGE_SIZE_OPTIONS} showSizeChanger showLessItems responsive onChange={setPage} onShowSizeChange={handlePageSizeChange} /></div></div></section><aside className="admin-review-rail" aria-label="批次与操作摘要"><section className="review-rail-card"><div className="review-rail-heading"><h2>当前批次概览</h2></div><strong className="current-batch-name">{batch?.name || '暂无批次'}</strong><div className="batch-overview-total"><span>达人总数</span><strong>{batchTotal.toLocaleString()}</strong></div><dl className="batch-overview-statuses"><div><dt>待确认</dt><dd>{statusCounts.pending}</dd></div><div><dt>已确认</dt><dd>{statusCounts.confirmed}</dd></div><div><dt>已申诉</dt><dd>{statusCounts.appealed}</dd></div></dl></section><section className="review-rail-card"><div className="review-rail-heading"><h2>最近操作</h2><button type="button" onClick={onOpenAudit}>查看全部操作</button></div><div className="recent-operation-list">{recentLogs.map(log => <div key={log.id}><strong>{log.action_type}</strong><span>{log.subject_nickname || log.subject_name || '系统'} · {log.created_at}</span></div>)}{!recentLogs.length && <p className="rail-empty">当前批次暂无操作记录</p>}</div></section></aside></div></div>;
 }
 function VideoDetail({
   daren,
@@ -1752,7 +1700,7 @@ function App() {
     }
   }, [user, selectedBatch]);
   useEffect(() => {
-    if (page !== 'home' || !batchesLoaded) return;
+    if (!user || page !== 'home' || !batchesLoaded) return;
     if (selectedBatch) return void enterDataCheck();
     setActiveWorkspace('data');
     setPage(user.role === 'admin' ? 'batches' : 'empty');

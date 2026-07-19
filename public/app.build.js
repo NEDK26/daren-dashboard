@@ -243,9 +243,9 @@ function WorkspaceSidebar({
     className: "workspace-nav-label"
   }, isAdmin ? '本期工作台' : '我的工作台'), navButton('data', isAdmin ? '数据核对' : '本期数据', onDataCheck), isAdmin && navButton('fees', '费用核对', onFeeCheck, true)), isAdmin && /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
     className: "workspace-nav-label"
-  }, "基础工作台"), navButton('accounts', '达人账号管理', onAccounts), navButton('audit', isAdmin ? '操作记录' : '我的记录', () => onNavigate('audit'))), !isAdmin && /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+  }, "基础工作台"), navButton('accounts', '达人账号管理', onAccounts)), !isAdmin && /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
     className: "workspace-nav-label"
-  }, "更多"), !isAdmin && navButton('batch-switch', '切换批次', () => onNavigate('batch-switch')), navButton('audit', isAdmin ? '操作记录' : '我的记录', () => onNavigate('audit')), /*#__PURE__*/React.createElement("button", {
+  }, "更多"), navButton('batch-switch', '切换批次', () => onNavigate('batch-switch')), navButton('audit', '我的记录', () => onNavigate('audit')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "workspace-nav-item",
     onClick: onPassword
@@ -898,12 +898,8 @@ function DarenList({
   const [contentTypeOptions, setContentTypeOptions] = useState([]);
   const [confirmationStatus, setConfirmationStatus] = useState('');
   const [hasAnomaly, setHasAnomaly] = useState('');
-  const [platform, setPlatform] = useState('');
-  const [platformOptions, setPlatformOptions] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
-  const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [statusCounts, setStatusCounts] = useState({
     pending: 0,
     confirmed: 0,
@@ -924,15 +920,16 @@ function DarenList({
     setContentType('');
     setConfirmationStatus('');
     setHasAnomaly('');
-    setPlatform('');
     if (!isAdmin || !batch) {
       setCategoryOptions([]);
       setContentTypeOptions([]);
-      return setPlatformOptions([]);
+      return;
     }
     let cancelled = false;
-    Promise.all([api.get('/api/daren-categories?batchId=' + batch.id), api.get('/api/daren-content-types?batchId=' + batch.id), api.get('/api/daren-platforms?batchId=' + batch.id)]).then(([categories, contentTypes, platforms]) => {
+    Promise.allSettled([api.get('/api/daren-categories?batchId=' + batch.id), api.get('/api/daren-content-types?batchId=' + batch.id)]).then(([categoryResult, contentTypeResult]) => {
       if (cancelled) return;
+      const categories = categoryResult.status === 'fulfilled' ? categoryResult.value : {};
+      const contentTypes = contentTypeResult.status === 'fulfilled' ? contentTypeResult.value : {};
       setCategoryOptions((categories.categories || []).map(value => ({
         value,
         label: value
@@ -941,15 +938,10 @@ function DarenList({
         value,
         label: value
       })));
-      setPlatformOptions((platforms.platforms || []).map(value => ({
-        value,
-        label: value
-      })));
     }).catch(() => {
       if (cancelled) return;
       setCategoryOptions([]);
       setContentTypeOptions([]);
-      setPlatformOptions([]);
     });
     return () => {
       cancelled = true;
@@ -992,7 +984,6 @@ function DarenList({
       if (contentType) params.set('contentType', contentType);
       if (confirmationStatus) params.set('confirmationStatus', confirmationStatus);
       if (hasAnomaly) params.set('hasAnomaly', hasAnomaly);
-      if (platform) params.set('platform', platform);
       const res = await api.get('/api/darens?' + params.toString(), {
         signal: controller.signal
       });
@@ -1007,13 +998,12 @@ function DarenList({
         confirmed: 0,
         appealed: 0
       });
-      setSelectedRowKeys([]);
     } catch (e) {
       if (e.name !== 'AbortError') message.error('加载失败');
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [search, category, contentType, confirmationStatus, hasAnomaly, platform, page, pageSize, batch?.id]);
+  }, [search, category, contentType, confirmationStatus, hasAnomaly, page, pageSize, batch?.id]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -1046,39 +1036,6 @@ function DarenList({
       setExporting(false);
     }
   };
-  const handleDelete = records => {
-    if (!records.length) return;
-    const names = records.slice(0, 5).map(r => r.nickname).join('、');
-    const more = records.length > 5 ? ` 等 ${records.length} 个达人` : '';
-    Modal.confirm({
-      title: `确认删除 ${records.length} 个达人？`,
-      content: `将删除 ${names}${more} 在当前批次内的视频和本地截图；仅当用户没有其他批次数据时才删除其账号。`,
-      okText: '删除',
-      okButtonProps: {
-        danger: true
-      },
-      cancelText: '取消',
-      onOk: async () => {
-        setDeleting(true);
-        try {
-          const res = await api.delete('/api/darens', {
-            ids: records.map(r => r.id),
-            batchId: batch?.id
-          });
-          if (res.ok) {
-            message.success(`已删除 ${res.deletedDarens} 个达人`);
-            fetchData();
-          } else {
-            message.error(res.error || '删除失败');
-          }
-        } catch (e) {
-          message.error('删除失败');
-        } finally {
-          setDeleting(false);
-        }
-      }
-    });
-  };
   const columns = [{
     title: '达人昵称',
     dataIndex: 'nickname',
@@ -1094,10 +1051,10 @@ function DarenList({
       onClick: () => onViewVideos(record)
     }, text)))
   }, {
-    title: '平台',
-    dataIndex: 'platform',
-    key: 'platform',
-    width: 90,
+    title: '达人分类',
+    dataIndex: 'category',
+    key: 'category',
+    width: 120,
     render: value => value || '-'
   }, {
     title: '内容类型',
@@ -1148,8 +1105,6 @@ function DarenList({
       onClick: () => onViewVideos(record)
     }, "查看核对")
   }];
-  const selectedKeySet = new Set(selectedRowKeys.map(String));
-  const selectedRows = data.filter(row => selectedKeySet.has(String(row.id)));
   const handlePageSizeChange = (_, nextPageSize) => {
     setPage(1);
     setPageSize(nextPageSize);
@@ -1162,7 +1117,6 @@ function DarenList({
     setContentType('');
     setConfirmationStatus('');
     setHasAnomaly('');
-    setPlatform('');
     setPage(1);
   };
   return /*#__PURE__*/React.createElement("div", {
@@ -1264,7 +1218,7 @@ function DarenList({
   }, /*#__PURE__*/React.createElement("div", {
     className: "toolbar admin-review-filters"
   }, /*#__PURE__*/React.createElement(Select, {
-    placeholder: "全部状态",
+    placeholder: "状态",
     value: confirmationStatus || undefined,
     onChange: v => {
       setPage(1);
@@ -1282,7 +1236,7 @@ function DarenList({
       label: '已提交申诉'
     }]
   }), /*#__PURE__*/React.createElement(Select, {
-    placeholder: "全部异常",
+    placeholder: "异常",
     value: hasAnomaly || undefined,
     onChange: v => {
       setPage(1);
@@ -1296,15 +1250,6 @@ function DarenList({
       value: 'no',
       label: '无异常'
     }]
-  }), /*#__PURE__*/React.createElement(Select, {
-    placeholder: "全部平台",
-    value: platform || undefined,
-    onChange: v => {
-      setPage(1);
-      setPlatform(v || '');
-    },
-    allowClear: true,
-    options: platformOptions
   }), /*#__PURE__*/React.createElement(Input.Search, {
     placeholder: "搜索达人昵称",
     value: searchInput,
@@ -1334,14 +1279,7 @@ function DarenList({
     options: categoryOptions
   }), /*#__PURE__*/React.createElement(Button, {
     onClick: resetFilters
-  }, "重置"), /*#__PURE__*/React.createElement("div", {
-    className: "spacer"
-  }), /*#__PURE__*/React.createElement(Button, {
-    danger: true,
-    loading: deleting,
-    disabled: isReadOnly || !selectedRowKeys.length,
-    onClick: () => handleDelete(selectedRows)
-  }, "删除选中")), /*#__PURE__*/React.createElement(Table, {
+  }, "重置")), /*#__PURE__*/React.createElement(Table, {
     className: "admin-review-table",
     columns: columns,
     dataSource: data,
@@ -1352,10 +1290,6 @@ function DarenList({
       x: 920
     },
     pagination: false,
-    rowSelection: !isReadOnly ? {
-      selectedRowKeys,
-      onChange: setSelectedRowKeys
-    } : undefined,
     size: "middle"
   }), /*#__PURE__*/React.createElement("div", {
     className: "admin-review-table-footer"
@@ -2595,7 +2529,7 @@ function App() {
     }
   }, [user, selectedBatch]);
   useEffect(() => {
-    if (page !== 'home' || !batchesLoaded) return;
+    if (!user || page !== 'home' || !batchesLoaded) return;
     if (selectedBatch) return void enterDataCheck();
     setActiveWorkspace('data');
     setPage(user.role === 'admin' ? 'batches' : 'empty');

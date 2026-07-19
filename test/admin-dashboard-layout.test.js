@@ -6,6 +6,7 @@ const path = require('node:path');
 const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, '../public/style.css'), 'utf8');
 const route = fs.readFileSync(path.join(__dirname, '../routes/darens.js'), 'utf8');
+const darenList = app.slice(app.indexOf('function DarenList'), app.indexOf('function VideoDetail'));
 
 test('admin data check is organized as a batch workspace with a contextual rail', () => {
   assert.match(app, /className="admin-review-page"/);
@@ -32,20 +33,29 @@ test('admin page heading keeps only the data reconciliation title', () => {
 });
 
 test('admin table prioritizes reconciliation fields and explicit actions', () => {
-  assert.match(app, /title:\s*'平台',\s*dataIndex:\s*'platform'/);
-  assert.match(app, /title: '异常情况'/);
-  assert.match(app, /title: '核对状态'/);
-  assert.match(app, /查看核对/);
-  assert.doesNotMatch(app, /title: '主页链接'/);
+  assert.match(darenList, /title:\s*'达人分类',\s*dataIndex:\s*'category'/);
+  assert.doesNotMatch(darenList, /title:\s*'平台',\s*dataIndex:\s*'platform'/);
+  assert.match(darenList, /title: '异常情况'/);
+  assert.match(darenList, /title: '核对状态'/);
+  assert.match(darenList, /查看核对/);
+  assert.doesNotMatch(darenList, /title: '主页链接'/);
 });
 
-test('admin filters send status, anomaly, and platform constraints to the server', () => {
+test('admin filters send status and anomaly constraints without a platform filter', () => {
   assert.match(app, /params\.set\('confirmationStatus', confirmationStatus\)/);
   assert.match(app, /params\.set\('hasAnomaly', hasAnomaly\)/);
-  assert.match(app, /params\.set\('platform', platform\)/);
+  assert.doesNotMatch(darenList, /params\.set\('platform', platform\)/);
+  assert.doesNotMatch(darenList, /placeholder="全部平台"/);
+  assert.match(darenList, /<Select placeholder="状态"/);
+  assert.match(darenList, /<Select placeholder="异常"/);
+  assert.doesNotMatch(darenList, /placeholder="全部状态"|placeholder="全部异常"/);
   assert.match(route, /if \(confirmationStatus\)/);
   assert.match(route, /if \(hasAnomaly === 'yes'\)/);
-  assert.match(route, /if \(platform\)/);
+});
+
+test('admin filter controls stay on one row on the review page', () => {
+  assert.match(css, /\.admin-review-filters\s*\{[^}]*flex-wrap:\s*nowrap/s);
+  assert.match(css, /@media \(max-width: 960px\)[\s\S]*\.admin-review-filters\s*\{[^}]*overflow-x:\s*auto/s);
 });
 
 test('admin batch selection lives in the page header instead of the sidebar footer', () => {

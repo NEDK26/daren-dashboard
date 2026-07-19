@@ -10,7 +10,7 @@ test('users enter data reconciliation without a workbench chooser', () => {
   assert.doesNotMatch(app, /请选择要核对的内容/);
   assert.doesNotMatch(app, /function FeePlaceholderPage/);
   assert.match(app, /useState\('home'\)/);
-  assert.match(app, /if \(page !== 'home' \|\| !batchesLoaded\) return/);
+  assert.match(app, /if \(!user \|\| page !== 'home' \|\| !batchesLoaded\) return/);
 });
 
 test('workspace navigation avoids decorative character badges', () => {

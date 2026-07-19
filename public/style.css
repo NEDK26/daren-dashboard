@@ -898,9 +898,9 @@ input:-webkit-autofill:focus {
 
 .admin-review-main { min-width: 0; }
 .admin-review-data-card { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); }
-.admin-review-filters { margin-bottom: 0; padding: 12px; gap: 8px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
-.admin-review-filters .ant-select { width: 132px; }
-.admin-review-filters .ant-input-search { width: 190px; }
+.admin-review-filters { margin-bottom: 0; padding: 12px; gap: 8px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; flex-wrap: nowrap; }
+.admin-review-filters .ant-select { width: 132px; flex: 0 0 132px; }
+.admin-review-filters .ant-input-search { width: 190px; flex: 0 0 190px; }
 .admin-review-table { overflow: hidden; border: 0; border-radius: 0; }
 .admin-review-table .ant-table { border: 0; border-radius: 0; }
 .admin-review-table .ant-table-thead > tr > th { background: #fafafa !important; color: var(--ink-secondary); font-size: 12px; }
@@ -1191,8 +1191,11 @@ input:-webkit-autofill:focus {
   .admin-review-batch-picker { align-items: stretch; flex-direction: column; }
   .admin-review-batch-picker .spacer { display: none; }
   .admin-review-rail { grid-template-columns: 1fr; }
+  .admin-review-filters { flex-wrap: nowrap; overflow-x: auto; }
   .admin-review-filters .ant-select,
-  .admin-review-filters .ant-input-search { width: calc(50% - 4px); }
+  .admin-review-filters .ant-input-search { width: 112px; flex-basis: 112px; }
+  .admin-review-filters .ant-input-search { width: 160px; flex-basis: 160px; }
+  .admin-review-filters .ant-btn { flex: 0 0 auto; }
   .anomaly-summary-item { min-height: 76px; padding: 14px; }
   .anomaly-summary-item strong { font-size: 24px; }
   .login-card { width: calc(100vw - 32px); }
@@ -1228,7 +1231,8 @@ input:-webkit-autofill:focus {
   .anomaly-summary-item { flex-direction: column; align-items: flex-start; gap: 8px; }
   .admin-review-header h1 { font-size: 24px; }
   .admin-review-filters .ant-select,
-  .admin-review-filters .ant-input-search { width: 100%; }
+  .admin-review-filters .ant-input-search { width: 112px; flex-basis: 112px; }
+  .admin-review-filters .ant-input-search { width: 160px; flex-basis: 160px; }
   .editable-column-options { grid-template-columns: 1fr; }
   .creator-page-header h3 { font-size: 22px; }
   .creator-review-actions { grid-template-columns: 1fr; }
