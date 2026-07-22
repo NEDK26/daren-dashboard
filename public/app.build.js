@@ -1929,52 +1929,6 @@ const EDITABLE_COLUMN_GROUPS = [{
   title: '合规与申诉',
   keys: ['violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot']
 }];
-function SettingsPage({
-  onBack
-}) {
-  const [checked, setChecked] = useState([]);
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    api.get('/api/settings/editable-columns').then(res => setChecked(res.columns || []));
-  }, []);
-  const save = async () => {
-    setLoading(true);
-    const res = await api.put('/api/settings/editable-columns', {
-      columns: checked
-    });
-    setLoading(false);
-    if (res.ok) message.success('权限设置已保存');
-  };
-  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "video-detail-header"
-  }, /*#__PURE__*/React.createElement(Button, {
-    onClick: onBack
-  }, "← 返回"), /*#__PURE__*/React.createElement("h3", null, "可编辑列权限设置")), /*#__PURE__*/React.createElement(Card, {
-    title: "普通用户可编辑权限",
-    className: "settings-card"
-  }, /*#__PURE__*/React.createElement(Checkbox.Group, {
-    value: checked,
-    onChange: setChecked,
-    className: "editable-column-groups"
-  }, EDITABLE_COLUMN_GROUPS.map(group => /*#__PURE__*/React.createElement("section", {
-    className: "editable-column-group",
-    key: group.title
-  }, /*#__PURE__*/React.createElement("h4", null, group.title), /*#__PURE__*/React.createElement("div", {
-    className: "editable-column-options"
-  }, group.keys.map(key => {
-    const column = allColumns.find(item => item.key === key);
-    return /*#__PURE__*/React.createElement(Checkbox, {
-      key: key,
-      value: key
-    }, column.label);
-  }))))), /*#__PURE__*/React.createElement("div", {
-    className: "settings-actions"
-  }, /*#__PURE__*/React.createElement(Button, {
-    type: "primary",
-    onClick: save,
-    loading: loading
-  }, "保存设置"))));
-}
 function AuditPage({
   onBack
 }) {

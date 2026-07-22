@@ -1303,27 +1303,6 @@ const EDITABLE_COLUMN_GROUPS = [{
   title: '合规与申诉',
   keys: ['violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot']
 }];
-function SettingsPage({
-  onBack
-}) {
-  const [checked, setChecked] = useState([]);
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    api.get('/api/settings/editable-columns').then(res => setChecked(res.columns || []));
-  }, []);
-  const save = async () => {
-    setLoading(true);
-    const res = await api.put('/api/settings/editable-columns', {
-      columns: checked
-    });
-    setLoading(false);
-    if (res.ok) message.success('权限设置已保存');
-  };
-  return <React.Fragment><div className="video-detail-header"><Button onClick={onBack}>← 返回</Button><h3>可编辑列权限设置</h3></div><Card title="普通用户可编辑权限" className="settings-card"><Checkbox.Group value={checked} onChange={setChecked} className="editable-column-groups">{EDITABLE_COLUMN_GROUPS.map(group => <section className="editable-column-group" key={group.title}><h4>{group.title}</h4><div className="editable-column-options">{group.keys.map(key => {
-              const column = allColumns.find(item => item.key === key);
-              return <Checkbox key={key} value={key}>{column.label}</Checkbox>;
-            })}</div></section>)}</Checkbox.Group><div className="settings-actions"><Button type="primary" onClick={save} loading={loading}>保存设置</Button></div></Card></React.Fragment>;
-}
 function AuditPage({
   onBack
 }) {
