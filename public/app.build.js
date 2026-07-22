@@ -1929,7 +1929,7 @@ const EDITABLE_COLUMN_GROUPS = [{
   title: '合规与申诉',
   keys: ['violation_status', 'violation_desc', 'compliance_status', 'compliance_desc', 'is_node', 'node_name', 'is_hot']
 }];
-function AuditPage({
+function LegacyAuditPage({
   onBack
 }) {
   const [logs, setLogs] = useState([]);
