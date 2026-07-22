@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
+const workspace = fs.readFileSync(path.join(root, 'public/workspace-components.jsx'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'public/style.css'), 'utf8');
 
 test('login page uses the provided logo in a centered panel', () => {
@@ -16,17 +17,17 @@ test('login page uses the provided logo in a centered panel', () => {
 });
 
 test('workspace shell reuses the logo in aligned brand groups', () => {
-  assert.ok((app.match(/branding\.logo/g) || []).length >= 3);
-  assert.match(app, /className="workspace-brand"/);
-  assert.match(app, /className="app-brand"/);
-  assert.match(app, /className="header-logo"/);
+  assert.ok((app.match(/branding\.logo/g) || []).length >= 1);
+  assert.match(workspace, /className="workspace-brand"/);
+  assert.match(workspace, /className="app-brand"/);
+  assert.match(workspace, /className="header-logo"/);
   assert.match(css, /\.app-brand\s*\{[^}]*display:\s*flex[^}]*align-items:\s*center/s);
   assert.match(css, /\.header-logo\s*\{[^}]*object-fit:\s*contain/s);
 });
 
 test('workspace navigation stays visible instead of relying on a return arrow', () => {
-  assert.match(app, /function WorkspaceSidebar/);
-  assert.match(app, /aria-label="工作区导航"/);
+  assert.match(workspace, /function WorkspaceSidebar/);
+  assert.match(workspace, /aria-label="工作区导航"/);
   assert.match(css, /\.workspace-sidebar\s*\{[^}]*position:\s*sticky/s);
 });
 
@@ -92,13 +93,13 @@ test('application pages keep the full available width without shrinking to their
 });
 
 test('header account opens logout from the username menu', () => {
-  assert.match(app, /\bDropdown\b/);
-  assert.match(app, /className="account-trigger"/);
-  assert.match(app, /className="account-name"/);
-  assert.match(app, /className="account-chevron"/);
-  assert.match(app, /key:\s*'logout',\s*label:\s*'退出登录'/);
-  assert.match(app, /trigger=\{\['click'\]\}/);
-  assert.doesNotMatch(app, /className="account-role"|className="logout-button"/);
+  assert.match(workspace, /\bDropdown\b/);
+  assert.match(workspace, /className="account-trigger"/);
+  assert.match(workspace, /className="account-name"/);
+  assert.match(workspace, /className="account-chevron"/);
+  assert.match(workspace, /key:\s*'logout',\s*label:\s*'退出登录'/);
+  assert.match(workspace, /trigger=\{\['click'\]\}/);
+  assert.doesNotMatch(workspace, /className="account-role"|className="logout-button"/);
   assert.match(css, /\.account-trigger\s*\{[^}]*display:\s*flex[^}]*background:\s*transparent[^}]*border:\s*0/s);
   assert.match(css, /\.account-chevron\s*\{[^}]*color:\s*var\(--ink-muted\)/s);
 });

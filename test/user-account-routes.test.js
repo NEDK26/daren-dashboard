@@ -31,7 +31,8 @@ test('users can change passwords and sessions track credential versions', () => 
 
 test('admin home exposes a foundation workbench and account menu exposes password change', () => {
   const app = read('public/app.js');
-  assert.match(app, /基础工作台/);
-  assert.match(app, /达人账号管理/);
-  assert.match(app, /修改密码/);
+  const workspace = read('public/workspace-components.jsx');
+  assert.match(workspace, /基础工作台/);
+  assert.match(workspace, /达人账号管理/);
+  assert.match(workspace, /修改密码/);
 });
