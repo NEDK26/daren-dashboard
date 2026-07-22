@@ -34,6 +34,15 @@ test('deployment profile loader rejects unknown profiles and capabilities', () =
   }), /缺少能力/);
 });
 
+test('capability changes stay scoped to one deployment load and do not alter the stored profile', () => {
+  const { profiles, loadDeploymentConfig } = require('../config');
+  const disabled = loadDeploymentConfig('sj');
+  disabled.capabilities.appeals = false;
+
+  assert.equal(profiles.sj.capabilities.appeals, true);
+  assert.equal(loadDeploymentConfig('sj').capabilities.appeals, true);
+});
+
 test('deployment config route exposes only safe profile fields', () => {
   const source = fs.readFileSync(path.join(root, 'routes/deploymentConfig.js'), 'utf8');
 
