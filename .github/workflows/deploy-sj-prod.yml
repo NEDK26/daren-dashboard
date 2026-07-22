@@ -44,3 +44,4 @@ jobs:
             sleep 2
             curl --fail --silent --show-error http://127.0.0.1:3001/ > /dev/null
             curl --fail --silent --show-error http://127.0.0.1:3001/api/deployment-config | grep '"code":"sj"'
+            echo "Deployment record: commit=$(git rev-parse HEAD) profile=sj deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"

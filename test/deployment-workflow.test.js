@@ -18,6 +18,7 @@ for (const [file, profile, branch] of [
     assert.match(source, /npm ci --omit=dev/);
     assert.match(source, /\/api\/deployment-config/);
     assert.match(source, new RegExp(`\\\"code\\\":\\\"${profile}\\\"`));
+    assert.match(source, /git rev-parse HEAD/);
+    assert.match(source, /deployed_at=/);
   });
 }
-
