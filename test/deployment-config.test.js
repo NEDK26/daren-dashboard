@@ -39,8 +39,9 @@ test('deployment config route exposes only safe profile fields', () => {
 
 test('frontend loads deployment config before rendering the application shell', () => {
   const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
+  const context = fs.readFileSync(path.join(root, 'public/deployment-context.js'), 'utf8');
 
-  assert.match(app, /\/api\/deployment-config/);
+  assert.match(context, /\/api\/deployment-config/);
   assert.match(app, /deploymentConfig/);
   assert.match(app, /deploymentConfig\.branding\.title/);
   assert.match(app, /deploymentConfig\.branding\.logo/);

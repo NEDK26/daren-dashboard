@@ -1641,10 +1641,8 @@ function App() {
   const [checking, setChecking] = useState(true);
   const [configError, setConfigError] = useState(false);
   useEffect(() => {
-    Promise.all([api.get('/api/deployment-config'), api.get('/api/me')]).then(([configRes, meRes]) => {
-      if (!configRes.config) throw new Error('部署配置缺失');
-      setDeploymentConfig(configRes.config);
-      document.title = configRes.config.branding.title;
+    Promise.all([window.DAREN_DEPLOYMENT.load(), api.get('/api/me')]).then(([config, meRes]) => {
+      setDeploymentConfig(window.DAREN_DEPLOYMENT.applyBranding(config));
       if (meRes.user) setUser(meRes.user);
     }).catch(() => setConfigError(true)).finally(() => setChecking(false));
   }, []);
