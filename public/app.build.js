@@ -197,6 +197,7 @@ function AppNavigation({
 }
 function WorkspaceSidebar({
   user,
+  deploymentConfig,
   page,
   activeWorkspace,
   onDataCheck,
@@ -207,6 +208,8 @@ function WorkspaceSidebar({
   onLogout
 }) {
   const isAdmin = user.role === 'admin';
+  const branding = deploymentConfig.branding;
+  const capabilities = deploymentConfig.capabilities || {};
   const dataActive = activeWorkspace === 'data' || ['darens', 'videos', 'empty', 'batch-switch', 'batches', 'settings'].includes(page);
   const accountMenu = {
     items: [{
@@ -233,19 +236,19 @@ function WorkspaceSidebar({
     className: "workspace-brand",
     onClick: onDataCheck
   }, /*#__PURE__*/React.createElement("img", {
-    src: "/logo.png",
+    src: branding.logo,
     alt: "",
     "aria-hidden": "true"
-  }), /*#__PURE__*/React.createElement("span", null, "达人数据管理")), /*#__PURE__*/React.createElement("nav", {
+  }), /*#__PURE__*/React.createElement("span", null, branding.title)), /*#__PURE__*/React.createElement("nav", {
     className: "workspace-navigation",
     "aria-label": "工作区导航"
   }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
     className: "workspace-nav-label"
-  }, isAdmin ? '本期工作台' : '我的工作台'), navButton('data', isAdmin ? '数据核对' : '本期数据', onDataCheck), isAdmin && navButton('fees', '费用核对', onFeeCheck, true)), isAdmin && /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+  }, isAdmin ? '本期工作台' : '我的工作台'), capabilities.dataCheck && navButton('data', isAdmin ? '数据核对' : '本期数据', onDataCheck), isAdmin && capabilities.feeCheck && navButton('fees', '费用核对', onFeeCheck, true)), isAdmin && capabilities.accountManagement && /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
     className: "workspace-nav-label"
   }, "基础工作台"), navButton('accounts', '达人账号管理', onAccounts)), !isAdmin && /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
     className: "workspace-nav-label"
-  }, "更多"), navButton('batch-switch', '切换批次', () => onNavigate('batch-switch')), navButton('audit', '我的记录', () => onNavigate('audit')), /*#__PURE__*/React.createElement("button", {
+  }, "更多"), capabilities.batchManagement && navButton('batch-switch', '切换批次', () => onNavigate('batch-switch')), capabilities.auditLogs && navButton('audit', '我的记录', () => onNavigate('audit')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "workspace-nav-item",
     onClick: onPassword
@@ -269,19 +272,21 @@ function WorkspaceSidebar({
 }
 function MobileWorkspaceHeader({
   user,
+  deploymentConfig,
   onPassword,
   onLogout
 }) {
+  const branding = deploymentConfig.branding;
   return /*#__PURE__*/React.createElement("div", {
     className: "mobile-workspace-header"
   }, /*#__PURE__*/React.createElement("div", {
     className: "app-brand"
   }, /*#__PURE__*/React.createElement("img", {
     className: "header-logo",
-    src: "/logo.png",
+    src: branding.logo,
     alt: "",
     "aria-hidden": "true"
-  }), /*#__PURE__*/React.createElement("h2", null, "达人数据管理")), /*#__PURE__*/React.createElement(Dropdown, {
+  }), /*#__PURE__*/React.createElement("h2", null, branding.title)), /*#__PURE__*/React.createElement(Dropdown, {
     menu: {
       items: [{
         key: 'password',
@@ -309,7 +314,8 @@ function MobileWorkspaceHeader({
 // ── LoginPage ──
 
 function LoginPage({
-  onLogin
+  onLogin,
+  deploymentConfig
 }) {
   const [loading, setLoading] = useState(false);
   const handleSubmit = useCallback(async values => {
@@ -336,10 +342,10 @@ function LoginPage({
     className: "login-logo-frame"
   }, /*#__PURE__*/React.createElement("img", {
     className: "login-logo",
-    src: "/logo.png",
-    alt: "甚杰文化"
+    src: deploymentConfig.branding.logo,
+    alt: deploymentConfig.branding.title
   })), /*#__PURE__*/React.createElement(Card, {
-    title: "达人数据管理平台",
+    title: deploymentConfig.branding.title,
     className: "login-card"
   }, /*#__PURE__*/React.createElement(Form, {
     onFinish: handleSubmit,
@@ -2477,6 +2483,7 @@ function AuditPage({
 
 function App() {
   const [user, setUser] = useState(null);
+  const [deploymentConfig, setDeploymentConfig] = useState(null);
   const [page, setPage] = useState('home');
   const [selectedDaren, setSelectedDaren] = useState(null);
   const [batches, setBatches] = useState([]);
@@ -2485,10 +2492,14 @@ function App() {
   const [activeWorkspace, setActiveWorkspace] = useState(null);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [configError, setConfigError] = useState(false);
   useEffect(() => {
-    api.get('/api/me').then(res => {
-      if (res.user) setUser(res.user);
-    }).catch(() => {}).finally(() => setChecking(false));
+    Promise.all([api.get('/api/deployment-config'), api.get('/api/me')]).then(([configRes, meRes]) => {
+      if (!configRes.config) throw new Error('部署配置缺失');
+      setDeploymentConfig(configRes.config);
+      document.title = configRes.config.branding.title;
+      if (meRes.user) setUser(meRes.user);
+    }).catch(() => setConfigError(true)).finally(() => setChecking(false));
   }, []);
   const loadBatches = useCallback(async () => {
     const res = await api.get('/api/batches');
@@ -2509,6 +2520,7 @@ function App() {
     loadBatches().catch(() => message.error('加载批次失败'));
   }, [user, loadBatches]);
   const enterDataCheck = useCallback(async () => {
+    if (!deploymentConfig.capabilities.dataCheck) return message.info('当前部署未启用数据核对');
     setActiveWorkspace('data');
     if (!selectedBatch) {
       if (user.role === 'admin') return setPage('batches');
@@ -2527,7 +2539,7 @@ function App() {
     } catch (e) {
       message.error('加载数据失败');
     }
-  }, [user, selectedBatch]);
+  }, [user, selectedBatch, deploymentConfig]);
   useEffect(() => {
     if (!user || page !== 'home' || !batchesLoaded) return;
     if (selectedBatch) return void enterDataCheck();
@@ -2535,12 +2547,14 @@ function App() {
     setPage(user.role === 'admin' ? 'batches' : 'empty');
   }, [page, batchesLoaded, selectedBatch, user, enterDataCheck]);
   const enterFeeCheck = useCallback(() => {
+    if (!deploymentConfig.capabilities.feeCheck) return message.info('当前部署未启用费用核对');
     message.info('费用核对暂未开启');
-  }, []);
+  }, [deploymentConfig]);
   const enterAccountManagement = useCallback(() => {
+    if (!deploymentConfig.capabilities.accountManagement) return message.info('当前部署未启用达人账号管理');
     setActiveWorkspace('basic');
     setPage('accounts');
-  }, []);
+  }, [deploymentConfig]);
   const navigateToVideos = useCallback(daren => {
     setSelectedDaren(daren);
     setPage('videos');
@@ -2570,11 +2584,22 @@ function App() {
   }, [user]);
   const navigatePrimary = useCallback(key => {
     if (key === 'data' || key === 'darens') return enterDataCheck();
+    const capabilityByPage = {
+      fees: 'feeCheck',
+      accounts: 'accountManagement',
+      audit: 'auditLogs',
+      'batch-switch': 'batchManagement',
+      settings: 'accountManagement'
+    };
+    const capability = capabilityByPage[key];
+    if (capability && !deploymentConfig.capabilities[capability]) return message.info('当前部署未启用该功能');
     setPage(key);
-  }, [enterDataCheck]);
+  }, [enterDataCheck, deploymentConfig]);
   if (checking) return null;
+  if (configError || !deploymentConfig) return /*#__PURE__*/React.createElement(Card, null, "部署配置加载失败，请刷新重试");
   if (!user) {
     return /*#__PURE__*/React.createElement(LoginPage, {
+      deploymentConfig: deploymentConfig,
       onLogin: setUser
     });
   }
@@ -2585,6 +2610,14 @@ function App() {
     });
   }
   const renderPage = () => {
+    const pageCapability = {
+      fees: 'feeCheck',
+      accounts: 'accountManagement',
+      audit: 'auditLogs',
+      'batch-switch': 'batchManagement',
+      settings: 'accountManagement'
+    }[page];
+    if (pageCapability && !deploymentConfig.capabilities[pageCapability]) return /*#__PURE__*/React.createElement(Card, null, "当前部署未启用该功能");
     switch (page) {
       case 'home':
         return null;
@@ -2651,6 +2684,7 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "workspace-shell"
   }, /*#__PURE__*/React.createElement(WorkspaceSidebar, {
+    deploymentConfig: deploymentConfig,
     user: user,
     page: page,
     activeWorkspace: activeWorkspace,
@@ -2663,6 +2697,7 @@ function App() {
   }), /*#__PURE__*/React.createElement("main", {
     className: "workspace-main"
   }, /*#__PURE__*/React.createElement(MobileWorkspaceHeader, {
+    deploymentConfig: deploymentConfig,
     user: user,
     onPassword: () => setPasswordModalOpen(true),
     onLogout: handleLogout

@@ -164,6 +164,7 @@ function AppNavigation({
 }
 function WorkspaceSidebar({
   user,
+  deploymentConfig,
   page,
   activeWorkspace,
   onDataCheck,
@@ -174,6 +175,8 @@ function WorkspaceSidebar({
   onLogout
 }) {
   const isAdmin = user.role === 'admin';
+  const branding = deploymentConfig.branding;
+  const capabilities = deploymentConfig.capabilities || {};
   const dataActive = activeWorkspace === 'data' || ['darens', 'videos', 'empty', 'batch-switch', 'batches', 'settings'].includes(page);
   const accountMenu = {
     items: [{
@@ -188,14 +191,16 @@ function WorkspaceSidebar({
     }) => key === 'password' ? onPassword() : onLogout()
   };
   const navButton = (key, label, onClick, muted = false) => <button key={key} type="button" className={'workspace-nav-item ' + (key === 'data' && dataActive || page === key ? 'active' : '') + (muted ? ' muted' : '')} onClick={onClick}><span>{label}</span></button>;
-  return <aside className="workspace-sidebar"><button type="button" className="workspace-brand" onClick={onDataCheck}><img src="/logo.png" alt="" aria-hidden="true" /><span>达人数据管理</span></button><nav className="workspace-navigation" aria-label="工作区导航"><section><div className="workspace-nav-label">{isAdmin ? '本期工作台' : '我的工作台'}</div>{navButton('data', isAdmin ? '数据核对' : '本期数据', onDataCheck)}{isAdmin && navButton('fees', '费用核对', onFeeCheck, true)}</section>{isAdmin && <section><div className="workspace-nav-label">基础工作台</div>{navButton('accounts', '达人账号管理', onAccounts)}</section>}{!isAdmin && <section><div className="workspace-nav-label">更多</div>{navButton('batch-switch', '切换批次', () => onNavigate('batch-switch'))}{navButton('audit', '我的记录', () => onNavigate('audit'))}<button type="button" className="workspace-nav-item" onClick={onPassword}><span>账户设置</span></button></section>}</nav><div className="workspace-sidebar-footer"><Dropdown menu={accountMenu} trigger={['click']} placement="topLeft"><button className="workspace-account" type="button" aria-label={`${user.display_name}，打开账户菜单`}><span className="workspace-avatar" aria-hidden="true">{isAdmin ? '管' : '达'}</span><span><strong>{user.display_name}</strong><small>{isAdmin ? '管理员' : '达人账号'}</small></span><span className="account-chevron" aria-hidden="true">⌄</span></button></Dropdown></div></aside>;
+  return <aside className="workspace-sidebar"><button type="button" className="workspace-brand" onClick={onDataCheck}><img src={branding.logo} alt="" aria-hidden="true" /><span>{branding.title}</span></button><nav className="workspace-navigation" aria-label="工作区导航"><section><div className="workspace-nav-label">{isAdmin ? '本期工作台' : '我的工作台'}</div>{capabilities.dataCheck && navButton('data', isAdmin ? '数据核对' : '本期数据', onDataCheck)}{isAdmin && capabilities.feeCheck && navButton('fees', '费用核对', onFeeCheck, true)}</section>{isAdmin && capabilities.accountManagement && <section><div className="workspace-nav-label">基础工作台</div>{navButton('accounts', '达人账号管理', onAccounts)}</section>}{!isAdmin && <section><div className="workspace-nav-label">更多</div>{capabilities.batchManagement && navButton('batch-switch', '切换批次', () => onNavigate('batch-switch'))}{capabilities.auditLogs && navButton('audit', '我的记录', () => onNavigate('audit'))}<button type="button" className="workspace-nav-item" onClick={onPassword}><span>账户设置</span></button></section>}</nav><div className="workspace-sidebar-footer"><Dropdown menu={accountMenu} trigger={['click']} placement="topLeft"><button className="workspace-account" type="button" aria-label={`${user.display_name}，打开账户菜单`}><span className="workspace-avatar" aria-hidden="true">{isAdmin ? '管' : '达'}</span><span><strong>{user.display_name}</strong><small>{isAdmin ? '管理员' : '达人账号'}</small></span><span className="account-chevron" aria-hidden="true">⌄</span></button></Dropdown></div></aside>;
 }
 function MobileWorkspaceHeader({
   user,
+  deploymentConfig,
   onPassword,
   onLogout
 }) {
-  return <div className="mobile-workspace-header"><div className="app-brand"><img className="header-logo" src="/logo.png" alt="" aria-hidden="true" /><h2>达人数据管理</h2></div><Dropdown menu={{
+  const branding = deploymentConfig.branding;
+  return <div className="mobile-workspace-header"><div className="app-brand"><img className="header-logo" src={branding.logo} alt="" aria-hidden="true" /><h2>{branding.title}</h2></div><Dropdown menu={{
       items: [{
         key: 'password',
         label: '修改密码'
@@ -212,7 +217,8 @@ function MobileWorkspaceHeader({
 // ── LoginPage ──
 
 function LoginPage({
-  onLogin
+  onLogin,
+  deploymentConfig
 }) {
   const [loading, setLoading] = useState(false);
   const handleSubmit = useCallback(async values => {
@@ -231,7 +237,7 @@ function LoginPage({
       setLoading(false);
     }
   }, [onLogin]);
-  return <div className="login-page"><div className="login-panel"><div className="login-logo-frame"><img className="login-logo" src="/logo.png" alt="甚杰文化" /></div><Card title="达人数据管理平台" className="login-card"><Form onFinish={handleSubmit} layout="vertical"><Form.Item name="username" rules={[{
+  return <div className="login-page"><div className="login-panel"><div className="login-logo-frame"><img className="login-logo" src={deploymentConfig.branding.logo} alt={deploymentConfig.branding.title} /></div><Card title={deploymentConfig.branding.title} className="login-card"><Form onFinish={handleSubmit} layout="vertical"><Form.Item name="username" rules={[{
             required: true,
             message: '请输入用户名'
           }]}><Input placeholder="用户名" /></Form.Item><Form.Item name="password" rules={[{
@@ -1648,6 +1654,7 @@ function AuditPage({
 
 function App() {
   const [user, setUser] = useState(null);
+  const [deploymentConfig, setDeploymentConfig] = useState(null);
   const [page, setPage] = useState('home');
   const [selectedDaren, setSelectedDaren] = useState(null);
   const [batches, setBatches] = useState([]);
@@ -1656,10 +1663,14 @@ function App() {
   const [activeWorkspace, setActiveWorkspace] = useState(null);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [configError, setConfigError] = useState(false);
   useEffect(() => {
-    api.get('/api/me').then(res => {
-      if (res.user) setUser(res.user);
-    }).catch(() => {}).finally(() => setChecking(false));
+    Promise.all([api.get('/api/deployment-config'), api.get('/api/me')]).then(([configRes, meRes]) => {
+      if (!configRes.config) throw new Error('部署配置缺失');
+      setDeploymentConfig(configRes.config);
+      document.title = configRes.config.branding.title;
+      if (meRes.user) setUser(meRes.user);
+    }).catch(() => setConfigError(true)).finally(() => setChecking(false));
   }, []);
   const loadBatches = useCallback(async () => {
     const res = await api.get('/api/batches');
@@ -1680,6 +1691,7 @@ function App() {
     loadBatches().catch(() => message.error('加载批次失败'));
   }, [user, loadBatches]);
   const enterDataCheck = useCallback(async () => {
+    if (!deploymentConfig.capabilities.dataCheck) return message.info('当前部署未启用数据核对');
     setActiveWorkspace('data');
     if (!selectedBatch) {
       if (user.role === 'admin') return setPage('batches');
@@ -1698,7 +1710,7 @@ function App() {
     } catch (e) {
       message.error('加载数据失败');
     }
-  }, [user, selectedBatch]);
+  }, [user, selectedBatch, deploymentConfig]);
   useEffect(() => {
     if (!user || page !== 'home' || !batchesLoaded) return;
     if (selectedBatch) return void enterDataCheck();
@@ -1706,12 +1718,14 @@ function App() {
     setPage(user.role === 'admin' ? 'batches' : 'empty');
   }, [page, batchesLoaded, selectedBatch, user, enterDataCheck]);
   const enterFeeCheck = useCallback(() => {
+    if (!deploymentConfig.capabilities.feeCheck) return message.info('当前部署未启用费用核对');
     message.info('费用核对暂未开启');
-  }, []);
+  }, [deploymentConfig]);
   const enterAccountManagement = useCallback(() => {
+    if (!deploymentConfig.capabilities.accountManagement) return message.info('当前部署未启用达人账号管理');
     setActiveWorkspace('basic');
     setPage('accounts');
-  }, []);
+  }, [deploymentConfig]);
   const navigateToVideos = useCallback(daren => {
     setSelectedDaren(daren);
     setPage('videos');
@@ -1741,16 +1755,22 @@ function App() {
   }, [user]);
   const navigatePrimary = useCallback(key => {
     if (key === 'data' || key === 'darens') return enterDataCheck();
+    const capabilityByPage = { fees: 'feeCheck', accounts: 'accountManagement', audit: 'auditLogs', 'batch-switch': 'batchManagement', settings: 'accountManagement' };
+    const capability = capabilityByPage[key];
+    if (capability && !deploymentConfig.capabilities[capability]) return message.info('当前部署未启用该功能');
     setPage(key);
-  }, [enterDataCheck]);
+  }, [enterDataCheck, deploymentConfig]);
   if (checking) return null;
+  if (configError || !deploymentConfig) return <Card>部署配置加载失败，请刷新重试</Card>;
   if (!user) {
-    return <LoginPage onLogin={setUser} />;
+    return <LoginPage deploymentConfig={deploymentConfig} onLogin={setUser} />;
   }
   if (Number(user.must_change_password)) {
     return <PasswordChangePage user={user} onChanged={setUser} />;
   }
   const renderPage = () => {
+    const pageCapability = { fees: 'feeCheck', accounts: 'accountManagement', audit: 'auditLogs', 'batch-switch': 'batchManagement', settings: 'accountManagement' }[page];
+    if (pageCapability && !deploymentConfig.capabilities[pageCapability]) return <Card>当前部署未启用该功能</Card>;
     switch (page) {
       case 'home':
         return null;
@@ -1781,7 +1801,7 @@ function App() {
   return <Layout style={{
     minHeight: '100vh',
     background: 'var(--paper)'
-  }}><div className="workspace-shell"><WorkspaceSidebar user={user} page={page} activeWorkspace={activeWorkspace} onDataCheck={enterDataCheck} onFeeCheck={enterFeeCheck} onAccounts={enterAccountManagement} onNavigate={navigatePrimary} onPassword={() => setPasswordModalOpen(true)} onLogout={handleLogout} /><main className="workspace-main"><MobileWorkspaceHeader user={user} onPassword={() => setPasswordModalOpen(true)} onLogout={handleLogout} /><div className="app-content">{renderPage()}</div></main></div><PasswordChangeModal open={passwordModalOpen} user={user} onClose={() => setPasswordModalOpen(false)} onChanged={nextUser => {
+  }}><div className="workspace-shell"><WorkspaceSidebar deploymentConfig={deploymentConfig} user={user} page={page} activeWorkspace={activeWorkspace} onDataCheck={enterDataCheck} onFeeCheck={enterFeeCheck} onAccounts={enterAccountManagement} onNavigate={navigatePrimary} onPassword={() => setPasswordModalOpen(true)} onLogout={handleLogout} /><main className="workspace-main"><MobileWorkspaceHeader deploymentConfig={deploymentConfig} user={user} onPassword={() => setPasswordModalOpen(true)} onLogout={handleLogout} /><div className="app-content">{renderPage()}</div></main></div><PasswordChangeModal open={passwordModalOpen} user={user} onClose={() => setPasswordModalOpen(false)} onChanged={nextUser => {
       setUser(nextUser);
       setPasswordModalOpen(false);
     }} /></Layout>;

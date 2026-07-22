@@ -4,6 +4,7 @@ const session = require('express-session');
 const path = require('path');
 const { initDb } = require('./db');
 const { initAdmin } = require('./auth');
+const { getDeploymentConfig } = require('./config');
 
 async function main() {
   await initDb();
@@ -11,6 +12,7 @@ async function main() {
 
   const app = express();
   const PORT = process.env.PORT || 3001;
+  const deployment = getDeploymentConfig();
 
   app.use(express.json({ limit: '50mb' }));
   app.use(session({
@@ -24,6 +26,7 @@ async function main() {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
   app.use('/api', require('./routes/auth'));
+  app.use('/api', require('./routes/deploymentConfig'));
   app.use('/api', require('./routes/userAccounts'));
   app.use('/api', require('./routes/batches'));
   app.use('/api', require('./routes/darens'));
@@ -39,7 +42,7 @@ async function main() {
   app.use((req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
   app.listen(PORT, () => {
-    console.log('Server running on http://localhost:' + PORT);
+    console.log(`Server running on http://localhost:${PORT} (deployment: ${deployment.identity.code})`);
   });
 }
 

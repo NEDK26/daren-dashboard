@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const { prepare, withTransaction } = require('../db');
-const { requireLogin, auditLog } = require('../middleware');
+const { requireLogin, requireCapability, auditLog } = require('../middleware');
 const { resetDarenConfirmation } = require('../services/darenConfirmation');
 
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -22,11 +22,11 @@ const upload = multer({
 });
 const APPEAL_IMAGE_FIELDS = [1, 2, 3].map(groupNo => ({ name: `appeal_image_${groupNo}`, maxCount: 1 }));
 
-router.get('/videos/:id/appeals', requireLogin, authorizeAppealRead, (req, res) => {
+router.get('/videos/:id/appeals', requireLogin, requireCapability('appeals'), authorizeAppealRead, (req, res) => {
   res.json({ appeals: listAppeals(req.params.id) });
 });
 
-router.post('/videos/:id/appeals', requireLogin, authorizeAppealWrite, upload.fields(APPEAL_IMAGE_FIELDS), (req, res) => {
+router.post('/videos/:id/appeals', requireLogin, requireCapability('appeals'), authorizeAppealWrite, upload.fields(APPEAL_IMAGE_FIELDS), (req, res) => {
   const video = req.appealVideo;
   const existing = new Map(listAppeals(video.id).map(appeal => [Number(appeal.group_no), appeal]));
   const changes = {};

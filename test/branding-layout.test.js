@@ -10,13 +10,13 @@ const css = fs.readFileSync(path.join(root, 'public/style.css'), 'utf8');
 test('login page uses the provided logo in a centered panel', () => {
   assert.ok(fs.existsSync(path.join(root, 'public/logo.png')));
   assert.match(app, /login-panel/);
-  assert.match(app, /src="\/logo\.png"/);
+  assert.match(app, /deploymentConfig\.branding\.logo/);
   assert.match(css, /\.login-panel\s*\{[^}]*display:\s*flex/s);
   assert.match(css, /\.login-card\s+\.ant-card-head-title\s*\{[^}]*text-align:\s*center/s);
 });
 
 test('workspace shell reuses the logo in aligned brand groups', () => {
-  assert.ok((app.match(/src="\/logo\.png"/g) || []).length >= 3);
+  assert.ok((app.match(/branding\.logo/g) || []).length >= 3);
   assert.match(app, /className="workspace-brand"/);
   assert.match(app, /className="app-brand"/);
   assert.match(app, /className="header-logo"/);
