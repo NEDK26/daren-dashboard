@@ -32,7 +32,7 @@ test('batch daren deletion preserves users that still have records in other batc
 
 test('category filter options come from distinct non-empty categories in the selected batch', () => {
   const route = read('routes/darens.js');
-  const app = read('public/app.js');
+  const app = read('public/daren-components.jsx');
   assert.match(route, /router\.get\('\/daren-categories', requireAdmin/);
   assert.match(route, /SELECT category FROM darens WHERE batch_id = \? AND TRIM\(category\) != '' GROUP BY category ORDER BY MIN\(id\)/);
   assert.match(app, /api\.get\('\/api\/daren-categories\?batchId=' \+ batch\.id\)/);
@@ -43,7 +43,7 @@ test('category filter options come from distinct non-empty categories in the sel
 test('content type filter options come from the selected batch and filter list and export', () => {
   const darens = read('routes/darens.js');
   const exportRoute = read('routes/export.js');
-  const app = read('public/app.js');
+  const app = read('public/daren-components.jsx');
   assert.match(darens, /router\.get\('\/daren-content-types', requireAdmin/);
   assert.match(darens, /SELECT content_type FROM darens WHERE batch_id = \? AND TRIM\(content_type\) != '' GROUP BY content_type ORDER BY MIN\(id\)/);
   assert.match(darens, /if \(contentType\) \{ conditions\.push\('d\.content_type = \?'\); params\.push\(contentType\); \}/);

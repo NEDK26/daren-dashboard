@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
 const workspace = fs.readFileSync(path.join(__dirname, '../public/workspace-components.jsx'), 'utf8');
+const daren = fs.readFileSync(path.join(__dirname, '../public/daren-components.jsx'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, '../public/style.css'), 'utf8');
 
 test('desktop workspace uses a persistent light sidebar with grouped work areas', () => {
@@ -50,7 +51,7 @@ test('sidebar keeps only primary work areas while contextual tools stay out of n
 });
 
 test('batch management and reconciliation settings are actions inside data reconciliation', () => {
-  assert.match(app, /className="admin-review-batch-picker"[\s\S]*onClick=\{onOpenBatches\}[\s\S]*?>批次管理<[\s\S]*onClick=\{onOpenSettings\}[\s\S]*?>核对设置</);
+  assert.match(daren, /className="admin-review-batch-picker"[\s\S]*onClick=\{onOpenBatches\}[\s\S]*?>批次管理<[\s\S]*onClick=\{onOpenSettings\}[\s\S]*?>核对设置</);
 });
 
 test('login routes directly into role data instead of a workbench card chooser', () => {

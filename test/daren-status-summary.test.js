@@ -12,7 +12,7 @@ test('daren list returns confirmation status summary counts', () => {
 });
 
 test('admin frontend renders the three confirmation summary metrics', () => {
-  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '../public/daren-components.jsx'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '../public/style.css'), 'utf8');
   assert.match(app, /confirmation-summary-card/);
   assert.match(app, /status-rail/);
@@ -23,7 +23,7 @@ test('admin frontend renders the three confirmation summary metrics', () => {
 });
 
 test('daren anomaly counts use a dedicated reconciliation column instead of duplicating a nickname badge', () => {
-  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '../public/daren-components.jsx'), 'utf8');
   assert.match(app, /className="daren-name-cell"/);
   assert.match(app, /title:\s*'异常情况',\s*dataIndex:\s*'anomaly_count'/);
   assert.doesNotMatch(app, /className="anomaly-count-badge"/);
