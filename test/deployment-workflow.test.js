@@ -16,6 +16,7 @@ for (const [file, profile, branch] of [
       assert.match(source, /workflow_dispatch:/);
       assert.match(source, /description: '已验证的分支、Tag 或 Commit SHA'/);
       assert.match(source, /default: sj-prod/);
+      assert.match(source, /uses: actions\/checkout@v4\s+with:\s+ref: \$\{\{ inputs\.ref \}\}/);
     }
     assert.match(source, /needs: verify/);
     assert.match(source, /run: npm test/);
