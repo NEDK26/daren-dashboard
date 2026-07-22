@@ -37,7 +37,7 @@ jobs:
             set -e
             cd /home/deploy/daren-dashboard
             test -f .env
-            grep -Eq '^DEPLOYMENT_PROFILE=default$' .env
+            node scripts/verify-deployment-env.js default
             git fetch origin master
             git reset --hard origin/master
             DEPLOYMENT_BACKUP_DIR=/home/deploy/backups/daren-dashboard node scripts/backup-deployment.js

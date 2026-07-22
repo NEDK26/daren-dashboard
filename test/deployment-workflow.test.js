@@ -35,6 +35,6 @@ for (const [file, profile, branch] of [
     assert.match(source, /git rev-parse HEAD/);
     assert.match(source, /deployed_at=/);
     assert.match(source, /test -f \.env/);
-    assert.match(source, new RegExp(`DEPLOYMENT_PROFILE=${profile}`));
+    assert.match(source, new RegExp(`verify-deployment-env\.js ${profile}`));
   });
 }
