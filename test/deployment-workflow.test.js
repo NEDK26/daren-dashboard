@@ -5,6 +5,14 @@ const path = require('node:path');
 
 const workflowDir = path.join(__dirname, '..', '.github', 'workflows');
 
+test('sj-prod branch is restricted to a master release pointer', () => {
+  const source = fs.readFileSync(path.join(workflowDir, 'validate-sj-prod.yml'), 'utf8');
+  assert.match(source, /branches: \[sj-prod\]/);
+  assert.match(source, /git fetch origin master/);
+  assert.match(source, /git merge-base --is-ancestor HEAD origin\/master/);
+  assert.match(source, /sj-prod must point to a commit already released through master/);
+});
+
 for (const [file, profile, branch] of [
   ['deploy.yml', 'default', 'master'],
   ['deploy-sj-prod.yml', 'sj', 'sj-prod']
