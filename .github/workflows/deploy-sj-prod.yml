@@ -42,10 +42,10 @@ jobs:
           script: |
             set -e
             cd /home/deploy/daren-dashboard
-            test -f .env
-            node scripts/verify-deployment-env.js sj
             git fetch --prune origin "${{ inputs.ref }}"
             git reset --hard FETCH_HEAD
+            test -f .env
+            node scripts/verify-deployment-env.js sj
             DEPLOYMENT_BACKUP_DIR=/home/deploy/backups/daren-dashboard node scripts/backup-deployment.js
             npm ci --omit=dev
             npx --yes pm2 restart daren-dashboard || npx --yes pm2 start ecosystem.config.js

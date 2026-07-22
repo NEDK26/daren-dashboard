@@ -36,5 +36,6 @@ for (const [file, profile, branch] of [
     assert.match(source, /deployed_at=/);
     assert.match(source, /test -f \.env/);
     assert.match(source, new RegExp(`verify-deployment-env\.js ${profile}`));
+    assert.ok(source.indexOf('git reset --hard') < source.indexOf('verify-deployment-env.js'));
   });
 }
