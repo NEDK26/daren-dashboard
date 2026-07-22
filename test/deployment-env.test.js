@@ -11,10 +11,15 @@ test('reads the deployment profile from a dotenv file', () => {
 });
 
 test('deployment env verification rejects the wrong profile', () => {
-  assert.equal(verifyDeploymentEnv('default', 'DEPLOYMENT_PROFILE=default\n'), 'default');
+  const validEnv = 'DEPLOYMENT_PROFILE=default\nDATABASE_PATH=data.db\nUPLOADS_DIR=uploads\n';
+  assert.equal(verifyDeploymentEnv('default', validEnv), 'default');
   assert.throws(
-    () => verifyDeploymentEnv('sj', 'DEPLOYMENT_PROFILE=default\n'),
+    () => verifyDeploymentEnv('sj', validEnv),
     /应为 sj，实际为 default/
+  );
+  assert.throws(
+    () => verifyDeploymentEnv('default', 'DEPLOYMENT_PROFILE=default\nUPLOADS_DIR=uploads\n'),
+    /DATABASE_PATH/
   );
 });
 
