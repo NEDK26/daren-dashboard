@@ -27,6 +27,9 @@ function loadDeploymentConfig(profileCode = process.env.DEPLOYMENT_PROFILE || 'd
 }
 
 function getDeploymentConfig() {
+  if (process.env.NODE_ENV === 'production' && !String(process.env.DEPLOYMENT_PROFILE || '').trim()) {
+    throw new Error('生产环境必须显式设置 DEPLOYMENT_PROFILE');
+  }
   return loadDeploymentConfig();
 }
 

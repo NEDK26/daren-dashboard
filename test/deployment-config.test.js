@@ -43,6 +43,22 @@ test('capability changes stay scoped to one deployment load and do not alter the
   assert.equal(loadDeploymentConfig('sj').capabilities.appeals, true);
 });
 
+test('production startup rejects an implicit default deployment profile', () => {
+  const { getDeploymentConfig } = require('../config');
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousProfile = process.env.DEPLOYMENT_PROFILE;
+  try {
+    process.env.NODE_ENV = 'production';
+    delete process.env.DEPLOYMENT_PROFILE;
+    assert.throws(() => getDeploymentConfig(), /生产环境必须显式设置 DEPLOYMENT_PROFILE/);
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+    if (previousProfile === undefined) delete process.env.DEPLOYMENT_PROFILE;
+    else process.env.DEPLOYMENT_PROFILE = previousProfile;
+  }
+});
+
 test('deployment config route exposes only safe profile fields', () => {
   const source = fs.readFileSync(path.join(root, 'routes/deploymentConfig.js'), 'utf8');
 
