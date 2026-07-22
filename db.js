@@ -2,7 +2,7 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'data.db');
+const DB_PATH = path.resolve(process.env.DATABASE_PATH || path.join(__dirname, 'data.db'));
 
 let _db = null;
 let transactionDepth = 0;

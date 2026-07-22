@@ -7,6 +7,7 @@ const script = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'backup-dep
 
 test('deployment backup copies database and uploads to a timestamped directory', () => {
   assert.match(script, /data\.db/);
+  assert.match(script, /DATABASE_PATH/);
   assert.match(script, /uploads/);
   assert.match(script, /toISOString/);
   assert.match(script, /DEPLOYMENT_BACKUP_DIR/);
@@ -16,6 +17,7 @@ test('deployment restore requires an explicit confirmation flag', () => {
   const restore = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'restore-deployment.js'), 'utf8');
   assert.match(restore, /--confirm/);
   assert.match(restore, /data\.db/);
+  assert.match(restore, /DATABASE_PATH/);
   assert.match(restore, /uploads/);
 });
 

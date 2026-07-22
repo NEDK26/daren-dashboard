@@ -13,7 +13,11 @@ const uploads = path.join(backupDir, 'uploads');
 if (!fs.existsSync(backupDir)) throw new Error(`备份目录不存在：${backupDir}`);
 if (!fs.existsSync(database) && !fs.existsSync(uploads)) throw new Error('备份目录中没有可恢复的数据');
 
-if (fs.existsSync(database)) fs.copyFileSync(database, path.join(projectRoot, 'data.db'));
+const targetDatabase = path.resolve(process.env.DATABASE_PATH || path.join(projectRoot, 'data.db'));
+if (fs.existsSync(database)) {
+  fs.mkdirSync(path.dirname(targetDatabase), { recursive: true });
+  fs.copyFileSync(database, targetDatabase);
+}
 if (fs.existsSync(uploads)) {
   const target = path.join(projectRoot, 'uploads');
   fs.rmSync(target, { recursive: true, force: true });
@@ -21,4 +25,3 @@ if (fs.existsSync(uploads)) {
 }
 
 console.log(`已恢复部署数据：${backupDir}`);
-

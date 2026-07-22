@@ -8,11 +8,10 @@ const target = path.join(backupRoot, timestamp);
 
 fs.mkdirSync(target, { recursive: true });
 
-const database = path.join(projectRoot, 'data.db');
+const database = path.resolve(process.env.DATABASE_PATH || path.join(projectRoot, 'data.db'));
 if (fs.existsSync(database)) fs.copyFileSync(database, path.join(target, 'data.db'));
 
 const uploads = path.join(projectRoot, 'uploads');
 if (fs.existsSync(uploads)) fs.cpSync(uploads, path.join(target, 'uploads'), { recursive: true });
 
 console.log(JSON.stringify({ backupDir: target, database: fs.existsSync(path.join(target, 'data.db')), uploads: fs.existsSync(path.join(target, 'uploads')) }));
-
