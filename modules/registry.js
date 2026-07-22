@@ -24,6 +24,46 @@ const modules = Object.freeze([
     routes: ['/api/batches'],
     pages: ['batches', 'batch-switch'],
     status: 'active'
+  },
+  {
+    key: 'anomaly-marking',
+    capability: 'anomalyMarking',
+    dependencies: ['dataCheck'],
+    routes: ['/api/videos/:id/anomaly-markers'],
+    pages: ['anomaly-markers'],
+    status: 'active'
+  },
+  {
+    key: 'account-management',
+    capability: 'accountManagement',
+    dependencies: ['batchManagement'],
+    routes: ['/api/user-accounts', '/api/settings/editable-columns'],
+    pages: ['accounts', 'settings'],
+    status: 'active'
+  },
+  {
+    key: 'import-export',
+    capability: 'importExport',
+    dependencies: ['batchManagement', 'dataCheck'],
+    routes: ['/api/import', '/api/export'],
+    pages: ['import', 'export'],
+    status: 'active'
+  },
+  {
+    key: 'audit',
+    capability: 'auditLogs',
+    dependencies: [],
+    routes: ['/api/audit-logs'],
+    pages: ['audit'],
+    status: 'active'
+  },
+  {
+    key: 'fee-check',
+    capability: 'feeCheck',
+    dependencies: ['dataCheck'],
+    routes: [],
+    pages: ['fees'],
+    status: 'planned'
   }
 ]);
 
@@ -43,4 +83,3 @@ function getModule(key) {
 modules.forEach(validateModule);
 
 module.exports = { modules, getModule, validateModule };
-
