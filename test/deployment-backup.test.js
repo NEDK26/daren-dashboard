@@ -12,6 +12,13 @@ test('deployment backup copies database and uploads to a timestamped directory',
   assert.match(script, /DEPLOYMENT_BACKUP_DIR/);
 });
 
+test('deployment restore requires an explicit confirmation flag', () => {
+  const restore = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'restore-deployment.js'), 'utf8');
+  assert.match(restore, /--confirm/);
+  assert.match(restore, /data\.db/);
+  assert.match(restore, /uploads/);
+});
+
 test('deployment workflows run backups before restarting the service', () => {
   for (const file of ['deploy.yml', 'deploy-sj-prod.yml']) {
     const workflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', file), 'utf8');
@@ -19,4 +26,3 @@ test('deployment workflows run backups before restarting the service', () => {
     assert.ok(workflow.indexOf('backup-deployment.js') < workflow.indexOf('pm2 restart'));
   }
 });
-
