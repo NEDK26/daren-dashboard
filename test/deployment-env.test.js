@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
 
 const { readDeploymentProfile, verifyDeploymentEnv } = require('../scripts/verify-deployment-env');
 
@@ -14,4 +16,11 @@ test('deployment env verification rejects the wrong profile', () => {
     () => verifyDeploymentEnv('sj', 'DEPLOYMENT_PROFILE=default\n'),
     /应为 sj，实际为 default/
   );
+});
+
+test('the checked-in environment templates select the intended deployment profile', () => {
+  const defaultEnv = fs.readFileSync(path.join(__dirname, '..', '.env.example'), 'utf8');
+  const sjEnv = fs.readFileSync(path.join(__dirname, '..', '.env.sj.example'), 'utf8');
+  assert.equal(readDeploymentProfile(defaultEnv), 'default');
+  assert.equal(readDeploymentProfile(sjEnv), 'sj');
 });
