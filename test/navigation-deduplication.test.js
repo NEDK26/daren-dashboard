@@ -4,11 +4,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+const darenSource = fs.readFileSync(path.join(__dirname, '../public/daren-components.jsx'), 'utf8');
 const section = (start, end) => app.slice(app.indexOf(start), app.indexOf(end));
 
 test('page toolbars keep local actions and remove duplicated primary navigation', () => {
   const home = section('function HomePage', 'function BatchManagerPage');
-  const darens = section('function DarenList', 'function VideoDetail');
+  const darens = darenSource;
   const videos = section('function VideoDetail', 'const allColumns');
 
   assert.doesNotMatch(home, /批次管理/);

@@ -512,7 +512,7 @@ function BatchManagerPage({
 }
 // ── DarenList ──
 
-function DarenList({
+function LegacyDarenList({
   user,
   batch,
   batches,

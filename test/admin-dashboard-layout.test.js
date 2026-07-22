@@ -3,10 +3,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+const app = fs.readFileSync(path.join(__dirname, '../public/daren-components.jsx'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, '../public/style.css'), 'utf8');
 const route = fs.readFileSync(path.join(__dirname, '../routes/darens.js'), 'utf8');
-const darenList = app.slice(app.indexOf('function DarenList'), app.indexOf('function VideoDetail'));
+const darenList = app;
 
 test('admin data check is organized as a batch workspace with a contextual rail', () => {
   assert.match(app, /className="admin-review-page"/);
