@@ -7,6 +7,7 @@ const db = fs.readFileSync(path.join(__dirname, '../db.js'), 'utf8');
 const middleware = fs.readFileSync(path.join(__dirname, '../middleware.js'), 'utf8');
 const audit = fs.readFileSync(path.join(__dirname, '../routes/audit.js'), 'utf8');
 const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+const auditPage = fs.readFileSync(path.join(__dirname, '../public/audit-components.jsx'), 'utf8');
 
 test('operation logs store one readable event with grouped changes', () => {
   assert.match(db, /CREATE TABLE IF NOT EXISTS operation_logs/);
@@ -18,12 +19,12 @@ test('operation logs store one readable event with grouped changes', () => {
 });
 
 test('audit page uses readable event rows and an expandable detail drawer', () => {
-  assert.match(app, /Drawer/);
-  assert.match(app, /操作类型/);
-  assert.match(app, /操作对象/);
-  assert.match(app, /title:\s*'达人',\s*dataIndex:\s*'subject_nickname'/);
-  assert.match(app, /达人：\$\{log\.subject_nickname\}/);
-  assert.match(app, /<span>达人<\/span>\s*<strong>\{selectedLog\.subject_nickname \|\| '-'\}<\/strong>/);
-  assert.match(app, /变更详情/);
-  assert.match(app, /audit-mobile-list/);
+  assert.match(auditPage, /Drawer/);
+  assert.match(auditPage, /操作类型/);
+  assert.match(auditPage, /操作对象/);
+  assert.match(auditPage, /title: '达人', dataIndex: 'subject_nickname'/);
+  assert.match(auditPage, /达人：\$\{log\.subject_nickname\}/);
+  assert.match(auditPage, /<span>达人<\/span>\s*<strong>\{selectedLog\.subject_nickname \|\| '-'\}<\/strong>/);
+  assert.match(auditPage, /变更详情/);
+  assert.match(auditPage, /audit-mobile-list/);
 });
