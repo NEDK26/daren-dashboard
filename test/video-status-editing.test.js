@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.js'), 'utf8');
+const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'video-components.jsx'), 'utf8');
 
 test('violation and compliance statuses are editable with constrained options', () => {
   assert.match(app, /dataIndex:\s*'violation_status',\s*width:\s*65,\s*editable:\s*true/);

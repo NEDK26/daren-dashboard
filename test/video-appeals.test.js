@@ -69,7 +69,7 @@ test('appeal API is scoped to the video owner and saves at most three uploaded g
 });
 
 test('video row opens an appeal drawer and only uploads when the drawer is saved', () => {
-  const app = read('public/app.js');
+  const app = read('public/video-components.jsx');
 
   assert.match(app, />申诉<\/Button>/);
   assert.match(app, /title="视频申诉"/);

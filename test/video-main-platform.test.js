@@ -7,7 +7,7 @@ const db = fs.readFileSync(path.join(__dirname, '../db.js'), 'utf8');
 const importer = fs.readFileSync(path.join(__dirname, '../routes/import.js'), 'utf8');
 const exporter = fs.readFileSync(path.join(__dirname, '../routes/export.js'), 'utf8');
 const darens = fs.readFileSync(path.join(__dirname, '../routes/darens.js'), 'utf8');
-const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+const app = fs.readFileSync(path.join(__dirname, '../public/video-components.jsx'), 'utf8');
 
 test('main-platform flag is stored with each video and shown with creator details', () => {
   assert.match(db, /VIDEO_COLUMNS = \[[\s\S]*'is_main_platform'/);

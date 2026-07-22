@@ -13,10 +13,12 @@ test('build script compiles workspace components and index loads them first', ()
   assert.match(pkg.scripts.build, /account-components\.jsx/);
   assert.match(pkg.scripts.build, /audit-components\.jsx/);
   assert.match(pkg.scripts.build, /daren-components\.jsx/);
+  assert.match(pkg.scripts.build, /video-components\.jsx/);
   assert.match(html, /workspace-components\.build\.js/);
   assert.match(html, /batch-components\.build\.js/);
   assert.match(html, /account-components\.build\.js/);
   assert.match(html, /audit-components\.build\.js/);
   assert.match(html, /daren-components\.build\.js/);
+  assert.match(html, /video-components\.build\.js/);
   assert.ok(html.indexOf('workspace-components.build.js') < html.indexOf('app.build.js'));
 });

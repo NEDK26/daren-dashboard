@@ -11,7 +11,7 @@ test('logged-in users can read the global editable-column configuration', () => 
 });
 
 test('the video editor enables only configured columns for regular users', () => {
-  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '../public/video-components.jsx'), 'utf8');
 
   assert.match(app, /editable:\s*col\.editable\s*&&\s*\(isAdmin\s*\|\|\s*editableCols\.includes\(col\.dataIndex\)\)/);
 });

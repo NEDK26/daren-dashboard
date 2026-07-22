@@ -5,6 +5,7 @@ const path = require('path');
 
 const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
 const batch = fs.readFileSync(path.join(__dirname, '../public/batch-components.jsx'), 'utf8');
+const daren = fs.readFileSync(path.join(__dirname, '../public/daren-components.jsx'), 'utf8');
 
 test('frontend owns selected batch state and sends batchId with data requests', () => {
   assert.match(app, /selectedBatch/);
@@ -25,5 +26,5 @@ test('admin frontend exposes batch creation, draft import, and deletion', () => 
 
 test('regular users receive an empty-current-batch state and history becomes read-only', () => {
   assert.match(app, /本期暂无数据/);
-  assert.match(app, /batch\?\.status === 'history'/);
+  assert.match(daren, /batch\?\.status === 'history'/);
 });
