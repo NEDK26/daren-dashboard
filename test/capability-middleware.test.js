@@ -54,3 +54,26 @@ test('capability guard rejects unknown capability names', () => {
     capabilities: {}
   }), /未知能力/);
 });
+
+test('disabling and re-enabling a capability never mutates stored data', () => {
+  const records = [{ id: 7, title: '历史视频', appeal: '保留申诉记录' }];
+  const snapshot = JSON.parse(JSON.stringify(records));
+  const disabled = createCapabilityGuard('appeals', {
+    capabilities: { appeals: false }
+  });
+  const blockedResponse = responseDouble();
+
+  disabled({}, blockedResponse, () => assert.fail('disabled capability must not enter the route'));
+  assert.deepEqual(records, snapshot);
+
+  const enabled = createCapabilityGuard('appeals', {
+    capabilities: { appeals: true }
+  });
+  let continued = false;
+  enabled({}, responseDouble(), () => {
+    continued = true;
+  });
+
+  assert.equal(continued, true);
+  assert.deepEqual(records, snapshot);
+});
