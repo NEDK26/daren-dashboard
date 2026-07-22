@@ -99,45 +99,6 @@ function BatchSwitchPage({
   const selectable = batches.filter(batch => batch.status !== 'draft');
   return <React.Fragment><div className="video-detail-header"><Button onClick={onBack}>← 返回</Button><h3>切换批次</h3></div><div className="batch-switch-list">{selectable.map(batch => <Card key={batch.id} className={'batch-switch-card ' + (selectedBatch?.id === batch.id ? 'active' : '')} hoverable onClick={() => onSelectBatch(batch)}><strong>{batch.name}</strong><span>{batch.status === 'current' ? '当前批次' : '历史批次'}</span></Card>)}{!selectable.length && <Card>暂无可用批次</Card>}</div></React.Fragment>;
 }
-function AppNavigation({
-  user,
-  page,
-  onNavigate,
-  placement
-}) {
-  const isAdmin = user.role === 'admin';
-  const items = isAdmin ? [{
-    key: 'darens',
-    label: '达人核对',
-    icon: '人'
-  }, {
-    key: 'batches',
-    label: '批次',
-    icon: '批'
-  }, {
-    key: 'settings',
-    label: '权限',
-    icon: '设'
-  }, {
-    key: 'audit',
-    label: '操作日志',
-    icon: '审'
-  }] : [{
-    key: 'data',
-    label: '数据核对',
-    icon: '数'
-  }, {
-    key: 'audit',
-    label: '我的日志',
-    icon: '记'
-  }, {
-    key: 'batch-switch',
-    label: '切换批次',
-    icon: '批'
-  }];
-  const activeKey = isAdmin ? page === 'videos' || page === 'home' || page === 'empty' ? 'darens' : page : page === 'videos' || page === 'empty' || page === 'home' ? 'data' : page;
-  return <nav className={placement === 'desktop' ? 'desktop-nav' : 'mobile-nav'}>{items.map(item => <Button key={item.key} type="text" className={activeKey === item.key ? 'active' : ''} onClick={() => onNavigate(item.key)}><span>{item.icon}</span>{item.label}</Button>)}</nav>;
-}
 // ── LoginPage ──
 
 function LoginPage({
