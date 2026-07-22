@@ -7,6 +7,7 @@ const { requireAdmin, requireCapability } = require('../middleware');
 const { exportColumns } = require('../excel-schema');
 const { addScreenshotImages, renderCellImages } = require('../services/exportImages');
 const { getVisibleBatch } = require('../services/batches');
+const { getUploadsDir } = require('../storage-paths');
 
 const exportKeyCol = Object.fromEntries(exportColumns.map(({ key }, index) => [key, index + 1]));
 
@@ -43,7 +44,7 @@ router.get('/export', requireAdmin, requireCapability('importExport'), async (re
   const screenshotImages = addScreenshotImages({
     sheet: ws,
     rows,
-    uploadsDir: path.join(__dirname, '..', 'uploads'),
+    uploadsDir: getUploadsDir(),
     screenshotColumns: Object.fromEntries(
       ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes',
         'appeal_image_1', 'appeal_image_2', 'appeal_image_3']

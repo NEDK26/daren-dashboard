@@ -23,3 +23,16 @@ test('DATABASE_PATH isolates a deployment database from the project directory', 
   assert.equal(projectDatabaseAfter.size, projectDatabaseBefore.size);
   assert.equal(projectDatabaseAfter.mtimeMs, projectDatabaseBefore.mtimeMs);
 });
+
+test('UPLOADS_DIR isolates uploaded files from the project directory', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'daren-uploads-path-'));
+  const storageModulePath = path.join(__dirname, '..', 'storage-paths.js');
+  const script = `process.stdout.write(require(${JSON.stringify(storageModulePath)}).getUploadsDir())`;
+  const result = spawnSync(process.execPath, ['-e', script], {
+    env: { ...process.env, UPLOADS_DIR: tempDir },
+    encoding: 'utf8'
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, tempDir);
+});

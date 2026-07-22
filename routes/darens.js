@@ -5,6 +5,7 @@ const { getDb, saveDb, prepare, escapeColumn } = require('../db');
 const { requireLogin, requireAdmin, requireCapability, auditLog } = require('../middleware');
 const { deleteDarensByIds } = require('../services/deleteDarens');
 const { getVisibleBatch } = require('../services/batches');
+const { getUploadsDir } = require('../storage-paths');
 
 router.get('/daren-categories', requireAdmin, requireCapability('dataCheck'), (req, res) => {
   const resolved = getVisibleBatch(req, req.query.batchId);
@@ -188,7 +189,7 @@ router.delete('/darens', requireAdmin, requireCapability('dataCheck'), (req, res
       ids: req.body.ids,
       batchId: resolved.batch.id,
       actor: req.session.user.display_name,
-      uploadsDir: path.join(__dirname, '..', 'uploads'),
+      uploadsDir: getUploadsDir(),
       saveDb
     });
     res.json({ ok: true, ...result });

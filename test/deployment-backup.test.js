@@ -9,6 +9,7 @@ test('deployment backup copies database and uploads to a timestamped directory',
   assert.match(script, /data\.db/);
   assert.match(script, /DATABASE_PATH/);
   assert.match(script, /uploads/);
+  assert.match(script, /UPLOADS_DIR/);
   assert.match(script, /toISOString/);
   assert.match(script, /DEPLOYMENT_BACKUP_DIR/);
 });
@@ -19,6 +20,7 @@ test('deployment restore requires an explicit confirmation flag', () => {
   assert.match(restore, /data\.db/);
   assert.match(restore, /DATABASE_PATH/);
   assert.match(restore, /uploads/);
+  assert.match(restore, /UPLOADS_DIR/);
 });
 
 test('deployment workflows run backups before restarting the service', () => {

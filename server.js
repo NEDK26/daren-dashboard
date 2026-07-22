@@ -5,6 +5,7 @@ const path = require('path');
 const { initDb } = require('./db');
 const { initAdmin } = require('./auth');
 const { getDeploymentConfig } = require('./config');
+const { getUploadsDir } = require('./storage-paths');
 
 async function main() {
   await initDb();
@@ -23,7 +24,7 @@ async function main() {
   }));
 
   app.use(express.static(path.join(__dirname, 'public')));
-  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+  app.use('/uploads', express.static(getUploadsDir()));
 
   app.use('/api', require('./routes/auth'));
   app.use('/api', require('./routes/deploymentConfig'));

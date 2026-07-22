@@ -19,7 +19,8 @@ if (fs.existsSync(database)) {
   fs.copyFileSync(database, targetDatabase);
 }
 if (fs.existsSync(uploads)) {
-  const target = path.join(projectRoot, 'uploads');
+  const target = path.resolve(process.env.UPLOADS_DIR || path.join(projectRoot, 'uploads'));
+  fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.rmSync(target, { recursive: true, force: true });
   fs.cpSync(uploads, target, { recursive: true });
 }

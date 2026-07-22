@@ -3,11 +3,16 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { prepare } = require('../db');
+const { getUploadsDir } = require('../storage-paths');
 const { requireLogin, requireCapability, auditLog } = require('../middleware');
 const { resetDarenConfirmation } = require('../services/darenConfirmation');
 
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '..', 'uploads'),
+  destination: (req, file, cb) => {
+    const uploadsDir = getUploadsDir();
+    require('fs').mkdirSync(uploadsDir, { recursive: true });
+    cb(null, uploadsDir);
+  },
   filename: (req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, unique + path.extname(file.originalname));

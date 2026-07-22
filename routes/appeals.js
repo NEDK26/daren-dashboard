@@ -6,8 +6,10 @@ const router = express.Router();
 const { prepare, withTransaction } = require('../db');
 const { requireLogin, requireCapability, auditLog } = require('../middleware');
 const { resetDarenConfirmation } = require('../services/darenConfirmation');
+const { getUploadsDir } = require('../storage-paths');
 
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+const uploadsDir = getUploadsDir();
+fs.mkdirSync(uploadsDir, { recursive: true });
 const storage = multer.diskStorage({
   destination: uploadsDir,
   filename: (req, file, cb) => {
