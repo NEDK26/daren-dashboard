@@ -70,12 +70,14 @@ test('appeal API is scoped to the video owner and saves at most three uploaded g
 
 test('video row opens an appeal drawer and only uploads when the drawer is saved', () => {
   const app = read('public/video-components.jsx');
+  const appeal = read('public/appeal-components.jsx');
 
   assert.match(app, />申诉<\/Button>/);
-  assert.match(app, /title="视频申诉"/);
-  assert.match(app, /Array\.from\(\{\s*length:\s*3\s*\}/);
+  assert.match(appeal, /title="视频申诉"/);
+  assert.match(appeal, /Array\.from\(\{\s*length:\s*3\s*\}/);
   assert.match(app, /api\.upload\('\/api\/videos\/' \+ appealTarget\.id \+ '\/appeals'/);
-  assert.doesNotMatch(app, /beforeUpload=\{file => api\.upload\([^\n]*appeals/);
+  assert.match(appeal, /beforeUpload=\{file => onStageImage/);
+  assert.doesNotMatch(appeal, /beforeUpload=\{file => api\.upload\([^\n]*appeals/);
   assert.match(app, /return !isReadOnly \? <Space[^;]*>申诉<\/Button>/s);
 });
 

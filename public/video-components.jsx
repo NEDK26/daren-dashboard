@@ -611,19 +611,5 @@ function VideoDetail({
         return <div className="anomaly-marker-field" key={key}><Checkbox checked={checked} onChange={event => setAnomalyFields(fields => event.target.checked ? [...fields, key] : fields.filter(field => field !== key))}>{label}</Checkbox>{anomalyTarget?.[key] ? <Image src={anomalyTarget[key]} width={64} height={64} style={{
             objectFit: 'cover'
           }} /> : <Tag>未上传</Tag>}</div>;
-      })}</Drawer><Drawer className="appeal-drawer" title="视频申诉" open={Boolean(appealTarget)} onClose={closeAppeal} width="min(520px, 100vw)" destroyOnClose footer={<Space><Button onClick={closeAppeal}>取消</Button><Button type="primary" loading={appealSaving} disabled={appealLoading} onClick={saveAppeals}>保存申诉</Button></Space>}><p className="appeal-drawer-hint">每条视频最多提交三组申诉文字和图片，保存后统一提交。</p>{appealLoading ? <div className="appeal-loading">正在加载…</div> : Array.from({
-        length: 3
-      }, (_, index) => {
-        const slot = appealSlots[index] || {
-          group_no: index + 1,
-          appeal_text: ''
-        };
-        const imageUrl = slot.previewUrl || !slot.removeImage && slot.image_path;
-        return <section className="appeal-slot" key={slot.group_no}><div className="appeal-slot-heading"><strong>申诉 {slot.group_no}</strong><span>文字 + 1 张图片</span></div><Input.TextArea value={slot.appeal_text} onChange={event => updateAppealSlot(slot.group_no, {
-            appeal_text: event.target.value
-          })} placeholder="填写申诉说明" rows={3} maxLength={1000} showCount /><div className="appeal-image-row">{imageUrl ? <Image src={imageUrl} width={88} height={88} style={{
-              objectFit: 'cover'
-            }} /> : <div className="appeal-image-empty">暂无图片</div>}<Space direction="vertical" size={6}><Upload beforeUpload={file => stageAppealImage(slot.group_no, file)} showUploadList={false} accept="image/*"><Button size="small">{imageUrl ? '替换图片' : '选择图片'}</Button></Upload>{imageUrl && <Button size="small" type="text" danger onClick={() => removeAppealImage(slot)}>移除图片</Button>}{slot.file && <span className="appeal-pending-label">待保存</span>}</Space></div></section>;
-      })}</Drawer></React.Fragment>;
+      })}</Drawer><AppealDrawer open={Boolean(appealTarget)} onClose={closeAppeal} slots={appealSlots} loading={appealLoading} saving={appealSaving} onUpdateSlot={updateAppealSlot} onStageImage={stageAppealImage} onRemoveImage={removeAppealImage} onSave={saveAppeals} /></React.Fragment>;
 }
-
