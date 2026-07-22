@@ -33,7 +33,7 @@ test('confirmation status has the three allowed states and only normal users can
   assert.match(schema, /CREATE TRIGGER IF NOT EXISTS validate_darens_confirmation_status_update\s+BEFORE UPDATE OF confirmation_status ON darens[\s\S]*?NEW\.confirmation_status NOT IN \('待确认', '已确认', '已提交申诉'\)/);
   assert.match(source, /router\.put\('\/darens\/:id\/confirmation', requireLogin,/);
   assert.match(source, /\['已确认', '已提交申诉'\]/);
-  assert.match(source, /router\.put\('\/darens\/:id\/confirmation', requireLogin, \(req, res\) => \{[\s\S]*?if \(req\.session\.user\.role === 'admin'\) return res\.status\(403\)/);
+  assert.match(source, /router\.put\('\/darens\/:id\/confirmation', requireLogin, requireCapability\('dataCheck'\), \(req, res\) => \{[\s\S]*?if \(req\.session\.user\.role === 'admin'\) return res\.status\(403\)/);
   assert.match(source, /daren\.nickname !== req\.session\.user\.display_name/);
 });
 

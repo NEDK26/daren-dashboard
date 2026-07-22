@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { prepare, withTransaction } = require('../db');
-const { requireAdmin, operationLog } = require('../middleware');
+const { requireAdmin, requireCapability, operationLog } = require('../middleware');
 const { resetUserPassword, resetUserPasswords } = require('../services/userAccounts');
 const { createAccountWorkbook, sendAccountWorkbook } = require('../services/accountWorkbook');
 
-router.get('/user-accounts', requireAdmin, (req, res) => {
+router.get('/user-accounts', requireAdmin, requireCapability('accountManagement'), (req, res) => {
   const batchId = Number(req.query.batchId) || 0;
   const search = String(req.query.search || '').trim();
   const conditions = ["u.role = 'user'"];
@@ -32,7 +32,7 @@ router.get('/user-accounts', requireAdmin, (req, res) => {
   res.json({ rows, total: rows.length });
 });
 
-router.post('/user-accounts/:id/reset-password', requireAdmin, async (req, res) => {
+router.post('/user-accounts/:id/reset-password', requireAdmin, requireCapability('accountManagement'), async (req, res) => {
   try {
     const account = resetUserPassword({ prepare, withTransaction, userId: Number(req.params.id) });
     if (!account) return res.status(404).json({ error: '普通用户账号不存在' });
@@ -48,7 +48,7 @@ router.post('/user-accounts/:id/reset-password', requireAdmin, async (req, res) 
   }
 });
 
-router.post('/user-accounts/reset-passwords', requireAdmin, async (req, res) => {
+router.post('/user-accounts/reset-passwords', requireAdmin, requireCapability('accountManagement'), async (req, res) => {
   const body = req.body || {};
   const batchId = Number(body.batchId) || 0;
   const all = Boolean(body.all);

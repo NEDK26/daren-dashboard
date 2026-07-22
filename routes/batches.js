@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { prepare, withTransaction } = require('../db');
-const { requireLogin, requireAdmin, operationLog } = require('../middleware');
+const { requireLogin, requireAdmin, requireCapability, operationLog } = require('../middleware');
 const { buildBatchName, getCurrentBatch } = require('../services/batches');
 const { publishBatch, revokeBatch } = require('../services/batchLifecycle');
 const { initializeBatchAccounts } = require('../services/userAccounts');
 const { createAccountWorkbook, sendAccountWorkbook } = require('../services/accountWorkbook');
 
-router.get('/batches', requireLogin, (req, res) => {
+router.get('/batches', requireLogin, requireCapability('batchManagement'), (req, res) => {
   const isAdmin = req.session.user.role === 'admin';
   const batches = isAdmin
     ? prepare(`SELECT b.*,
@@ -24,7 +24,7 @@ router.get('/batches', requireLogin, (req, res) => {
   res.json({ batches, current: getCurrentBatch() || null });
 });
 
-router.post('/batches/:id/initialize-accounts', requireAdmin, async (req, res) => {
+router.post('/batches/:id/initialize-accounts', requireAdmin, requireCapability('batchManagement'), async (req, res) => {
   const batch = prepare('SELECT * FROM batches WHERE id = ?').get(req.params.id);
   if (!batch) return res.status(404).json({ error: '批次不存在' });
   try {
@@ -42,7 +42,7 @@ router.post('/batches/:id/initialize-accounts', requireAdmin, async (req, res) =
   }
 });
 
-router.post('/batches', requireAdmin, (req, res) => {
+router.post('/batches', requireAdmin, requireCapability('batchManagement'), (req, res) => {
   if (prepare("SELECT 1 FROM batches WHERE status = 'draft'").get()) {
     return res.status(400).json({ error: '已有草稿批次' });
   }
@@ -66,7 +66,7 @@ router.post('/batches', requireAdmin, (req, res) => {
   }
 });
 
-router.delete('/batches/:id', requireAdmin, (req, res) => {
+router.delete('/batches/:id', requireAdmin, requireCapability('batchManagement'), (req, res) => {
   const batch = prepare('SELECT * FROM batches WHERE id = ?').get(req.params.id);
   if (!batch) return res.status(404).json({ error: '批次不存在' });
   if (batch.status !== 'draft') return res.status(400).json({ error: '只能删除草稿批次' });
@@ -93,7 +93,7 @@ router.delete('/batches/:id', requireAdmin, (req, res) => {
   }
 });
 
-router.post('/batches/:id/publish', requireAdmin, (req, res) => {
+router.post('/batches/:id/publish', requireAdmin, requireCapability('batchManagement'), (req, res) => {
   try {
     const batch = publishBatch({ prepare, withTransaction, batchId: req.params.id });
     operationLog(req, {
@@ -107,7 +107,7 @@ router.post('/batches/:id/publish', requireAdmin, (req, res) => {
   }
 });
 
-router.post('/batches/:id/revoke', requireAdmin, (req, res) => {
+router.post('/batches/:id/revoke', requireAdmin, requireCapability('batchManagement'), (req, res) => {
   try {
     const current = prepare("SELECT * FROM batches WHERE id = ? AND status = 'current'").get(req.params.id);
     const batch = revokeBatch({ prepare, withTransaction, batchId: req.params.id });

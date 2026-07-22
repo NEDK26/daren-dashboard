@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { prepare } = require('../db');
-const { requireLogin, auditLog } = require('../middleware');
+const { requireLogin, requireCapability, auditLog } = require('../middleware');
 const { resetDarenConfirmation } = require('../services/darenConfirmation');
 
 const storage = multer.diskStorage({
@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-router.post('/upload/:id/:field', requireLogin, authorizeScreenshotUpload, upload.single('file'), (req, res) => {
+router.post('/upload/:id/:field', requireLogin, authorizeScreenshotUpload, requireCapability('dataCheck'), upload.single('file'), (req, res) => {
   const { id, field } = req.params;
   if (!req.file) return res.status(400).json({ error: '未上传文件' });
 

@@ -3,14 +3,14 @@ const router = express.Router();
 const ExcelJS = require('exceljs');
 const path = require('path');
 const { prepare } = require('../db');
-const { requireAdmin } = require('../middleware');
+const { requireAdmin, requireCapability } = require('../middleware');
 const { exportColumns } = require('../excel-schema');
 const { addScreenshotImages, renderCellImages } = require('../services/exportImages');
 const { getVisibleBatch } = require('../services/batches');
 
 const exportKeyCol = Object.fromEntries(exportColumns.map(({ key }, index) => [key, index + 1]));
 
-router.get('/export', requireAdmin, async (req, res) => {
+router.get('/export', requireAdmin, requireCapability('importExport'), async (req, res) => {
   const { category, contentType, search, batchId } = req.query;
   const resolved = getVisibleBatch(req, batchId);
   if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
