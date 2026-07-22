@@ -34,41 +34,9 @@ const PAGE_CAPABILITIES = window.DAREN_MODULES?.pageCapabilities || Object.freez
   settings: 'accountManagement'
 });
 
-// ── API helpers ──
+// ── Shared API client ──
 
-const api = {
-  get: (url, options = {}) => fetch(url, options).then(r => r.json()),
-  post: (url, data) => fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  }).then(r => r.json()),
-  put: (url, data) => fetch(url, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  }).then(r => r.json()),
-  delete: (url, data) => fetch(url, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  }).then(r => r.json()),
-  upload: (url, file, fields = {}) => {
-    const fd = new FormData();
-    if (file) fd.append('file', file);
-    Object.entries(fields).forEach(([key, value]) => fd.append(key, value));
-    return fetch(url, {
-      method: 'POST',
-      body: fd
-    }).then(r => r.json());
-  }
-};
+const api = window.DAREN_API;
 async function downloadAccountFile(url, options, fallbackName) {
   const response = await fetch(url, options);
   const contentType = response.headers.get('content-type') || '';
