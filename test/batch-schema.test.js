@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const initSqlJs = require('sql.js');
-const { migrateBatchSchema } = require('../db');
+const { initSchema, migrateBatchSchema } = require('../db');
 
 function row(db, sql, params = []) {
   const stmt = db.prepare(sql);
@@ -117,4 +117,18 @@ test('failed batch migration rolls back schema and data changes', async () => {
   assert.equal(row(db, "SELECT COUNT(*) AS count FROM pragma_table_info('darens') WHERE name = 'batch_id'").count, 0);
   assert.equal(row(db, 'SELECT COUNT(*) AS count FROM darens').count, 1);
   assert.equal(row(db, 'SELECT COUNT(*) AS count FROM videos').count, 1);
+});
+
+test('schema initialization records one idempotent migration baseline', async () => {
+  const SQL = await initSqlJs();
+  const db = new SQL.Database();
+
+  initSchema(db);
+  initSchema(db);
+
+  assert.deepEqual(row(db, 'SELECT version, name FROM schema_migrations ORDER BY version'), {
+    version: 1,
+    name: 'initial-schema'
+  });
+  assert.equal(row(db, 'SELECT COUNT(*) AS count FROM schema_migrations').count, 1);
 });
