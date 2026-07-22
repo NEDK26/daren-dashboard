@@ -11,7 +11,12 @@ for (const [file, profile, branch] of [
 ]) {
   test(`${file} verifies and health-checks the ${profile} deployment`, () => {
     const source = fs.readFileSync(path.join(workflowDir, file), 'utf8');
-    assert.match(source, new RegExp(`branches: \\[${branch}\\]`));
+    if (file === 'deploy.yml') assert.match(source, new RegExp(`branches: \\[${branch}\\]`));
+    else {
+      assert.match(source, /workflow_dispatch:/);
+      assert.match(source, /description: '已验证的分支、Tag 或 Commit SHA'/);
+      assert.match(source, /default: sj-prod/);
+    }
     assert.match(source, /needs: verify/);
     assert.match(source, /run: npm test/);
     assert.match(source, /run: npm run build/);

@@ -1,8 +1,12 @@
 name: Deploy SJ Production
 
 on:
-  push:
-    branches: [sj-prod]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: '已验证的分支、Tag 或 Commit SHA'
+        required: true
+        default: sj-prod
 
 jobs:
   verify:
@@ -36,8 +40,8 @@ jobs:
           script: |
             set -e
             cd /home/deploy/daren-dashboard
-            git fetch origin sj-prod
-            git reset --hard origin/sj-prod
+            git fetch --prune origin "${{ inputs.ref }}"
+            git reset --hard FETCH_HEAD
             DEPLOYMENT_BACKUP_DIR=/home/deploy/backups/daren-dashboard node scripts/backup-deployment.js
             npm ci --omit=dev
             npx --yes pm2 restart daren-dashboard || npx --yes pm2 start ecosystem.config.js
