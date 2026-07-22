@@ -25,5 +25,7 @@ for (const [file, profile, branch] of [
     assert.match(source, new RegExp(`\\\"code\\\":\\\"${profile}\\\"`));
     assert.match(source, /git rev-parse HEAD/);
     assert.match(source, /deployed_at=/);
+    assert.match(source, /test -f \.env/);
+    assert.match(source, new RegExp(`DEPLOYMENT_PROFILE=${profile}`));
   });
 }
