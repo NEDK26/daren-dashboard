@@ -38,6 +38,7 @@ jobs:
             cd /home/deploy/daren-dashboard
             git fetch origin sj-prod
             git reset --hard origin/sj-prod
+            DEPLOYMENT_BACKUP_DIR=/home/deploy/backups/daren-dashboard node scripts/backup-deployment.js
             npm ci --omit=dev
             npx --yes pm2 restart daren-dashboard || npx --yes pm2 start ecosystem.config.js
             npx --yes pm2 save
