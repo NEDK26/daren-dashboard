@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
 const workspace = fs.readFileSync(path.join(__dirname, '../public/workspace-components.jsx'), 'utf8');
+const batch = fs.readFileSync(path.join(__dirname, '../public/batch-components.jsx'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, '../public/style.css'), 'utf8');
 const audit = fs.readFileSync(path.join(__dirname, '../routes/audit.js'), 'utf8');
 
@@ -17,7 +18,7 @@ test('responsive navigation exposes role-specific desktop and mobile destination
   assert.match(workspace, /数据核对/);
   assert.match(workspace, /我的日志/);
   assert.match(workspace, /切换批次/);
-  assert.match(app, /function BatchSwitchPage/);
+  assert.match(batch, /function BatchSwitchPage/);
   assert.match(css, /\.desktop-nav/);
   assert.match(css, /\.mobile-nav/);
 });

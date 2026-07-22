@@ -4,11 +4,12 @@ const fs = require('node:fs');
 const path = require('path');
 
 const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+const batch = fs.readFileSync(path.join(__dirname, '../public/batch-components.jsx'), 'utf8');
 
 test('frontend owns selected batch state and sends batchId with data requests', () => {
   assert.match(app, /selectedBatch/);
   assert.match(app, /batchId/);
-  assert.match(app, /BatchPicker/);
+  assert.match(batch, /BatchPicker/);
 });
 
 test('admin frontend exposes batch creation, draft import, and deletion', () => {
