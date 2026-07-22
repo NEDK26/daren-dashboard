@@ -24,6 +24,12 @@ function validateCapabilities(capabilities) {
       throw new Error(`能力 ${name} 必须是布尔值`);
     }
   }
+
+  for (const name of capabilityNames) {
+    if (!Object.prototype.hasOwnProperty.call(capabilities, name)) {
+      throw new Error(`部署配置缺少能力：${name}`);
+    }
+  }
 }
 
 function assertCapabilityName(name) {

@@ -27,6 +27,11 @@ test('deployment profile loader rejects unknown profiles and capabilities', () =
     branding: { title: 'bad', logo: '/bad.png' },
     capabilities: { notARealCapability: true }
   }), /未知能力/);
+  assert.throws(() => validateDeploymentConfig({
+    identity: { code: 'partial' },
+    branding: { title: 'partial', logo: '/partial.png' },
+    capabilities: { dataCheck: true }
+  }), /缺少能力/);
 });
 
 test('deployment config route exposes only safe profile fields', () => {
