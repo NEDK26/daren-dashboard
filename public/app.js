@@ -27,6 +27,14 @@ const {
   Pagination
 } = antd;
 
+const PAGE_CAPABILITIES = window.DAREN_MODULES?.pageCapabilities || Object.freeze({
+  fees: 'feeCheck',
+  accounts: 'accountManagement',
+  audit: 'auditLogs',
+  'batch-switch': 'batchManagement',
+  settings: 'accountManagement'
+});
+
 // ── API helpers ──
 
 const api = {
@@ -1755,8 +1763,7 @@ function App() {
   }, [user]);
   const navigatePrimary = useCallback(key => {
     if (key === 'data' || key === 'darens') return enterDataCheck();
-    const capabilityByPage = { fees: 'feeCheck', accounts: 'accountManagement', audit: 'auditLogs', 'batch-switch': 'batchManagement', settings: 'accountManagement' };
-    const capability = capabilityByPage[key];
+    const capability = PAGE_CAPABILITIES[key];
     if (capability && !deploymentConfig.capabilities[capability]) return message.info('当前部署未启用该功能');
     setPage(key);
   }, [enterDataCheck, deploymentConfig]);
@@ -1769,7 +1776,7 @@ function App() {
     return <PasswordChangePage user={user} onChanged={setUser} />;
   }
   const renderPage = () => {
-    const pageCapability = { fees: 'feeCheck', accounts: 'accountManagement', audit: 'auditLogs', 'batch-switch': 'batchManagement', settings: 'accountManagement' }[page];
+    const pageCapability = PAGE_CAPABILITIES[page];
     if (pageCapability && !deploymentConfig.capabilities[pageCapability]) return <Card>当前部署未启用该功能</Card>;
     switch (page) {
       case 'home':
