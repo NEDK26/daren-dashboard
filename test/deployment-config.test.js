@@ -43,6 +43,31 @@ test('capability changes stay scoped to one deployment load and do not alter the
   assert.equal(loadDeploymentConfig('sj').capabilities.appeals, true);
 });
 
+test('deployment profile rejects enabled modules with missing capabilities', () => {
+  const { loadDeploymentConfig, validateDeploymentConfig } = require('../config');
+  const missingDataCheck = loadDeploymentConfig('default');
+  missingDataCheck.capabilities.dataCheck = false;
+  assert.throws(
+    () => validateDeploymentConfig(missingDataCheck),
+    /模块 appeals.*依赖能力 dataCheck/
+  );
+
+  const missingBatchManagement = loadDeploymentConfig('default');
+  missingBatchManagement.capabilities.batchManagement = false;
+  assert.throws(
+    () => validateDeploymentConfig(missingBatchManagement),
+    /模块 data-check.*依赖能力 batchManagement/
+  );
+});
+
+test('deployment profile cannot enable a planned module', () => {
+  const { loadDeploymentConfig, validateDeploymentConfig } = require('../config');
+  const config = loadDeploymentConfig('default');
+  config.capabilities.feeCheck = true;
+
+  assert.throws(() => validateDeploymentConfig(config), /模块 fee-check 尚未启用/);
+});
+
 test('production startup rejects an implicit default deployment profile', () => {
   const { getDeploymentConfig } = require('../config');
   const previousNodeEnv = process.env.NODE_ENV;

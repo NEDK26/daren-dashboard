@@ -1,5 +1,5 @@
 const { assertCapabilityName, validateCapabilities } = require('./capabilities');
-const { getPublicModules } = require('../modules/registry');
+const { getPublicModules, validateDeploymentModules } = require('../modules/registry');
 
 const profiles = {
   default: require('./deployments/default'),
@@ -11,6 +11,7 @@ function validateDeploymentConfig(config) {
   if (!config.identity?.code) throw new Error('部署配置缺少 identity.code');
   if (!config.branding?.title || !config.branding?.logo) throw new Error('部署配置缺少品牌信息');
   validateCapabilities(config.capabilities);
+  validateDeploymentModules(config.capabilities);
   return config;
 }
 

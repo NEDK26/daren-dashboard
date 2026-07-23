@@ -116,6 +116,19 @@ function getPageCapabilities(moduleList = getPublicModules()) {
   }, {});
 }
 
+function validateDeploymentModules(capabilities, moduleList = modules) {
+  for (const module of moduleList) {
+    if (!capabilities[module.capability]) continue;
+    if (module.status !== 'active') throw new Error(`模块 ${module.key} 尚未启用`);
+    for (const dependency of module.dependencies) {
+      if (!capabilities[dependency]) {
+        throw new Error(`模块 ${module.key} 依赖能力 ${dependency}`);
+      }
+    }
+  }
+  return capabilities;
+}
+
 validateModuleRegistry(modules);
 
 module.exports = {
@@ -123,6 +136,7 @@ module.exports = {
   getModule,
   getPublicModules,
   getPageCapabilities,
+  validateDeploymentModules,
   validateModule,
   validateModuleRegistry
 };
