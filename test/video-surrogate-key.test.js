@@ -69,12 +69,12 @@ test('updates only the selected co-created video by internal id', async () => {
 test('uses internal video id in route and browser row identity', () => {
   const videos = fs.readFileSync(path.join(__dirname, '../routes/videos.js'), 'utf8');
   const upload = fs.readFileSync(path.join(__dirname, '../routes/upload.js'), 'utf8');
-  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const video = fs.readFileSync(path.join(__dirname, '../public/video-components.jsx'), 'utf8');
 
   assert.match(videos, /router\.put\('\/videos\/:id'/);
   assert.match(videos, /WHERE v\.id = \?/);
   assert.match(upload, /router\.post\('\/upload\/:id\/:field'/);
   assert.match(upload, /WHERE v\.id = \?/);
-  assert.match(app, /rowKey="id"/);
-  assert.match(app, /editingKey === record\.id/);
+  assert.match(video, /rowKey="id"/);
+  assert.match(video, /editingKey === record\.id/);
 });

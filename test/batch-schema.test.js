@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const initSqlJs = require('sql.js');
-const { migrateBatchSchema } = require('../db');
+const { initSchema, migrateBatchSchema } = require('../db');
 
 function row(db, sql, params = []) {
   const stmt = db.prepare(sql);
@@ -90,4 +90,45 @@ test('allows the same nickname and work id in separate batches', async () => {
 
   assert.equal(row(db, 'SELECT COUNT(*) AS count FROM darens').count, 2);
   assert.equal(row(db, 'SELECT COUNT(*) AS count FROM videos').count, 2);
+});
+
+test('batch migration is idempotent and does not duplicate the initial batch', async () => {
+  const SQL = await initSqlJs();
+  const db = new SQL.Database();
+  createLegacySchema(db);
+  db.run("INSERT INTO darens (id, nickname) VALUES (1, 'alice')");
+
+  assert.equal(migrateBatchSchema(db), true);
+  assert.equal(migrateBatchSchema(db), false);
+  assert.equal(row(db, 'SELECT COUNT(*) AS count FROM batches').count, 1);
+  assert.equal(row(db, 'SELECT COUNT(*) AS count FROM darens').count, 1);
+});
+
+test('failed batch migration rolls back schema and data changes', async () => {
+  const SQL = await initSqlJs();
+  const db = new SQL.Database();
+  db.run('CREATE TABLE darens (id INTEGER PRIMARY KEY, nickname TEXT NOT NULL)');
+  db.run('CREATE TABLE videos (id INTEGER PRIMARY KEY, daren_id INTEGER NOT NULL, platform TEXT NOT NULL)');
+  db.run("INSERT INTO darens (id, nickname) VALUES (1, 'alice')");
+  db.run("INSERT INTO videos (id, daren_id, platform) VALUES (1, 1, '快手')");
+
+  assert.throws(() => migrateBatchSchema(db));
+  assert.equal(row(db, "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'batches'").count, 0);
+  assert.equal(row(db, "SELECT COUNT(*) AS count FROM pragma_table_info('darens') WHERE name = 'batch_id'").count, 0);
+  assert.equal(row(db, 'SELECT COUNT(*) AS count FROM darens').count, 1);
+  assert.equal(row(db, 'SELECT COUNT(*) AS count FROM videos').count, 1);
+});
+
+test('schema initialization records one idempotent migration baseline', async () => {
+  const SQL = await initSqlJs();
+  const db = new SQL.Database();
+
+  initSchema(db);
+  initSchema(db);
+
+  assert.deepEqual(row(db, 'SELECT version, name FROM schema_migrations ORDER BY version'), {
+    version: 1,
+    name: 'initial-schema'
+  });
+  assert.equal(row(db, 'SELECT COUNT(*) AS count FROM schema_migrations').count, 1);
 });

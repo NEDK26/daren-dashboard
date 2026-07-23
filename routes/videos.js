@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { getDb, prepare, escapeColumn } = require('../db');
-const { requireLogin, requireAdmin, auditLog } = require('../middleware');
+const { requireLogin, requireAdmin, requireCapability, auditLog } = require('../middleware');
 const { resetDarenConfirmation } = require('../services/darenConfirmation');
 const { updateScreenshotAnomalies } = require('../services/anomalyMarkers');
 const { getVisibleBatch } = require('../services/batches');
 
-router.get('/darens/:id/videos', requireLogin, (req, res) => {
+router.get('/darens/:id/videos', requireLogin, requireCapability('dataCheck'), (req, res) => {
   const { id } = req.params;
   const { platform, title, violation, compliance, batchId } = req.query;
   const resolved = getVisibleBatch(req, batchId);
@@ -53,7 +53,7 @@ router.get('/darens/:id/videos', requireLogin, (req, res) => {
   res.json(rows);
 });
 
-router.put('/videos/:id', requireLogin, (req, res) => {
+router.put('/videos/:id', requireLogin, requireCapability('dataCheck'), (req, res) => {
   const { id } = req.params;
   const isAdmin = req.session.user.role === 'admin';
 
@@ -99,7 +99,7 @@ router.put('/videos/:id', requireLogin, (req, res) => {
   res.json({ ok: true, changes: Object.keys(changes) });
 });
 
-router.put('/videos/:id/anomaly-markers', requireAdmin, (req, res) => {
+router.put('/videos/:id/anomaly-markers', requireAdmin, requireCapability('anomalyMarking'), (req, res) => {
   const { id } = req.params;
   const fields = req.body?.fields;
   if (!Array.isArray(fields)) return res.status(400).json({ error: 'fields 必须是数组' });

@@ -25,7 +25,8 @@ test('workspace navigation avoids decorative character badges', () => {
 
 test('admins can manage batches before any data batch is published', () => {
   const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const batch = fs.readFileSync(path.join(__dirname, '../public/batch-components.jsx'), 'utf8');
 
-  assert.match(app, />批次管理/);
+  assert.match(batch, />批次管理/);
   assert.match(app, /if \(!selectedBatch\) \{\s+if \(user\.role === 'admin'\) return setPage\('batches'\)/);
 });

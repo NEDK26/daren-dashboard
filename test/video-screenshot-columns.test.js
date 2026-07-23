@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 test('video screenshot columns follow their matching metrics', () => {
-  const source = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '../public/video-components.jsx'), 'utf8');
   const columns = [
     ["title: 'DA播放'", "title: '播放截图'"],
     ["title: 'DA点赞'", "title: '点赞截图'"],

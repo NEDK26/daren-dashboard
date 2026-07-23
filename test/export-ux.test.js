@@ -4,9 +4,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.js'), 'utf8');
+const darenSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'daren-components.jsx'), 'utf8');
 
 test('export downloads the full selected batch with progress and error feedback', () => {
-  const darens = app.slice(app.indexOf('function DarenList'), app.indexOf('function VideoDetail'));
+  const darens = darenSource;
   const exportHandler = darens.slice(darens.indexOf('const handleExport'), darens.indexOf('const handleDelete'));
   assert.match(darens, /const \[exporting, setExporting\] = useState\(false\)/);
   assert.match(darens, /fetch\('\/api\/export\?/);

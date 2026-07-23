@@ -3,11 +3,16 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { prepare } = require('../db');
-const { requireLogin, auditLog } = require('../middleware');
+const { getUploadsDir } = require('../storage-paths');
+const { requireLogin, requireCapability, auditLog } = require('../middleware');
 const { resetDarenConfirmation } = require('../services/darenConfirmation');
 
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '..', 'uploads'),
+  destination: (req, file, cb) => {
+    const uploadsDir = getUploadsDir();
+    require('fs').mkdirSync(uploadsDir, { recursive: true });
+    cb(null, uploadsDir);
+  },
   filename: (req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, unique + path.extname(file.originalname));
@@ -15,7 +20,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-router.post('/upload/:id/:field', requireLogin, authorizeScreenshotUpload, upload.single('file'), (req, res) => {
+router.post('/upload/:id/:field', requireLogin, authorizeScreenshotUpload, requireCapability('dataCheck'), upload.single('file'), (req, res) => {
   const { id, field } = req.params;
   if (!req.file) return res.status(400).json({ error: '未上传文件' });
 

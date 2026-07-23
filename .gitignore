@@ -8,3 +8,4 @@ daren-dashboard/
 .claude/
 skills-lock.json
 *.bak
+backups/

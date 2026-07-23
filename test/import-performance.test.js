@@ -39,7 +39,7 @@ test('withTransaction rolls back and does not persist on failure', async () => {
 
 test('import uses a transaction and the UI exposes animated stages', () => {
   const route = fs.readFileSync(path.join(__dirname, '../routes/import.js'), 'utf8');
-  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '../public/batch-components.jsx'), 'utf8');
   const style = fs.readFileSync(path.join(__dirname, '../public/style.css'), 'utf8');
 
   assert.match(route, /withTransaction\(/);

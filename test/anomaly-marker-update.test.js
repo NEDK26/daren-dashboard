@@ -10,7 +10,7 @@ test('video route exposes an admin-only screenshot anomaly update endpoint', () 
 });
 
 test('video detail offers a fixed row action and screenshot anomaly drawer', () => {
-  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '../public/video-components.jsx'), 'utf8');
   assert.match(app, /异常标记/);
   assert.match(app, /anomaly-markers/);
   assert.match(app, /<Drawer/);
@@ -21,7 +21,7 @@ test('video detail offers a fixed row action and screenshot anomaly drawer', () 
 });
 
 test('screenshot columns expose data indexes so anomaly styling reaches the cells', () => {
-  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '../public/video-components.jsx'), 'utf8');
   for (const field of ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes']) {
     assert.match(app, new RegExp(`dataIndex: '${field}'`));
   }

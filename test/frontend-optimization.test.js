@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+const video = fs.readFileSync(path.join(__dirname, '../public/video-components.jsx'), 'utf8');
 const darens = fs.readFileSync(path.join(__dirname, '../routes/darens.js'), 'utf8');
 const videos = fs.readFileSync(path.join(__dirname, '../routes/videos.js'), 'utf8');
 
@@ -20,9 +21,9 @@ test('video list exposes server pagination', () => {
 });
 
 test('frontend debounces filters and cancels stale requests', () => {
-  assert.match(app, /AbortController/);
-  assert.match(app, /setTimeout\(/);
-  assert.match(app, /pageSize/);
+  assert.match(video, /AbortController/);
+  assert.match(video, /setTimeout\(/);
+  assert.match(video, /pageSize/);
 });
 
 test('admin list does not render deletion controls', () => {

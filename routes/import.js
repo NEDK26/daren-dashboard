@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const ExcelJS = require('exceljs');
 const { prepare, withTransaction } = require('../db');
-const { requireAdmin, operationLog } = require('../middleware');
+const { requireAdmin, requireCapability, operationLog } = require('../middleware');
 const { buildHeaderMap } = require('../excel-schema');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -29,7 +29,7 @@ function isRedFill(cell) {
   return false;
 }
 
-router.post('/import', requireAdmin, upload.single('file'), async (req, res) => {
+router.post('/import', requireAdmin, requireCapability('importExport'), upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: '请上传文件' });
   const batchId = Number(req.body.batchId);
   const batch = prepare("SELECT * FROM batches WHERE id = ? AND status = 'draft'").get(batchId);

@@ -3,14 +3,15 @@ const router = express.Router();
 const ExcelJS = require('exceljs');
 const path = require('path');
 const { prepare } = require('../db');
-const { requireAdmin } = require('../middleware');
+const { requireAdmin, requireCapability } = require('../middleware');
 const { exportColumns } = require('../excel-schema');
 const { addScreenshotImages, renderCellImages } = require('../services/exportImages');
 const { getVisibleBatch } = require('../services/batches');
+const { getUploadsDir } = require('../storage-paths');
 
 const exportKeyCol = Object.fromEntries(exportColumns.map(({ key }, index) => [key, index + 1]));
 
-router.get('/export', requireAdmin, async (req, res) => {
+router.get('/export', requireAdmin, requireCapability('importExport'), async (req, res) => {
   const { category, contentType, search, batchId } = req.query;
   const resolved = getVisibleBatch(req, batchId);
   if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
@@ -43,7 +44,7 @@ router.get('/export', requireAdmin, async (req, res) => {
   const screenshotImages = addScreenshotImages({
     sheet: ws,
     rows,
-    uploadsDir: path.join(__dirname, '..', 'uploads'),
+    uploadsDir: getUploadsDir(),
     screenshotColumns: Object.fromEntries(
       ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes',
         'appeal_image_1', 'appeal_image_2', 'appeal_image_3']

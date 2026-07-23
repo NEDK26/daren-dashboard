@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+const app = fs.readFileSync(path.join(__dirname, '../public/video-components.jsx'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, '../public/style.css'), 'utf8');
 
 test('creator data uses a main workspace with a separate review rail', () => {

@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build": "babel public/app.js -o public/app.build.js",
+    "build": "babel public/app.js -o public/app.build.js && babel public/workspace-components.jsx -o public/workspace-components.build.js && babel public/batch-components.jsx -o public/batch-components.build.js && babel public/account-components.jsx -o public/account-components.build.js && babel public/audit-components.jsx -o public/audit-components.build.js && babel public/daren-components.jsx -o public/daren-components.build.js && babel public/video-components.jsx -o public/video-components.build.js && babel public/appeal-components.jsx -o public/appeal-components.build.js",
     "test": "node --test"
   },
   "dependencies": {

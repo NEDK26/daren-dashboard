@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { prepare } = require('../db');
-const { requireLogin } = require('../middleware');
+const { requireLogin, requireCapability } = require('../middleware');
 
-router.get('/audit-logs', requireLogin, (req, res) => {
+router.get('/audit-logs', requireLogin, requireCapability('auditLogs'), (req, res) => {
   const { action, keyword, batchId, limit = 200, offset = 0 } = req.query;
 
   let sql = `SELECT l.* FROM operation_logs l`;

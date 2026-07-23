@@ -1,4 +1,5 @@
 const { prepare } = require('./db');
+const { assertCapabilityName, getDeploymentConfig } = require('./config');
 
 const FIELD_LABELS = {
   organization: '机构', content_type: '内容类型', category: '分类', platform: '平台',
@@ -45,6 +46,24 @@ function requireAdmin(req, res, next) {
     return res.status(403).json({ error: '请先修改初始化密码', mustChangePassword: true });
   }
   next();
+}
+
+function createCapabilityGuard(capability, deployment) {
+  assertCapabilityName(capability);
+  return (req, res, next) => {
+    if (!deployment?.capabilities?.[capability]) {
+      return res.status(403).json({
+        code: 'CAPABILITY_DISABLED',
+        error: '当前部署未启用该功能',
+        capability
+      });
+    }
+    next();
+  };
+}
+
+function requireCapability(capability) {
+  return createCapabilityGuard(capability, getDeploymentConfig());
 }
 
 function operationLog(req, event) {
@@ -94,4 +113,13 @@ function auditLog(req, tableName, recordId, fieldChanges, actionType = '修改�
   });
 }
 
-module.exports = { requireLogin, requireAdmin, getSessionUser, auditLog, operationLog, FIELD_LABELS };
+module.exports = {
+  requireLogin,
+  requireAdmin,
+  requireCapability,
+  createCapabilityGuard,
+  getSessionUser,
+  auditLog,
+  operationLog,
+  FIELD_LABELS
+};

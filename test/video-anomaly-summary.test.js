@@ -11,7 +11,7 @@ test('video list returns anomaly and submitted anomaly summary counts', () => {
 });
 
 test('video detail renders anomaly summary metrics', () => {
-  const app = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '../public/video-components.jsx'), 'utf8');
   assert.match(app, /anomaly-summary-card/);
   assert.match(app, /异常数量/);
   assert.match(app, /已提交异常数量/);

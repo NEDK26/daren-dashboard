@@ -1,0 +1,30 @@
+name: Validate SJ Production Pointer
+
+on:
+  push:
+    branches: [sj-prod]
+
+jobs:
+  validate-pointer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ensure SJ branch is a release pointer
+        run: |
+          set -e
+          git fetch origin master --no-tags
+          master_tree=$(git rev-parse origin/master^{tree})
+          sj_tree=$(git rev-parse HEAD^{tree})
+          if [ "$master_tree" = "$sj_tree" ]; then
+            echo "SJ pointer has the same tree as master"
+            exit 0
+          fi
+          if git merge-base --is-ancestor HEAD origin/master; then
+            echo "SJ pointer is an older commit already contained in master"
+            exit 0
+          fi
+          echo "sj-prod must point to a commit already released through master"
+          exit 1

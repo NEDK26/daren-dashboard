@@ -2,10 +2,11 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'data.db');
+const DB_PATH = path.resolve(process.env.DATABASE_PATH || path.join(__dirname, 'data.db'));
 
 let _db = null;
 let transactionDepth = 0;
+const CURRENT_SCHEMA_VERSION = 1;
 
 async function initDb() {
   if (_db) return _db;
@@ -91,6 +92,21 @@ function createBatchesTable(db) {
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     imported_at TEXT
   )`);
+}
+
+function createSchemaMigrationsTable(db) {
+  db.run(`CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    applied_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  )`);
+}
+
+function recordSchemaBaseline(db) {
+  db.run('INSERT OR IGNORE INTO schema_migrations (version, name) VALUES (?, ?)', [
+    CURRENT_SCHEMA_VERSION,
+    'initial-schema'
+  ]);
 }
 
 function createDarensTable(db, tableName = 'darens') {
@@ -254,16 +270,17 @@ function migrateBatchSchema(db = _db) {
   return true;
 }
 
-function initSchema() {
-  createBatchesTable(_db);
-  try { _db.run('ALTER TABLE batches ADD COLUMN previous_batch_id INTEGER'); } catch {}
-  if (!tableExists(_db, 'darens')) createDarensTable(_db);
-  if (!tableExists(_db, 'videos')) createVideosTable(_db);
-  else if (tableColumns(_db, 'darens').some(column => column.name === 'batch_id') && tableColumns(_db, 'videos').some(column => column.name === 'batch_id')) migrateVideosTable(_db);
-  else migrateBatchSchema(_db);
-  createVideoAppealsTable(_db);
+function initSchema(db = _db) {
+  createSchemaMigrationsTable(db);
+  createBatchesTable(db);
+  try { db.run('ALTER TABLE batches ADD COLUMN previous_batch_id INTEGER'); } catch {}
+  if (!tableExists(db, 'darens')) createDarensTable(db);
+  if (!tableExists(db, 'videos')) createVideosTable(db);
+  else if (tableColumns(db, 'darens').some(column => column.name === 'batch_id') && tableColumns(db, 'videos').some(column => column.name === 'batch_id')) migrateVideosTable(db);
+  else migrateBatchSchema(db);
+  createVideoAppealsTable(db);
 
-  _db.run(`CREATE TABLE IF NOT EXISTS users (
+  db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     display_name TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
@@ -273,17 +290,17 @@ function initSchema() {
     initial_password_issued_at TEXT,
     password_changed_at TEXT
   )`);
-  try { _db.run('ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0'); } catch {}
-  try { _db.run('ALTER TABLE users ADD COLUMN credential_version INTEGER NOT NULL DEFAULT 1'); } catch {}
-  try { _db.run('ALTER TABLE users ADD COLUMN initial_password_issued_at TEXT'); } catch {}
-  try { _db.run('ALTER TABLE users ADD COLUMN password_changed_at TEXT'); } catch {}
+  try { db.run('ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0'); } catch {}
+  try { db.run('ALTER TABLE users ADD COLUMN credential_version INTEGER NOT NULL DEFAULT 1'); } catch {}
+  try { db.run('ALTER TABLE users ADD COLUMN initial_password_issued_at TEXT'); } catch {}
+  try { db.run('ALTER TABLE users ADD COLUMN password_changed_at TEXT'); } catch {}
 
-  _db.run(`CREATE TABLE IF NOT EXISTS settings (
+  db.run(`CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   )`);
 
-  _db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
+  db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_nickname TEXT NOT NULL,
     table_name TEXT NOT NULL,
@@ -296,7 +313,7 @@ function initSchema() {
 
   // Keep one complete user-visible operation per row.  The old audit_logs table
   // remains in place so existing installations can upgrade without data loss.
-  _db.run(`CREATE TABLE IF NOT EXISTS operation_logs (
+  db.run(`CREATE TABLE IF NOT EXISTS operation_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     batch_id INTEGER,
     batch_name TEXT,
@@ -311,26 +328,27 @@ function initSchema() {
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   )`);
 
-  try { _db.run("ALTER TABLE videos ADD COLUMN anomaly_data TEXT DEFAULT ''"); } catch {}
-  try { _db.run('ALTER TABLE videos ADD COLUMN is_main_platform TEXT'); } catch {}
-  try { _db.run("ALTER TABLE darens ADD COLUMN confirmation_status TEXT NOT NULL DEFAULT '待确认'"); } catch {}
-  _db.run(`CREATE TRIGGER IF NOT EXISTS validate_darens_confirmation_status_insert
+  try { db.run("ALTER TABLE videos ADD COLUMN anomaly_data TEXT DEFAULT ''"); } catch {}
+  try { db.run('ALTER TABLE videos ADD COLUMN is_main_platform TEXT'); } catch {}
+  try { db.run("ALTER TABLE darens ADD COLUMN confirmation_status TEXT NOT NULL DEFAULT '待确认'"); } catch {}
+  db.run(`CREATE TRIGGER IF NOT EXISTS validate_darens_confirmation_status_insert
     BEFORE INSERT ON darens
     FOR EACH ROW WHEN NEW.confirmation_status NOT IN ('待确认', '已确认', '已提交申诉')
     BEGIN SELECT RAISE(ABORT, 'invalid confirmation status'); END`);
-  _db.run(`CREATE TRIGGER IF NOT EXISTS validate_darens_confirmation_status_update
+  db.run(`CREATE TRIGGER IF NOT EXISTS validate_darens_confirmation_status_update
     BEFORE UPDATE OF confirmation_status ON darens
     FOR EACH ROW WHEN NEW.confirmation_status NOT IN ('待确认', '已确认', '已提交申诉')
     BEGIN SELECT RAISE(ABORT, 'invalid confirmation status'); END`);
-  _db.run('CREATE INDEX IF NOT EXISTS idx_videos_daren_id ON videos(daren_id)');
-  _db.run('CREATE INDEX IF NOT EXISTS idx_darens_batch_id ON darens(batch_id)');
-  _db.run('CREATE INDEX IF NOT EXISTS idx_videos_batch_id ON videos(batch_id)');
-  _db.run('CREATE INDEX IF NOT EXISTS idx_videos_platform ON videos(platform)');
-  _db.run('CREATE INDEX IF NOT EXISTS idx_video_appeals_video_id ON video_appeals(video_id)');
-  _db.run('CREATE INDEX IF NOT EXISTS idx_audit_table_record ON audit_logs(table_name, record_id)');
-  _db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_created ON operation_logs(created_at DESC)');
-  _db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_subject ON operation_logs(subject_nickname, created_at DESC)');
-  _db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_batch ON operation_logs(batch_id, created_at DESC)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_videos_daren_id ON videos(daren_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_darens_batch_id ON darens(batch_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_videos_batch_id ON videos(batch_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_videos_platform ON videos(platform)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_video_appeals_video_id ON video_appeals(video_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_audit_table_record ON audit_logs(table_name, record_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_created ON operation_logs(created_at DESC)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_subject ON operation_logs(subject_nickname, created_at DESC)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_operation_logs_batch ON operation_logs(batch_id, created_at DESC)');
+  recordSchemaBaseline(db);
 }
 
 // Prepare wrapper mimicking better-sqlite3 sync API
@@ -369,4 +387,4 @@ function escapeColumn(col) {
   return col;
 }
 
-module.exports = { initDb, getDb, saveDb, prepare, escapeColumn, migrateVideosTable, migrateBatchSchema, createVideoAppealsTable, withTransaction };
+module.exports = { initDb, initSchema, getDb, saveDb, prepare, escapeColumn, migrateVideosTable, migrateBatchSchema, createVideoAppealsTable, withTransaction };

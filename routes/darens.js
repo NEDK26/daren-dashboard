@@ -2,11 +2,12 @@ const express = require('express');
 const path = require('path');
 const router = express.Router();
 const { getDb, saveDb, prepare, escapeColumn } = require('../db');
-const { requireLogin, requireAdmin, auditLog } = require('../middleware');
+const { requireLogin, requireAdmin, requireCapability, auditLog } = require('../middleware');
 const { deleteDarensByIds } = require('../services/deleteDarens');
 const { getVisibleBatch } = require('../services/batches');
+const { getUploadsDir } = require('../storage-paths');
 
-router.get('/daren-categories', requireAdmin, (req, res) => {
+router.get('/daren-categories', requireAdmin, requireCapability('dataCheck'), (req, res) => {
   const resolved = getVisibleBatch(req, req.query.batchId);
   if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
   const categories = prepare("SELECT category FROM darens WHERE batch_id = ? AND TRIM(category) != '' GROUP BY category ORDER BY MIN(id)")
@@ -15,7 +16,7 @@ router.get('/daren-categories', requireAdmin, (req, res) => {
   res.json({ categories });
 });
 
-router.get('/daren-content-types', requireAdmin, (req, res) => {
+router.get('/daren-content-types', requireAdmin, requireCapability('dataCheck'), (req, res) => {
   const resolved = getVisibleBatch(req, req.query.batchId);
   if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
   const contentTypes = prepare("SELECT content_type FROM darens WHERE batch_id = ? AND TRIM(content_type) != '' GROUP BY content_type ORDER BY MIN(id)")
@@ -24,7 +25,7 @@ router.get('/daren-content-types', requireAdmin, (req, res) => {
   res.json({ contentTypes });
 });
 
-router.get('/daren-platforms', requireAdmin, (req, res) => {
+router.get('/daren-platforms', requireAdmin, requireCapability('dataCheck'), (req, res) => {
   const resolved = getVisibleBatch(req, req.query.batchId);
   if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
   const platforms = prepare("SELECT platform FROM darens WHERE batch_id = ? AND TRIM(platform) != '' GROUP BY platform ORDER BY MIN(id)")
@@ -33,7 +34,7 @@ router.get('/daren-platforms', requireAdmin, (req, res) => {
   res.json({ platforms });
 });
 
-router.get('/darens', requireLogin, (req, res) => {
+router.get('/darens', requireLogin, requireCapability('dataCheck'), (req, res) => {
   const { search, category, contentType, confirmationStatus, hasAnomaly, platform, batchId } = req.query;
   const resolved = getVisibleBatch(req, batchId);
   if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
@@ -118,7 +119,7 @@ router.get('/darens', requireLogin, (req, res) => {
   res.json(rows);
 });
 
-router.put('/darens/:id', requireLogin, (req, res) => {
+router.put('/darens/:id', requireLogin, requireCapability('dataCheck'), (req, res) => {
   const { id } = req.params;
   const isAdmin = req.session.user.role === 'admin';
 
@@ -153,7 +154,7 @@ router.put('/darens/:id', requireLogin, (req, res) => {
   res.json({ ok: true, changes: Object.keys(changes) });
 });
 
-router.put('/darens/:id/confirmation', requireLogin, (req, res) => {
+router.put('/darens/:id/confirmation', requireLogin, requireCapability('dataCheck'), (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   if (req.session.user.role === 'admin') return res.status(403).json({ error: '管理员仅可查看确认状态' });
@@ -178,7 +179,7 @@ router.put('/darens/:id/confirmation', requireLogin, (req, res) => {
   res.json({ ok: true, status });
 });
 
-router.delete('/darens', requireAdmin, (req, res) => {
+router.delete('/darens', requireAdmin, requireCapability('dataCheck'), (req, res) => {
   try {
     const resolved = getVisibleBatch(req, req.body.batchId);
     if (resolved.error) return res.status(resolved.status).json({ error: resolved.error });
@@ -188,7 +189,7 @@ router.delete('/darens', requireAdmin, (req, res) => {
       ids: req.body.ids,
       batchId: resolved.batch.id,
       actor: req.session.user.display_name,
-      uploadsDir: path.join(__dirname, '..', 'uploads'),
+      uploadsDir: getUploadsDir(),
       saveDb
     });
     res.json({ ok: true, ...result });
