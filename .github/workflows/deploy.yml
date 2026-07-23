@@ -46,5 +46,7 @@ jobs:
             npx pm2 save
             sleep 2
             curl --fail --silent --show-error http://127.0.0.1:3001/ > /dev/null
-            curl --fail --silent --show-error http://127.0.0.1:3001/api/deployment-config | grep '"code":"default"'
+            health=$(curl --fail --silent --show-error http://127.0.0.1:3001/api/health)
+            echo "$health" | grep '"status":"ok"'
+            echo "$health" | grep '"deployment":"default"'
             echo "Deployment record: commit=$(git rev-parse HEAD) profile=default deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"

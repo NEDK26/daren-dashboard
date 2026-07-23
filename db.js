@@ -387,4 +387,16 @@ function escapeColumn(col) {
   return col;
 }
 
-module.exports = { initDb, initSchema, getDb, saveDb, prepare, escapeColumn, migrateVideosTable, migrateBatchSchema, createVideoAppealsTable, withTransaction };
+module.exports = {
+  CURRENT_SCHEMA_VERSION,
+  initDb,
+  initSchema,
+  getDb,
+  saveDb,
+  prepare,
+  escapeColumn,
+  migrateVideosTable,
+  migrateBatchSchema,
+  createVideoAppealsTable,
+  withTransaction
+};

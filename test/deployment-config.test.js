@@ -43,6 +43,31 @@ test('capability changes stay scoped to one deployment load and do not alter the
   assert.equal(loadDeploymentConfig('sj').capabilities.appeals, true);
 });
 
+test('deployment profile rejects enabled modules with missing capabilities', () => {
+  const { loadDeploymentConfig, validateDeploymentConfig } = require('../config');
+  const missingDataCheck = loadDeploymentConfig('default');
+  missingDataCheck.capabilities.dataCheck = false;
+  assert.throws(
+    () => validateDeploymentConfig(missingDataCheck),
+    /模块 appeals.*依赖能力 dataCheck/
+  );
+
+  const missingBatchManagement = loadDeploymentConfig('default');
+  missingBatchManagement.capabilities.batchManagement = false;
+  assert.throws(
+    () => validateDeploymentConfig(missingBatchManagement),
+    /模块 data-check.*依赖能力 batchManagement/
+  );
+});
+
+test('deployment profile cannot enable a planned module', () => {
+  const { loadDeploymentConfig, validateDeploymentConfig } = require('../config');
+  const config = loadDeploymentConfig('default');
+  config.capabilities.feeCheck = true;
+
+  assert.throws(() => validateDeploymentConfig(config), /模块 fee-check 尚未启用/);
+});
+
 test('production startup rejects an implicit default deployment profile', () => {
   const { getDeploymentConfig } = require('../config');
   const previousNodeEnv = process.env.NODE_ENV;
@@ -60,11 +85,15 @@ test('production startup rejects an implicit default deployment profile', () => 
 });
 
 test('deployment config route exposes only safe profile fields', () => {
+  const { getPublicDeploymentConfig, loadDeploymentConfig } = require('../config');
+  const publicConfig = getPublicDeploymentConfig(loadDeploymentConfig('default'));
   const source = fs.readFileSync(path.join(root, 'routes/deploymentConfig.js'), 'utf8');
 
   assert.match(source, /router\.get\('\/deployment-config'/);
   assert.match(source, /getPublicDeploymentConfig/);
   assert.doesNotMatch(source, /process\.env\.(SESSION_SECRET|ADMIN_PASS)/);
+  assert.equal(publicConfig.modules.length, 8);
+  assert.deepEqual(Object.keys(publicConfig.modules[0]).sort(), ['capability', 'key', 'pages', 'status']);
 });
 
 test('frontend loads deployment config before rendering the application shell', () => {
