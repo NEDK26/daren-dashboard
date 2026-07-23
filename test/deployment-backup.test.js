@@ -60,7 +60,12 @@ test('deployment workflows run backups before restarting the service', () => {
   for (const file of ['deploy.yml', 'deploy-sj-prod.yml']) {
     const workflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', file), 'utf8');
     assert.match(workflow, /node-version: 22/);
+    assert.match(workflow, /NVM_DIR/);
+    assert.match(workflow, /nvm\.sh/);
+    assert.match(workflow, /nvm use 22/);
+    assert.match(workflow, /process\.execPath/);
     assert.match(workflow, /process\.versions\.node/);
+    assert.ok(workflow.indexOf('nvm.sh') < workflow.indexOf('process.versions.node'));
     assert.match(workflow, /backup-deployment\.js/);
     assert.ok(workflow.indexOf('backup-deployment.js') < workflow.indexOf('git reset'));
     assert.ok(workflow.indexOf('backup-deployment.js') < workflow.indexOf('pm2 restart'));
