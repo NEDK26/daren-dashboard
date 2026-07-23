@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const router = express.Router();
-const { getDb, saveDb, prepare, escapeColumn } = require('../db');
+const { getDb, prepare, escapeColumn } = require('../db');
 const { requireLogin, requireAdmin, requireCapability, auditLog } = require('../middleware');
 const { deleteDarensByIds } = require('../services/deleteDarens');
 const { getVisibleBatch } = require('../services/batches');
@@ -189,8 +189,7 @@ router.delete('/darens', requireAdmin, requireCapability('dataCheck'), (req, res
       ids: req.body.ids,
       batchId: resolved.batch.id,
       actor: req.session.user.display_name,
-      uploadsDir: getUploadsDir(),
-      saveDb
+      uploadsDir: getUploadsDir()
     });
     res.json({ ok: true, ...result });
   } catch (err) {

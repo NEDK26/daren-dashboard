@@ -2,38 +2,21 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const initSqlJs = require('sql.js');
+const { createMemoryDatabase } = require('../test-utils/sqlite');
 
 let lifecycle;
 try { lifecycle = require('../services/batchLifecycle'); } catch { lifecycle = {}; }
 
 function createPrepare(db) {
-  return sql => ({
-    get: (...params) => {
-      const stmt = db.prepare(sql);
-      if (params.length) stmt.bind(params);
-      const row = stmt.step() ? stmt.getAsObject() : undefined;
-      stmt.free();
-      return row;
-    },
-    run: (...params) => {
-      db.run(sql, params);
-      return { changes: db.getRowsModified() };
-    }
-  });
+  return sql => db.prepare(sql);
 }
 
 function createTransaction(db) {
-  return fn => {
-    db.run('BEGIN');
-    try { const result = fn(); db.run('COMMIT'); return result; }
-    catch (error) { db.run('ROLLBACK'); throw error; }
-  };
+  return fn => db.transaction(fn)();
 }
 
 async function createDb() {
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   db.run(`CREATE TABLE batches (
     id INTEGER PRIMARY KEY, name TEXT, status TEXT, previous_batch_id INTEGER
   )`);

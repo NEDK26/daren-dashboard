@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const initSqlJs = require('sql.js');
+const { createMemoryDatabase } = require('../test-utils/sqlite');
 
 let resetDarenConfirmation;
 try {
@@ -12,16 +12,7 @@ try {
 }
 
 function createPrepare(db) {
-  return sql => ({
-    get: (...params) => {
-      const stmt = db.prepare(sql);
-      if (params.length) stmt.bind(params);
-      const row = stmt.step() ? stmt.getAsObject() : undefined;
-      stmt.free();
-      return row;
-    },
-    run: (...params) => db.run(sql, params)
-  });
+  return sql => db.prepare(sql);
 }
 
 test('confirmation status has the three allowed states and only normal users can submit their own daren', () => {
@@ -46,8 +37,7 @@ test('video saves and screenshot uploads use the shared confirmation reset helpe
 
 test('confirmation reset persists the pending status and audits only a real status change', async () => {
   assert.ok(resetDarenConfirmation, 'expected darenConfirmation service');
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   const prepare = createPrepare(db);
   const audits = [];
   const req = { session: { user: { display_name: 'alice' } } };

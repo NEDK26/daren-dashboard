@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const initSqlJs = require('sql.js');
+const { createMemoryDatabase } = require('../test-utils/sqlite');
 
 let deleteDarensByIds;
 try {
@@ -13,8 +13,7 @@ try {
 }
 
 async function createDb() {
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   db.run('PRAGMA foreign_keys = ON');
   db.run(`CREATE TABLE darens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,10 +48,8 @@ async function createDb() {
 }
 
 function getScalar(db, sql) {
-  const stmt = db.prepare(sql);
-  const value = stmt.step() ? Object.values(stmt.getAsObject())[0] : undefined;
-  stmt.free();
-  return value;
+  const result = db.prepare(sql).get();
+  return result ? Object.values(result)[0] : undefined;
 }
 
 test('deletes selected darens, their videos, matching user accounts, and upload files', async () => {
@@ -69,8 +66,7 @@ test('deletes selected darens, their videos, matching user accounts, and upload 
     db,
     ids: [1],
     actor: 'admin',
-    uploadsDir,
-    saveDb: () => {}
+    uploadsDir
   });
 
   assert.equal(result.deletedDarens, 1);
@@ -95,7 +91,7 @@ test('fails the whole batch when any selected daren is missing', async () => {
   db.run("INSERT INTO videos (work_id, daren_id, screenshot_plays) VALUES ('w1', 1, '/uploads/plays.png')");
 
   assert.throws(
-    () => deleteDarensByIds({ db, ids: [1, 999], actor: 'admin', uploadsDir, saveDb: () => {} }),
+    () => deleteDarensByIds({ db, ids: [1, 999], actor: 'admin', uploadsDir }),
     /部分达人不存在/
   );
 

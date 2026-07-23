@@ -1,14 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const initSqlJs = require('sql.js');
+const { createMemoryDatabase } = require('../test-utils/sqlite');
 const { initSchema, migrateBatchSchema } = require('../db');
 
 function row(db, sql, params = []) {
-  const stmt = db.prepare(sql);
-  if (params.length) stmt.bind(params);
-  const result = stmt.step() ? stmt.getAsObject() : undefined;
-  stmt.free();
-  return result;
+  return db.prepare(sql).get(...params);
 }
 
 function createLegacySchema(db) {
@@ -63,8 +59,7 @@ function createLegacySchema(db) {
 
 test('migrates legacy rows into the initial current batch', async () => {
   assert.equal(typeof migrateBatchSchema, 'function');
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   createLegacySchema(db);
   db.run("INSERT INTO darens (id, nickname) VALUES (1, 'alice')");
   db.run("INSERT INTO videos (id, work_id, daren_id, platform) VALUES (1, 'work-1', 1, '快手')");
@@ -80,8 +75,7 @@ test('migrates legacy rows into the initial current batch', async () => {
 
 test('allows the same nickname and work id in separate batches', async () => {
   assert.equal(typeof migrateBatchSchema, 'function');
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   createLegacySchema(db);
   migrateBatchSchema(db);
   db.run("INSERT INTO batches (name, year, month, title, status) VALUES ('2026年06月｜ 数据核对', 2026, 6, '数据核对', 'history')");
@@ -93,8 +87,7 @@ test('allows the same nickname and work id in separate batches', async () => {
 });
 
 test('batch migration is idempotent and does not duplicate the initial batch', async () => {
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   createLegacySchema(db);
   db.run("INSERT INTO darens (id, nickname) VALUES (1, 'alice')");
 
@@ -105,8 +98,7 @@ test('batch migration is idempotent and does not duplicate the initial batch', a
 });
 
 test('failed batch migration rolls back schema and data changes', async () => {
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   db.run('CREATE TABLE darens (id INTEGER PRIMARY KEY, nickname TEXT NOT NULL)');
   db.run('CREATE TABLE videos (id INTEGER PRIMARY KEY, daren_id INTEGER NOT NULL, platform TEXT NOT NULL)');
   db.run("INSERT INTO darens (id, nickname) VALUES (1, 'alice')");
@@ -120,8 +112,7 @@ test('failed batch migration rolls back schema and data changes', async () => {
 });
 
 test('schema initialization records one idempotent migration baseline', async () => {
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
 
   initSchema(db);
   initSchema(db);

@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -36,11 +36,12 @@ jobs:
           script: |
             set -e
             cd /home/deploy/daren-dashboard
+            node -e "if (Number(process.versions.node.split('.')[0]) < 22) { console.error('Node.js 22+ required'); process.exit(1); }"
+            test -f .env
+            DEPLOYMENT_BACKUP_DIR=/home/deploy/backups/daren-dashboard node scripts/backup-deployment.js
             git fetch origin master
             git reset --hard origin/master
-            test -f .env
             node scripts/verify-deployment-env.js default
-            DEPLOYMENT_BACKUP_DIR=/home/deploy/backups/daren-dashboard node scripts/backup-deployment.js
             npm ci --omit=dev
             npx pm2 restart daren-dashboard || npx pm2 start ecosystem.config.js
             npx pm2 save

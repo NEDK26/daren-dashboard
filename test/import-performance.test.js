@@ -2,39 +2,32 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const initSqlJs = require('sql.js');
+const { createMemoryDatabase } = require('../test-utils/sqlite');
 
 const { withTransaction } = require('../db');
 
-test('withTransaction commits once on success and persists once', async () => {
+test('withTransaction commits on success', async () => {
   assert.equal(typeof withTransaction, 'function');
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
-  let persists = 0;
+  const db = createMemoryDatabase();
 
   withTransaction(() => db.run('CREATE TABLE sample (value TEXT)'), {
-    db,
-    persist: () => { persists++; }
+    db
   });
 
-  assert.equal(db.exec("SELECT name FROM sqlite_master WHERE name = 'sample'").length, 1);
-  assert.equal(persists, 1);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE name = 'sample'").get().count, 1);
 });
 
-test('withTransaction rolls back and does not persist on failure', async () => {
+test('withTransaction rolls back on failure', async () => {
   assert.equal(typeof withTransaction, 'function');
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   db.run('CREATE TABLE sample (value TEXT)');
-  let persists = 0;
 
   assert.throws(() => withTransaction(() => {
     db.run("INSERT INTO sample (value) VALUES ('not saved')");
     throw new Error('import failed');
-  }, { db, persist: () => { persists++; } }), /import failed/);
+  }, { db }), /import failed/);
 
-  assert.equal(db.exec('SELECT COUNT(*) AS count FROM sample')[0].values[0][0], 0);
-  assert.equal(persists, 0);
+  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM sample').get().count, 0);
 });
 
 test('import uses a transaction and the UI exposes animated stages', () => {
