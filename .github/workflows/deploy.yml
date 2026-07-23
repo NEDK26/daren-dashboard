@@ -36,6 +36,12 @@ jobs:
           script: |
             set -e
             cd /home/deploy/daren-dashboard
+            export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              . "$NVM_DIR/nvm.sh"
+              nvm use 22
+            fi
+            node -p "'Remote Node.js ' + process.version + ' at ' + process.execPath"
             node -e "if (Number(process.versions.node.split('.')[0]) < 22) { console.error('Node.js 22+ required'); process.exit(1); }"
             test -f .env
             DEPLOYMENT_BACKUP_DIR=/home/deploy/backups/daren-dashboard node scripts/backup-deployment.js
