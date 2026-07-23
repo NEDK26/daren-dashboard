@@ -9,7 +9,9 @@ test('DATABASE_PATH isolates a deployment database from the project directory', 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'daren-db-path-'));
   const databasePath = path.join(tempDir, 'customer.db');
   const projectDatabase = path.join(__dirname, '..', 'data.db');
-  const projectDatabaseBefore = fs.statSync(projectDatabase);
+  const projectDatabaseBefore = fs.existsSync(projectDatabase)
+    ? fs.readFileSync(projectDatabase)
+    : null;
   const dbModulePath = path.join(__dirname, '..', 'db.js');
   const script = `const db = require(${JSON.stringify(dbModulePath)}); db.initDb().then(() => { db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('probe', 'ok'); });`;
   const result = spawnSync(process.execPath, ['-e', script], {
@@ -19,9 +21,11 @@ test('DATABASE_PATH isolates a deployment database from the project directory', 
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.existsSync(databasePath), true);
-  const projectDatabaseAfter = fs.statSync(projectDatabase);
-  assert.equal(projectDatabaseAfter.size, projectDatabaseBefore.size);
-  assert.equal(projectDatabaseAfter.mtimeMs, projectDatabaseBefore.mtimeMs);
+  if (projectDatabaseBefore === null) {
+    assert.equal(fs.existsSync(projectDatabase), false);
+  } else {
+    assert.deepEqual(fs.readFileSync(projectDatabase), projectDatabaseBefore);
+  }
 });
 
 test('UPLOADS_DIR isolates uploaded files from the project directory', () => {
