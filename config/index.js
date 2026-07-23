@@ -1,4 +1,5 @@
 const { assertCapabilityName, validateCapabilities } = require('./capabilities');
+const { getPublicModules } = require('../modules/registry');
 
 const profiles = {
   default: require('./deployments/default'),
@@ -38,7 +39,8 @@ function getPublicDeploymentConfig(config = getDeploymentConfig()) {
   return {
     identity: { ...config.identity },
     branding: { ...config.branding },
-    capabilities: { ...config.capabilities }
+    capabilities: { ...config.capabilities },
+    modules: getPublicModules()
   };
 }
 

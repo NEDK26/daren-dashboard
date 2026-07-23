@@ -60,11 +60,15 @@ test('production startup rejects an implicit default deployment profile', () => 
 });
 
 test('deployment config route exposes only safe profile fields', () => {
+  const { getPublicDeploymentConfig, loadDeploymentConfig } = require('../config');
+  const publicConfig = getPublicDeploymentConfig(loadDeploymentConfig('default'));
   const source = fs.readFileSync(path.join(root, 'routes/deploymentConfig.js'), 'utf8');
 
   assert.match(source, /router\.get\('\/deployment-config'/);
   assert.match(source, /getPublicDeploymentConfig/);
   assert.doesNotMatch(source, /process\.env\.(SESSION_SECRET|ADMIN_PASS)/);
+  assert.equal(publicConfig.modules.length, 8);
+  assert.deepEqual(Object.keys(publicConfig.modules[0]).sort(), ['capability', 'key', 'pages', 'status']);
 });
 
 test('frontend loads deployment config before rendering the application shell', () => {
