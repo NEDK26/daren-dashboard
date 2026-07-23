@@ -4,12 +4,11 @@ const path = require('path');
 const SCREENSHOT_COLUMNS = ['screenshot_plays', 'screenshot_likes', 'screenshot_7d_plays', 'screenshot_7d_likes'];
 
 function queryAll(db, sql, params = []) {
-  const stmt = db.prepare(sql);
-  if (params.length) stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
-  stmt.free();
-  return rows;
+  return db.prepare(sql).all(...params);
+}
+
+function execute(db, sql, params = []) {
+  return db.prepare(sql).run(...params);
 }
 
 function normalizeIds(ids) {
@@ -53,7 +52,7 @@ function deleteUploadFiles(rows, uploadsDir, columns = SCREENSHOT_COLUMNS) {
   return warnings;
 }
 
-function deleteDarensByIds({ db, ids, batchId, actor, uploadsDir, saveDb }) {
+function deleteDarensByIds({ db, ids, batchId, actor, uploadsDir }) {
   const darenIds = normalizeIds(ids);
   const sqlIds = placeholders(darenIds);
   const normalizedBatchId = Number(batchId);
@@ -78,11 +77,11 @@ function deleteDarensByIds({ db, ids, batchId, actor, uploadsDir, saveDb }) {
   const userNames = [...new Set(darens.map(row => row.nickname))];
   let deletedUsers = 0;
 
-  try {
-    db.run('BEGIN');
+  db.transaction(() => {
     if (actor) {
       for (const daren of darens) {
-        db.run(
+        execute(
+          db,
           `INSERT INTO operation_logs
             (batch_id, operator_name, action_type, subject_type, subject_id, subject_name, subject_nickname, changes_json)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -91,20 +90,15 @@ function deleteDarensByIds({ db, ids, batchId, actor, uploadsDir, saveDb }) {
         );
       }
     }
-    db.run(`DELETE FROM videos WHERE daren_id IN (${sqlIds})${batchFilter}`, scopedParams);
-    db.run(`DELETE FROM darens WHERE id IN (${sqlIds})${batchFilter}`, scopedParams);
+    execute(db, `DELETE FROM videos WHERE daren_id IN (${sqlIds})${batchFilter}`, scopedParams);
+    execute(db, `DELETE FROM darens WHERE id IN (${sqlIds})${batchFilter}`, scopedParams);
     for (const nickname of userNames) {
       const remaining = queryAll(db, 'SELECT 1 FROM darens WHERE nickname = ? LIMIT 1', [nickname]);
       if (remaining.length) continue;
-      db.run("DELETE FROM users WHERE role = 'user' AND display_name = ?", [nickname]);
-      deletedUsers += db.getRowsModified();
+      const result = execute(db, "DELETE FROM users WHERE role = 'user' AND display_name = ?", [nickname]);
+      deletedUsers += result.changes;
     }
-    db.run('COMMIT');
-    if (saveDb) saveDb();
-  } catch (err) {
-    try { db.run('ROLLBACK'); } catch {}
-    throw err;
-  }
+  })();
 
   const fileWarnings = uploadsDir
     ? [...deleteUploadFiles(videos, uploadsDir), ...deleteUploadFiles(appealImages, uploadsDir, ['image_path'])]

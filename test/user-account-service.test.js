@@ -1,27 +1,20 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const initSqlJs = require('sql.js');
+const { createMemoryDatabase } = require('../test-utils/sqlite');
 const { verifyPassword, hashPassword } = require('../auth');
 const { initializeBatchAccounts, resetUserPassword, changeUserPassword } = require('../services/userAccounts');
 
 function makeDb() {
-  let db;
-  const ready = initSqlJs().then(SQL => {
-    db = new SQL.Database();
-    db.run(`CREATE TABLE users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, display_name TEXT UNIQUE, password_hash TEXT,
-      role TEXT, must_change_password INTEGER DEFAULT 0, credential_version INTEGER DEFAULT 1,
-      initial_password_issued_at TEXT, password_changed_at TEXT
-    )`);
-    db.run('CREATE TABLE darens (id INTEGER PRIMARY KEY AUTOINCREMENT, batch_id INTEGER, nickname TEXT)');
-  });
-  const prepare = sql => ({
-    get: (...params) => { const stmt = db.prepare(sql); stmt.bind(params); const row = stmt.step() ? stmt.getAsObject() : undefined; stmt.free(); return row; },
-    all: (...params) => { const stmt = db.prepare(sql); stmt.bind(params); const rows = []; while (stmt.step()) rows.push(stmt.getAsObject()); stmt.free(); return rows; },
-    run: (...params) => { const stmt = db.prepare(sql); stmt.bind(params); stmt.step(); const changes = db.getRowsModified(); stmt.free(); return { changes, lastInsertRowid: db.exec('SELECT last_insert_rowid()')[0]?.values[0]?.[0] || 0 }; }
-  });
-  const withTransaction = fn => { db.run('BEGIN'); try { const result = fn(); db.run('COMMIT'); return result; } catch (error) { db.run('ROLLBACK'); throw error; } };
-  return { ready, prepare, withTransaction };
+  const db = createMemoryDatabase();
+  db.run(`CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, display_name TEXT UNIQUE, password_hash TEXT,
+    role TEXT, must_change_password INTEGER DEFAULT 0, credential_version INTEGER DEFAULT 1,
+    initial_password_issued_at TEXT, password_changed_at TEXT
+  )`);
+  db.run('CREATE TABLE darens (id INTEGER PRIMARY KEY AUTOINCREMENT, batch_id INTEGER, nickname TEXT)');
+  const prepare = sql => db.prepare(sql);
+  const withTransaction = fn => db.transaction(fn)();
+  return { ready: Promise.resolve(), prepare, withTransaction };
 }
 
 test('initialization creates only missing accounts and marks them for first-login change', async () => {

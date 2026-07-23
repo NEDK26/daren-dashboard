@@ -2,24 +2,19 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const initSqlJs = require('sql.js');
+const { createMemoryDatabase } = require('../test-utils/sqlite');
 const dbModule = require('../db');
 const { exportColumns } = require('../excel-schema');
 
 const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 
 function all(db, sql) {
-  const stmt = db.prepare(sql);
-  const rows = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
-  stmt.free();
-  return rows;
+  return db.prepare(sql).all();
 }
 
 test('video appeals use a separate table with three slots and migrate legacy text', async () => {
   assert.equal(typeof dbModule.createVideoAppealsTable, 'function');
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   db.run('PRAGMA foreign_keys = ON');
   db.run(`CREATE TABLE videos (
     id INTEGER PRIMARY KEY,

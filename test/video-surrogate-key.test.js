@@ -2,13 +2,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const initSqlJs = require('sql.js');
+const { createMemoryDatabase } = require('../test-utils/sqlite');
 
 const { migrateVideosTable } = require('../db');
 
 async function createLegacyDb() {
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = createMemoryDatabase();
   db.run('CREATE TABLE darens (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname TEXT NOT NULL UNIQUE)');
   db.run("INSERT INTO darens (id, nickname) VALUES (1, 'alice'), (2, 'bob')");
   db.run(`CREATE TABLE videos (
@@ -22,12 +21,7 @@ async function createLegacyDb() {
 }
 
 function rows(db, sql, params = []) {
-  const stmt = db.prepare(sql);
-  if (params.length) stmt.bind(params);
-  const result = [];
-  while (stmt.step()) result.push(stmt.getAsObject());
-  stmt.free();
-  return result;
+  return db.prepare(sql).all(...params);
 }
 
 test('migrates work_id primary key and allows co-created rows', async () => {
