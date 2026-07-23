@@ -30,8 +30,9 @@ for (const [file, profile, branch] of [
     assert.match(source, /run: npm test/);
     assert.match(source, /run: npm run build/);
     assert.match(source, /npm ci --omit=dev/);
-    assert.match(source, /\/api\/deployment-config/);
-    assert.match(source, new RegExp(`\\\"code\\\":\\\"${profile}\\\"`));
+    assert.match(source, /\/api\/health/);
+    assert.match(source, /"status":"ok"/);
+    assert.match(source, new RegExp(`"deployment":"${profile}"`));
     assert.match(source, /git rev-parse HEAD/);
     assert.match(source, /deployed_at=/);
     assert.match(source, /test -f \.env/);

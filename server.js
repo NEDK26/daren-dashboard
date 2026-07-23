@@ -26,6 +26,7 @@ async function main() {
   app.use(express.static(path.join(__dirname, 'public')));
   app.use('/uploads', express.static(getUploadsDir()));
 
+  app.use('/api', require('./routes/health'));
   app.use('/api', require('./routes/auth'));
   app.use('/api', require('./routes/deploymentConfig'));
   app.use('/api', require('./routes/userAccounts'));
